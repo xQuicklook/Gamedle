@@ -2,6 +2,8 @@
 
 Tier-Listen für Spiele und Franchises, gemeinsam mit Freunden – direkt von Browser zu Browser (WebRTC), ohne eigenen Server.
 
+**Live:** https://xquicklook.github.io/Gamedle/
+
 ## Benutzen
 
 - **Als Datei:** `tierly.html` im Browser öffnen und an Freunde schicken. Sie öffnen dieselbe Datei und geben den Raum-Code ein.
