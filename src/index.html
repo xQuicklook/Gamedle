@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tierly – Game Tierlist</title>
+<meta name="description" content="Videospiele und Franchises gemeinsam mit Freunden ranken – Peer-to-Peer im Browser.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/*@@CSS@@*/
+</style>
+</head>
+<body>
+
+<!-- ───────────── Startseite ───────────── -->
+<section id="landing" class="landing">
+  <div class="landing-card">
+    <div class="brand brand-lg"><span class="logo" aria-hidden="true"></span>Tierly</div>
+    <h1>Ranke Videospiele gemeinsam mit deinen Freunden.</h1>
+    <p class="muted">Direkt von Browser zu Browser – kein Server, kein Account, keine Installation.</p>
+
+    <label class="field">
+      <span>Dein Name</span>
+      <input id="nameInput" maxlength="20" placeholder="z. B. Alex" autocomplete="nickname">
+    </label>
+    <div class="field">
+      <span>Deine Farbe</span>
+      <div class="color-pick" id="colorPick" role="radiogroup" aria-label="Spielerfarbe"></div>
+    </div>
+
+    <button class="btn primary lg block" id="createBtn">Neuen Raum erstellen</button>
+
+    <div class="divider"><span>oder einem Raum beitreten</span></div>
+
+    <form class="join-row" id="joinForm">
+      <input id="codeInput" maxlength="6" placeholder="CODE" autocomplete="off" spellcheck="false" aria-label="Raum-Code">
+      <button class="btn" type="submit">Beitreten</button>
+    </form>
+
+    <div id="resumeBox" class="resume"></div>
+
+    <button class="btn ghost block" id="soloBtn">Erst mal allein loslegen</button>
+    <div class="landing-links">
+      <button class="linkish rooms-link" id="roomsLink" type="button" hidden></button>
+      <button class="linkish rooms-link" id="diagLink" type="button">Verbindung testen</button>
+    </div>
+  </div>
+  <p class="landing-foot muted">Verbindung über WebRTC (PeerJS). Der Raum lebt im Browser des Erstellers. · <span id="appVersion"></span></p>
+</section>
+
+<!-- ───────────── App ───────────── -->
+<div id="app" class="app" hidden>
+  <header class="topbar">
+    <div class="brand"><span class="logo" aria-hidden="true"></span><span class="brand-text">Tierly</span></div>
+
+    <nav class="tabs" role="tablist" aria-label="Ranking-Typ">
+      <button class="tab" role="tab" data-board="games">Spiele</button>
+      <button class="tab" role="tab" data-board="franchises">Franchises</button>
+    </nav>
+
+    <div class="top-right">
+      <button id="roomChip" class="room-chip" title="Raum & Spieler"></button>
+      <div id="playerStack" class="player-stack"></div>
+      <div class="menu-wrap">
+        <button id="menuBtn" class="icon-btn" aria-haspopup="menu" aria-label="Menü"></button>
+        <div id="menu" class="menu" role="menu" hidden></div>
+      </div>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <div class="seg" id="viewSeg" role="tablist" aria-label="Ansicht"></div>
+    <div class="toolbar-actions">
+      <div class="zoom" id="zoomCtl" role="group" aria-label="Kachelgröße"></div>
+      <button class="btn sm" id="tiersBtn"></button>
+      <button class="btn sm" id="libraryBtn"></button>
+      <button class="btn sm primary" id="readyBtn"></button>
+    </div>
+  </div>
+
+  <div class="workspace">
+    <main class="board-wrap" id="boardWrap">
+      <div class="view-hint" id="viewHint"></div>
+      <div class="board" id="board"></div>
+    </main>
+
+    <div class="splitter" id="splitter" role="separator" aria-orientation="vertical" tabindex="0"
+         aria-label="Breite der Spieleliste" title="Ziehen: Spieleliste breiter/schmaler · Doppelklick: zurücksetzen"><span></span></div>
+
+    <aside class="pool" id="pool">
+      <div class="pool-head">
+        <button class="pool-handle" id="poolHandle" aria-label="Höhe der Spieleliste ändern (ziehen oder antippen)"><span></span></button>
+        <div class="pool-title">
+          <strong id="poolTitle">Unplatziert</strong>
+          <span class="count" id="poolCount">0</span>
+        </div>
+        <div class="pool-controls">
+          <div class="search">
+            <input id="poolSearch" type="search" placeholder="Suchen …" aria-label="Spiele durchsuchen">
+          </div>
+          <select id="poolSort" aria-label="Sortierung">
+            <option value="year">Jahr</option>
+            <option value="title">A–Z</option>
+            <option value="franchise">Franchise</option>
+          </select>
+        </div>
+        <div class="chips" id="poolChips"></div>
+      </div>
+      <div class="pool-body" id="poolBody" data-tier="__pool"></div>
+    </aside>
+  </div>
+</div>
+
+<div id="modalRoot"></div>
+<div id="toastRoot" class="toast-root" aria-live="polite"></div>
+
+<script>
+/*@@PEERJS@@*/
+</script>
+<script>
+/*@@JS@@*/
+</script>
+</body>
+</html>
