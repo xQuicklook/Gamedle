@@ -551,6 +551,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
 @keyframes fade { from { opacity: 0; } }
 .modal {
   width: min(var(--modal-w, 560px), 100%); max-height: min(86dvh, 820px);
+  min-width: 0; /* sonst macht eine lange Reiterleiste das Fenster breiter als den Bildschirm */
   display: flex; flex-direction: column;
   background: var(--bg-elev); border: 1px solid var(--border); border-radius: 18px;
   box-shadow: var(--shadow);
@@ -678,6 +679,21 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
 .linkish { background: none; border: 0; padding: 0; color: var(--accent); font-weight: 600; }
 .linkish:hover { text-decoration: underline; }
 .credit { font-size: 11.5px; color: var(--muted); margin: 0; }
+
+/* Reihe laden: Suchtreffer und Checkliste */
+.series-ico {
+  width: 48px; height: 64px; border-radius: 6px; display: grid; place-items: center;
+  background: var(--accent-soft); color: var(--accent);
+}
+.series-head { display: flex; align-items: center; gap: 8px; padding: 2px 0 6px; }
+.series-head .result-meta { flex: 1; }
+.pick-row { cursor: pointer; }
+.pick-row input[type="checkbox"] { width: 18px; height: 18px; margin: 0 6px; accent-color: var(--accent); cursor: pointer; }
+.pick-row.in-room { cursor: default; opacity: .55; }
+.series-foot {
+  position: sticky; bottom: -16px; z-index: 1; display: flex; justify-content: flex-end;
+  margin: 6px -20px -16px; padding: 10px 20px 16px; background: var(--bg-elev); border-top: 1px solid var(--border);
+}
 .manual { border-top: 1px solid var(--border); padding-top: 14px; display: flex; flex-direction: column; gap: 12px; }
 
 .tile-add {
@@ -2898,19 +2914,22 @@ const Wiki = {
 
   /* Spielreihe(n), frühestes Erscheinungsjahr und Genres (englische Namen) über Wikidata
      → Map(qid → {series: [], year, genres: []}). UNION statt OPTIONAL: sonst vervielfachen sich die Zeilen. */
+  async sparql(query) {
+    const res = await fetch(WIKIDATA_SPARQL + '?format=json&query=' + encodeURIComponent(query));
+    if (!res.ok) throw new Error('Wikidata antwortet nicht (' + res.status + ')');
+    return (await res.json()).results?.bindings || [];
+  },
+
   async details(qids) {
     const ids = [...new Set(qids.filter(q => /^Q\d+$/.test(q)))];
     const out = new Map(ids.map(q => [q, { series: [], year: null, genres: [] }]));
     for (let i = 0; i < ids.length; i += 50) {
-      const query = `SELECT ?item ?seriesLabel ?date ?genreLabel WHERE {
+      const rows = await this.sparql(`SELECT ?item ?seriesLabel ?date ?genreLabel WHERE {
         VALUES ?item { ${ids.slice(i, i + 50).map(q => 'wd:' + q).join(' ')} }
         { ?item wdt:P179 ?series. } UNION { ?item wdt:P577 ?date. } UNION { ?item wdt:P136 ?genre. }
         SERVICE wikibase:label { bd:serviceParam wikibase:language "en,mul,de". }
-      }`;
-      const res = await fetch(WIKIDATA_SPARQL + '?format=json&query=' + encodeURIComponent(query));
-      if (!res.ok) throw new Error('Wikidata antwortet nicht (' + res.status + ')');
-      const json = await res.json();
-      for (const b of json.results?.bindings || []) {
+      }`);
+      for (const b of rows) {
         const d = out.get(b.item.value.split('/').pop());
         if (!d) continue;
         const label = b.seriesLabel?.value;
@@ -2923,7 +2942,76 @@ const Wiki = {
     }
     return out;
   },
+
+  /* Spielereihen suchen (Wikidata-Suche, findet auch deutsche Namen wie „Die Sims“)
+     → [{qid, name, count}], gezählt werden nur echte Videospiele der Reihe */
+  async seriesSearch(q) {
+    q = str(q, 60).replace(/["\\]/g, '');
+    if (q.length < 2) return [];
+    const rows = await this.sparql(`SELECT ?series ?seriesLabel (COUNT(DISTINCT ?game) AS ?n) WHERE {
+      SERVICE wikibase:mwapi {
+        bd:serviceParam wikibase:endpoint "www.wikidata.org"; wikibase:api "EntitySearch"; mwapi:search "${q}"; mwapi:language "de".
+        ?series wikibase:apiOutputItem mwapi:item.
+      }
+      ?game wdt:P179 ?series; wdt:P31 wd:Q7889.
+      SERVICE wikibase:label { bd:serviceParam wikibase:language "en,mul,de". }
+    } GROUP BY ?series ?seriesLabel ORDER BY DESC(?n) LIMIT 8`);
+    return rows.map(r => ({ qid: r.series.value.split('/').pop(), name: r.seriesLabel.value, count: +r.n.value }))
+      .filter(s => !/^Q\d+$/.test(s.name));
+  },
+
+  /* Alle Spiele einer Reihe mit englischem Wikipedia-Artikel (Jahr, Typen, Genres, Bekanntheit) */
+  async seriesGames(qid) {
+    if (!/^Q\d+$/.test(qid)) return [];
+    const rows = await this.sparql(`SELECT ?game ?article ?links (MIN(?date) AS ?first)
+      (GROUP_CONCAT(DISTINCT ?typeLabel; separator="|") AS ?types) (GROUP_CONCAT(DISTINCT ?genreLabel; separator="|") AS ?genres) WHERE {
+      ?game wdt:P179 wd:${qid}; wdt:P31 wd:Q7889; wikibase:sitelinks ?links.
+      ?article schema:about ?game; schema:isPartOf <https://en.wikipedia.org/>.
+      OPTIONAL { ?game wdt:P577 ?date. }
+      OPTIONAL { ?game wdt:P31 ?type. ?type rdfs:label ?typeLabel. FILTER(LANG(?typeLabel) = "en") }
+      OPTIONAL { ?game wdt:P136 ?genre. ?genre rdfs:label ?genreLabel. FILTER(LANG(?genreLabel) = "en") }
+    } GROUP BY ?game ?article ?links`);
+    return rows.map(r => {
+      const wiki = decodeURIComponent(r.article.value.split('/wiki/')[1]).replace(/_/g, ' ');
+      const split = v => (v ? v.split('|').filter(Boolean) : []);
+      const date = (r.first?.value || '').slice(0, 10); // frühestes Erscheinungsdatum, JJJJ-MM-TT
+      return { qid: r.game.value.split('/').pop(), wiki, title: stripDisambig(wiki), date, year: parseYear(date), links: +r.links.value, types: split(r.types?.value), genres: genreKeys(split(r.genres?.value)) };
+    });
+  },
 };
+
+/* Spiele einer Reihe zur Auswahl aufbereiten: Unveröffentlichtes & Co. fliegt raus, Zusatzinhalte,
+   Sammlungen, Neuauflagen und kaum bekannte Ableger stehen da, sind aber nicht vorausgewählt.
+   today: Datum als JJJJ-MM-TT – was danach erscheint, ist noch nicht draußen. */
+function seriesChoices(games, today) {
+  const list = games.filter(g => g.year && g.date <= today && !g.types.some(t => /cancel|unreleased|escape room|character|product model/i.test(t)));
+  // „Wenig bekannt“ im Vergleich zur Reihe: unter einem Viertel der Sprachversionen des bekanntesten Teils
+  const minLinks = Math.max(6, Math.max(0, ...list.map(g => g.links)) / 4);
+  return list
+    .map(g => {
+      const hint = g.types.some(t => /downloadable|expansion|add-on/i.test(t)) ? 'Zusatzinhalt'
+        : g.types.some(t => /compilation|bundle|paired versions|multiple topics|conflation/i.test(t)) || /\bgames\b/i.test(g.title) ? 'Sammlung'
+          : g.types.some(t => /remake|remaster/i.test(t)) || /\s(HD|3D|DX)$|Remaster(ed)?\b|Definitive Edition|Anniversary Edition|Deluxe$|Collection$|Trilogy$/.test(g.title) ? 'Neuauflage'
+            : g.links < minLinks ? 'wenig bekannt' : '';
+      return { ...g, hint, pick: !hint };
+    })
+    .sort((a, b) => a.year - b.year || a.title.localeCompare(b.title, 'de'));
+}
+
+/* Franchise-Name für die geladene Reihe: wie im Katalog (wenn die meisten bekannten Spiele dort
+   dieselbe Reihe haben, z. B. „Sonic“ statt „Sonic the Hedgehog“), sonst wie im Raum, sonst der Reihenname */
+function seriesFranchise(label, games, existing) {
+  const count = new Map();
+  let known = 0;
+  for (const g of games) {
+    const s = catalogEntry(g)?.series;
+    if (!s) continue;
+    known++;
+    count.set(s, (count.get(s) || 0) + 1);
+  }
+  const best = [...count].sort((a, b) => b[1] - a[1])[0];
+  return best && best[1] * 2 > known ? best[0] : pickSeries([label], '', existing);
+}
 
 /* ───────── Genres ─────────
    Tierly nutzt dieselben Genre-Kürzel wie Gamedle und der Spielekatalog (Namen in GD_GENRES). */
@@ -5713,7 +5801,7 @@ function libraryModal(tab = null, query = '') {
   tab = tab || (query || App.state.order.length ? 'add' : 'packs');
   const content = h('div', { style: { display: 'flex', flexDirection: 'column', gap: '14px' } });
   const mkTabs = () => tabbed([
-    ['add', 'Suchen'], ['packs', 'Pakete'], ['import', 'Liste'], ['list', `Bibliothek (${App.state.order.length})`],
+    ['add', 'Suchen'], ['series', 'Reihe'], ['packs', 'Pakete'], ['import', 'Liste'], ['list', `Bibliothek (${App.state.order.length})`],
   ], tab, t => { tab = t; refresh(); });
   let tabsEl = mkTabs();
   const refreshTabs = () => { const n = mkTabs(); tabsEl.replaceWith(n); tabsEl = n; };
@@ -5783,6 +5871,121 @@ function libraryModal(tab = null, query = '') {
         results,
         h('p.credit', 'Cover, Jahr und Reihe kommen automatisch von Wikipedia & Wikidata.'),
         manualForm(),
+      ];
+    },
+
+    /* Ganze Reihe auf einmal: Spiele kommen von Wikidata, Ableger & Neuauflagen lassen sich abwählen */
+    series() {
+      const input = h('input', { type: 'search', placeholder: 'Reihe suchen, z. B. Zelda oder Need for Speed', autocomplete: 'off', spellcheck: 'false', 'aria-label': 'Reihe suchen' });
+      const box = h('div.results');
+      let seq = 0, timer = 0;
+      const offline = () => box.replaceChildren(h('p.help', 'Wikidata ist gerade nicht erreichbar – versuch es gleich noch einmal.'));
+
+      // Ohne Suchbegriff: Reihen aus dem Raum (zum Vervollständigen) bzw. die großen Katalog-Reihen
+      const suggest = () => {
+        const own = franchiseNames();
+        const names = own.length ? own : presetPacks().filter(p => p.group === 'Reihen').map(p => p.name);
+        const pick = name => { input.value = name; search(); };
+        box.replaceChildren(h('p.help', own.length ? 'Reihen im Raum vervollständigen:' : 'Beliebte Reihen:'),
+          h('div.chips', names.slice(0, 16).map(n => h('button.chip', { type: 'button', onclick: () => pick(n) }, n))));
+      };
+
+      const search = async () => {
+        const q = input.value.trim();
+        const my = ++seq;
+        if (q.length < 2) { suggest(); return; }
+        box.replaceChildren(h('div.skeleton'), h('div.skeleton'));
+        try {
+          const list = await Wiki.seriesSearch(q);
+          if (my !== seq) return;
+          box.replaceChildren(...list.map(s => h('div.result',
+            h('div.series-ico', icon('layers')),
+            h('div.result-meta', h('strong', s.name), h('span', `${s.count} Spiele auf Wikidata`)),
+            h('button.btn.sm.primary', { type: 'button', onclick: () => open(s) }, 'Auswählen'))));
+          if (!list.length) box.append(h('p.help', 'Keine Spielereihe gefunden. Probier den englischen Namen, z. B. „Final Fantasy“.'));
+        } catch (e) {
+          console.warn(e);
+          if (my === seq) offline();
+        }
+      };
+
+      const open = async s => {
+        const my = ++seq;
+        box.replaceChildren(h('div.skeleton'), h('div.skeleton'), h('div.skeleton'));
+        let games;
+        try {
+          games = seriesChoices(await Wiki.seriesGames(s.qid), new Date().toISOString().slice(0, 10));
+          // Cover und endgültiger Artikel (Weiterleitungen): gleicher Artikel = dasselbe Spiel, das bekanntere bleibt
+          const found = await Wiki.byTitles(games.map(g => g.wiki));
+          const seen = new Set();
+          games = games.map(g => ({ ...g, wiki: found.get(g.wiki)?.wiki || g.wiki, img: found.get(g.wiki)?.img || '' }))
+            .sort((a, b) => b.links - a.links).filter(g => !seen.has(g.wiki) && seen.add(g.wiki))
+            .sort((a, b) => a.year - b.year || a.title.localeCompare(b.title, 'de'));
+        } catch (e) {
+          console.warn(e);
+          if (my === seq) offline();
+          return;
+        }
+        if (my !== seq) return;
+        const index = itemIndex(App.state);
+        for (const g of games) {
+          const cat = catalogEntry(g);
+          if (cat) Object.assign(g, { title: cat.name, genres: cat.genres }); // gleicher Name wie in den Paketen
+          g.inRoom = !!index.duplicateOf(g);
+          if (g.inRoom) g.pick = false;
+        }
+        drawList(s, seriesFranchise(s.name, games, franchiseNames()), games);
+      };
+
+      const drawList = (s, franchise, games) => {
+        const addBtn = h('button.btn.primary', { type: 'button' });
+        const setCount = () => {
+          const n = games.filter(g => g.pick).length;
+          addBtn.disabled = !n;
+          addBtn.replaceChildren(icon('plus'), n ? `${n} ${n === 1 ? 'Spiel' : 'Spiele'} hinzufügen` : 'Nichts ausgewählt');
+        };
+        const rows = games.map(g => h('label.result.pick-row' + (g.inRoom ? '.in-room' : ''),
+          makeTile({ id: 'series', title: g.title, img: g.img, year: g.year }, {}),
+          h('div.result-meta', h('strong', g.title), h('span', [g.year, g.inRoom ? 'schon im Raum' : g.hint].filter(Boolean).join(' · '))),
+          h('input', { type: 'checkbox', checked: g.pick || g.inRoom, disabled: g.inRoom, 'aria-label': g.title, onchange: e => { g.pick = e.target.checked; setCount(); } })));
+        const setAll = v => {
+          games.forEach((g, i) => { if (!g.inRoom) { g.pick = v; rows[i].querySelector('input').checked = v; } });
+          setCount();
+        };
+        addBtn.onclick = () => {
+          const picked = games.filter(g => g.pick);
+          const items = picked.map(g => ({ title: g.title, year: g.year, franchise, wiki: g.wiki, img: g.img, genres: g.genres }));
+          const before = App.state.order.length;
+          for (let i = 0; i < items.length; i += 200) App.dispatch({ type: 'items/add', items: items.slice(i, i + 200) });
+          const n = App.state.order.length - before;
+          toast(n ? `${n} Spiele aus „${franchise}“ hinzugefügt` : 'Die Spiele waren schon im Raum.');
+          for (const g of picked) { g.inRoom = true; g.pick = false; }
+          refreshTabs();
+          drawList(s, franchise, games);
+        };
+        setCount();
+        if (!games.length) {
+          box.replaceChildren(h('p.help', 'Zu dieser Reihe gibt es auf Wikidata keine erschienenen Spiele mit Wikipedia-Artikel.'));
+          return;
+        }
+        box.replaceChildren(
+          h('div.series-head',
+            h('button.icon-btn.sm', { type: 'button', title: 'Andere Reihe', 'aria-label': 'Andere Reihe', onclick: () => search() }, icon('left')),
+            h('div.result-meta', h('strong', s.name), h('span', `${games.length} Spiele · Franchise „${franchise}“`)),
+            h('button.btn.sm', { type: 'button', onclick: () => setAll(true) }, 'Alle'),
+            h('button.btn.sm', { type: 'button', onclick: () => setAll(false) }, 'Keine')),
+          h('p.help', 'Ableger, Neuauflagen, Sammlungen und Zusatzinhalte sind nicht vorausgewählt.'),
+          ...rows,
+          h('div.series-foot', addBtn));
+      };
+
+      input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(search, 400); });
+      input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(timer); search(); } });
+      suggest();
+      return [
+        h('div.search-big', icon('search'), input),
+        box,
+        h('p.credit', 'Spiele und Reihen kommen von Wikidata, Cover von Wikipedia.'),
       ];
     },
 

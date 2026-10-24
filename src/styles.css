@@ -530,6 +530,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
 @keyframes fade { from { opacity: 0; } }
 .modal {
   width: min(var(--modal-w, 560px), 100%); max-height: min(86dvh, 820px);
+  min-width: 0; /* sonst macht eine lange Reiterleiste das Fenster breiter als den Bildschirm */
   display: flex; flex-direction: column;
   background: var(--bg-elev); border: 1px solid var(--border); border-radius: 18px;
   box-shadow: var(--shadow);
@@ -657,6 +658,21 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
 .linkish { background: none; border: 0; padding: 0; color: var(--accent); font-weight: 600; }
 .linkish:hover { text-decoration: underline; }
 .credit { font-size: 11.5px; color: var(--muted); margin: 0; }
+
+/* Reihe laden: Suchtreffer und Checkliste */
+.series-ico {
+  width: 48px; height: 64px; border-radius: 6px; display: grid; place-items: center;
+  background: var(--accent-soft); color: var(--accent);
+}
+.series-head { display: flex; align-items: center; gap: 8px; padding: 2px 0 6px; }
+.series-head .result-meta { flex: 1; }
+.pick-row { cursor: pointer; }
+.pick-row input[type="checkbox"] { width: 18px; height: 18px; margin: 0 6px; accent-color: var(--accent); cursor: pointer; }
+.pick-row.in-room { cursor: default; opacity: .55; }
+.series-foot {
+  position: sticky; bottom: -16px; z-index: 1; display: flex; justify-content: flex-end;
+  margin: 6px -20px -16px; padding: 10px 20px 16px; background: var(--bg-elev); border-top: 1px solid var(--border);
+}
 .manual { border-top: 1px solid var(--border); padding-top: 14px; display: flex; flex-direction: column; gap: 12px; }
 
 .tile-add {

@@ -121,19 +121,22 @@ const Wiki = {
 
   /* Spielreihe(n), frühestes Erscheinungsjahr und Genres (englische Namen) über Wikidata
      → Map(qid → {series: [], year, genres: []}). UNION statt OPTIONAL: sonst vervielfachen sich die Zeilen. */
+  async sparql(query) {
+    const res = await fetch(WIKIDATA_SPARQL + '?format=json&query=' + encodeURIComponent(query));
+    if (!res.ok) throw new Error('Wikidata antwortet nicht (' + res.status + ')');
+    return (await res.json()).results?.bindings || [];
+  },
+
   async details(qids) {
     const ids = [...new Set(qids.filter(q => /^Q\d+$/.test(q)))];
     const out = new Map(ids.map(q => [q, { series: [], year: null, genres: [] }]));
     for (let i = 0; i < ids.length; i += 50) {
-      const query = `SELECT ?item ?seriesLabel ?date ?genreLabel WHERE {
+      const rows = await this.sparql(`SELECT ?item ?seriesLabel ?date ?genreLabel WHERE {
         VALUES ?item { ${ids.slice(i, i + 50).map(q => 'wd:' + q).join(' ')} }
         { ?item wdt:P179 ?series. } UNION { ?item wdt:P577 ?date. } UNION { ?item wdt:P136 ?genre. }
         SERVICE wikibase:label { bd:serviceParam wikibase:language "en,mul,de". }
-      }`;
-      const res = await fetch(WIKIDATA_SPARQL + '?format=json&query=' + encodeURIComponent(query));
-      if (!res.ok) throw new Error('Wikidata antwortet nicht (' + res.status + ')');
-      const json = await res.json();
-      for (const b of json.results?.bindings || []) {
+      }`);
+      for (const b of rows) {
         const d = out.get(b.item.value.split('/').pop());
         if (!d) continue;
         const label = b.seriesLabel?.value;
@@ -146,7 +149,76 @@ const Wiki = {
     }
     return out;
   },
+
+  /* Spielereihen suchen (Wikidata-Suche, findet auch deutsche Namen wie „Die Sims“)
+     → [{qid, name, count}], gezählt werden nur echte Videospiele der Reihe */
+  async seriesSearch(q) {
+    q = str(q, 60).replace(/["\\]/g, '');
+    if (q.length < 2) return [];
+    const rows = await this.sparql(`SELECT ?series ?seriesLabel (COUNT(DISTINCT ?game) AS ?n) WHERE {
+      SERVICE wikibase:mwapi {
+        bd:serviceParam wikibase:endpoint "www.wikidata.org"; wikibase:api "EntitySearch"; mwapi:search "${q}"; mwapi:language "de".
+        ?series wikibase:apiOutputItem mwapi:item.
+      }
+      ?game wdt:P179 ?series; wdt:P31 wd:Q7889.
+      SERVICE wikibase:label { bd:serviceParam wikibase:language "en,mul,de". }
+    } GROUP BY ?series ?seriesLabel ORDER BY DESC(?n) LIMIT 8`);
+    return rows.map(r => ({ qid: r.series.value.split('/').pop(), name: r.seriesLabel.value, count: +r.n.value }))
+      .filter(s => !/^Q\d+$/.test(s.name));
+  },
+
+  /* Alle Spiele einer Reihe mit englischem Wikipedia-Artikel (Jahr, Typen, Genres, Bekanntheit) */
+  async seriesGames(qid) {
+    if (!/^Q\d+$/.test(qid)) return [];
+    const rows = await this.sparql(`SELECT ?game ?article ?links (MIN(?date) AS ?first)
+      (GROUP_CONCAT(DISTINCT ?typeLabel; separator="|") AS ?types) (GROUP_CONCAT(DISTINCT ?genreLabel; separator="|") AS ?genres) WHERE {
+      ?game wdt:P179 wd:${qid}; wdt:P31 wd:Q7889; wikibase:sitelinks ?links.
+      ?article schema:about ?game; schema:isPartOf <https://en.wikipedia.org/>.
+      OPTIONAL { ?game wdt:P577 ?date. }
+      OPTIONAL { ?game wdt:P31 ?type. ?type rdfs:label ?typeLabel. FILTER(LANG(?typeLabel) = "en") }
+      OPTIONAL { ?game wdt:P136 ?genre. ?genre rdfs:label ?genreLabel. FILTER(LANG(?genreLabel) = "en") }
+    } GROUP BY ?game ?article ?links`);
+    return rows.map(r => {
+      const wiki = decodeURIComponent(r.article.value.split('/wiki/')[1]).replace(/_/g, ' ');
+      const split = v => (v ? v.split('|').filter(Boolean) : []);
+      const date = (r.first?.value || '').slice(0, 10); // frühestes Erscheinungsdatum, JJJJ-MM-TT
+      return { qid: r.game.value.split('/').pop(), wiki, title: stripDisambig(wiki), date, year: parseYear(date), links: +r.links.value, types: split(r.types?.value), genres: genreKeys(split(r.genres?.value)) };
+    });
+  },
 };
+
+/* Spiele einer Reihe zur Auswahl aufbereiten: Unveröffentlichtes & Co. fliegt raus, Zusatzinhalte,
+   Sammlungen, Neuauflagen und kaum bekannte Ableger stehen da, sind aber nicht vorausgewählt.
+   today: Datum als JJJJ-MM-TT – was danach erscheint, ist noch nicht draußen. */
+function seriesChoices(games, today) {
+  const list = games.filter(g => g.year && g.date <= today && !g.types.some(t => /cancel|unreleased|escape room|character|product model/i.test(t)));
+  // „Wenig bekannt“ im Vergleich zur Reihe: unter einem Viertel der Sprachversionen des bekanntesten Teils
+  const minLinks = Math.max(6, Math.max(0, ...list.map(g => g.links)) / 4);
+  return list
+    .map(g => {
+      const hint = g.types.some(t => /downloadable|expansion|add-on/i.test(t)) ? 'Zusatzinhalt'
+        : g.types.some(t => /compilation|bundle|paired versions|multiple topics|conflation/i.test(t)) || /\bgames\b/i.test(g.title) ? 'Sammlung'
+          : g.types.some(t => /remake|remaster/i.test(t)) || /\s(HD|3D|DX)$|Remaster(ed)?\b|Definitive Edition|Anniversary Edition|Deluxe$|Collection$|Trilogy$/.test(g.title) ? 'Neuauflage'
+            : g.links < minLinks ? 'wenig bekannt' : '';
+      return { ...g, hint, pick: !hint };
+    })
+    .sort((a, b) => a.year - b.year || a.title.localeCompare(b.title, 'de'));
+}
+
+/* Franchise-Name für die geladene Reihe: wie im Katalog (wenn die meisten bekannten Spiele dort
+   dieselbe Reihe haben, z. B. „Sonic“ statt „Sonic the Hedgehog“), sonst wie im Raum, sonst der Reihenname */
+function seriesFranchise(label, games, existing) {
+  const count = new Map();
+  let known = 0;
+  for (const g of games) {
+    const s = catalogEntry(g)?.series;
+    if (!s) continue;
+    known++;
+    count.set(s, (count.get(s) || 0) + 1);
+  }
+  const best = [...count].sort((a, b) => b[1] - a[1])[0];
+  return best && best[1] * 2 > known ? best[0] : pickSeries([label], '', existing);
+}
 
 /* ───────── Genres ─────────
    Tierly nutzt dieselben Genre-Kürzel wie Gamedle und der Spielekatalog (Namen in GD_GENRES). */

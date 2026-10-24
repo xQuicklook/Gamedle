@@ -3,7 +3,7 @@
 Zwei Module in einer Seite, ohne Server und ohne Konto:
 
 - **Gamedle** – das tägliche Spiele-Rätsel (wie Loldle/Wordle) mit fünf Tagesmodi: Klassik (Eigenschaften vergleichen), Zitat, Emoji, Cover (verpixelt) und Szene (Bildausschnitt, der herauszoomt) – dazu Endlos zum Üben. Unter jedem Rätsel steht die Lösung von gestern.
-- **Tierly** – Tier-Listen für Spiele und Franchises, gemeinsam mit Freunden direkt von Browser zu Browser (WebRTC). Mehrere Spiele lassen sich auf einmal einsortieren (Strg-/Umschalt-Klick oder „Mehrere“), die Spieleliste lässt sich nach Jahrzehnt und Genre filtern. Stufen mit „Nicht werten“ (z. B. „Nicht gespielt“) zählen nicht fürs Gruppenergebnis und die Statistik.
+- **Tierly** – Tier-Listen für Spiele und Franchises, gemeinsam mit Freunden direkt von Browser zu Browser (WebRTC). Mehrere Spiele lassen sich auf einmal einsortieren (Strg-/Umschalt-Klick oder „Mehrere“), die Spieleliste lässt sich nach Jahrzehnt und Genre filtern. Unter „Reihe“ lädt man eine ganze Spielereihe von Wikidata (Ableger und Neuauflagen sind abwählbar). Stufen mit „Nicht werten“ (z. B. „Nicht gespielt“) zählen nicht fürs Gruppenergebnis und die Statistik.
 
 **Live:** https://xquicklook.github.io/Gamedle/
 

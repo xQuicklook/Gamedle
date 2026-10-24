@@ -13,7 +13,7 @@ const ctx = vm.createContext({ crypto: globalThis.crypto, TextEncoder, console, 
 const T = vm.runInContext(`${['gamedle-data.js', 'catalog.js', 'presets.js', 'core.js', 'wiki.js'].map(src).join('\n')}\n;({
   initialState, applyAction, visibleState, isBlind, placedCount, groupView, keyHash, itemIndex, adoptRanking, PROTOCOL,
   normalizeAction, opFor, statsFor, franchiseSuggestion, imgAllowed, FULL_SYNC_ACTIONS, placeMany,
-  ratedTiers, boardItems, genreKeys, knownGenres, catalogEntry, presetPacks, norm,
+  ratedTiers, boardItems, genreKeys, knownGenres, catalogEntry, presetPacks, norm, seriesChoices, seriesFranchise,
   CATALOG, CATALOG_EXTRA, CATALOG_SHORT, GD_GAMES, GD_GENRES, GD_PLATFORMS, GD_MODES, PACK_MIN, SMALL_PACK_MIN,
 })`, ctx);
 const clone = o => JSON.parse(JSON.stringify(o));
@@ -392,6 +392,47 @@ test('Pakete: nur ausreichend große, eindeutige IDs, Reihen ab 5 Spielen', () =
   // Jedes Jahrzehnt-Paket deckt genau seine Jahre ab
   const decades = packs.filter(p => /^\d0$/.test(p.id));
   assert.equal(decades.reduce((n, p) => n + p.games.length, 0), T.CATALOG.length);
+});
+
+/* ───────── Reihe laden ───────── */
+
+test('Reihe laden: Ausschuss fliegt raus, Ableger & Neuauflagen sind nicht vorausgewählt', () => {
+  const g = (title, year, links, ...types) => ({ title, year, date: year ? `${year}-03-03` : '', links, types: types.length ? types : ['video game'], wiki: title, genres: [] });
+  const list = T.seriesChoices([
+    g('The Legend of Zelda: Breath of the Wild', 2017, 52),
+    g('The Legend of Zelda', 1986, 46),
+    g('Heroes of Hyrule', null, 1, 'cancelled video game'),
+    g('Zelda Tomorrow', 2031, 20),
+    { ...g('Zelda Later This Year', 2026, 20), date: '2026-11-19' },
+    g('Real Escape Game', 2017, 1, 'escape room'),
+    g('The Legend of Zelda: Ocarina of Time 3D', 2011, 15),
+    g('The Legend of Zelda: Twilight Princess HD', 2016, 9),
+    g('Super Mario 3D World', 2013, 36),
+    g('Need for Speed: Most Wanted - Terminal Velocity', 2013, 8, 'downloadable content'),
+    g('The Legend of Zelda: Collector\'s Edition', 2003, 11, 'video game compilation'),
+    g('BS The Legend of Zelda', 1995, 3),
+  ], '2026-10-24');
+  same(list.map(x => x.title), [
+    'The Legend of Zelda', 'BS The Legend of Zelda', 'The Legend of Zelda: Collector\'s Edition', 'The Legend of Zelda: Ocarina of Time 3D',
+    'Need for Speed: Most Wanted - Terminal Velocity', 'Super Mario 3D World', 'The Legend of Zelda: Twilight Princess HD', 'The Legend of Zelda: Breath of the Wild',
+  ], 'nach Jahr, ohne Abgesagtes, Zukünftiges und Escape-Rooms');
+  const hint = t => list.find(x => x.title === t);
+  assert.equal(hint('The Legend of Zelda: Ocarina of Time 3D').hint, 'Neuauflage');
+  assert.equal(hint('The Legend of Zelda: Twilight Princess HD').hint, 'Neuauflage');
+  assert.equal(hint('Super Mario 3D World').pick, true, '„3D“ mitten im Titel ist keine Neuauflage');
+  assert.equal(hint('Need for Speed: Most Wanted - Terminal Velocity').hint, 'Zusatzinhalt');
+  assert.equal(hint("The Legend of Zelda: Collector's Edition").hint, 'Sammlung');
+  assert.equal(hint('BS The Legend of Zelda').hint, 'wenig bekannt');
+  assert.equal(hint('The Legend of Zelda').pick, true);
+  const multi = T.seriesChoices([g('Link and Zelda', 1995, 20, 'video game', 'Wikimedia article covering multiple topics'), g('Satellaview games from The Legend of Zelda series', 1995, 20)], '2026-10-24');
+  assert.ok(multi.every(x => x.hint === 'Sammlung'), 'Sammelartikel');
+});
+
+test('Reihe laden: Franchise-Name wie im Katalog, sonst wie im Raum, sonst der Reihenname', () => {
+  const sonic = [{ wiki: 'Sonic the Hedgehog (1991 video game)', title: 'Sonic the Hedgehog', year: 1991 }, { wiki: 'Sonic Mania', title: 'Sonic Mania', year: 2017 }];
+  assert.equal(T.seriesFranchise('Sonic the Hedgehog', sonic, []), 'Sonic', 'Katalog nennt die Reihe „Sonic“');
+  assert.equal(T.seriesFranchise('Anno', [{ wiki: 'Anno 1602', title: 'Anno 1602', year: 1998 }], []), 'Anno');
+  assert.equal(T.seriesFranchise('The Sims video game series', [], ['The Sims']), 'The Sims', 'Name aus dem Raum, Zusatz entfernt');
 });
 
 test('Bildquellen: Wikipedia und Uploads erlaubt, fremde Links nur nach Freigabe', () => {
