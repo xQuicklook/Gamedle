@@ -10,7 +10,7 @@ $jsFiles = @(
   'presets.js', 'core.js', 'wiki.js', 'net.js', 'migration.js', 'diag.js', 'app.js', 'undo.js', 'dnd.js', 'layout.js',
   'rooms.js', 'reveal.js', 'stats.js', 'onboarding.js', 'modals.js', 'editors.js', 'export.js',
   # Gamedle + Übersicht (startet die Navigation, muss zuletzt kommen)
-  'gamedle-data.js', 'gamedle-core.js', 'gamedle.js', 'hub.js'
+  'gamedle-data.js', 'gamedle-core.js', 'gamedle-schedule.js', 'gamedle.js', 'hub.js'
 )
 $cssFiles = 'styles.css', 'gamedle.css'
 $js = "'use strict';`n" + (($jsFiles | ForEach-Object { [IO.File]::ReadAllText((Join-Path $src $_), $utf8) }) -join "`n")
@@ -28,4 +28,5 @@ $site = Join-Path $root 'docs'
 New-Item -ItemType Directory -Force $site | Out-Null
 [IO.File]::WriteAllText((Join-Path $site 'index.html'), $out, $utf8)
 [IO.File]::WriteAllText((Join-Path $site '.nojekyll'), '', $utf8) # Datei unverändert ausliefern
+Copy-Item (Join-Path (Join-Path $root 'assets') 'og.png') (Join-Path $site 'og.png') -Force # Link-Vorschaubild
 Write-Output ("gamedle.html gebaut ({0:N0} KB) – auch als docs/index.html" -f ((Get-Item (Join-Path $root 'gamedle.html')).Length / 1KB))

@@ -16,6 +16,24 @@ const GD_MODES = { e: 'Einzelspieler', m: 'Mehrspieler', k: 'Koop' };
 // Ohne brauchbares Cover in der Wikipedia → nicht im Cover-Modus
 const GD_NO_COVER = new Set(['Minecraft', 'Undertale', 'Fortnite']);
 
+/* Dasselbe Unternehmen unter verschiedenen (historischen) Namen → zählt als richtig */
+const GD_COMPANY = {
+  'Sony Computer Entertainment': 'Sony', 'Sony Interactive Entertainment': 'Sony',
+  'Microsoft': 'Microsoft', 'Microsoft Game Studios': 'Microsoft', 'Microsoft Studios': 'Microsoft',
+  'Namco': 'Bandai Namco', 'Namco Bandai Games': 'Bandai Namco', 'Bandai Namco Entertainment': 'Bandai Namco', 'Bandai Namco Studios': 'Bandai Namco',
+  'Square': 'Square Enix', 'Square Enix': 'Square Enix',
+  'Lucasfilm Games': 'LucasArts', 'LucasArts': 'LucasArts',
+  'Warner Bros. Interactive Entertainment': 'Warner Bros.', 'Warner Bros. Games': 'Warner Bros.',
+  'Electronic Arts': 'Electronic Arts', 'EA Sports': 'Electronic Arts',
+  'DMA Design': 'Rockstar North', '2K Boston': 'Irrational Games',
+};
+/* Studios derselben Familie → zählt als teilweise richtig */
+const GD_FAMILY = {
+  'Rockstar North': 'Rockstar', 'DMA Design': 'Rockstar', 'Rockstar San Diego': 'Rockstar', 'Rockstar Studios': 'Rockstar',
+  'Blizzard Entertainment': 'Blizzard', 'Blizzard North': 'Blizzard',
+  'EA Black Box': 'EA', 'EA Vancouver': 'EA',
+};
+
 const GD_GAMES = [
   // 1980er
   ['Pac-Man', 1980, 'arc', 'arc', 'Namco', 'Namco', 'Pac-Man', 'top', 'e', 'Japan'],
@@ -72,7 +90,7 @@ const GD_GAMES = [
   // 2000er
   ['Counter-Strike', 2000, 'fps', 'pc', 'Valve', 'Valve', 'Counter-Strike', 'ego', 'm', 'USA', 'Counter-Strike (video game)', 'CS 1.6'],
   ['Deus Ex', 2000, 'fps,rpg,stl', 'pc', 'Ion Storm', 'Eidos Interactive', 'Deus Ex', 'ego', 'e', 'USA', 'Deus Ex (video game)'],
-  ['The Sims', 2000, 'sim', 'pc', 'Maxis', 'Electronic Arts', 'Die Sims', 'top', 'e', 'USA', 'The Sims (video game)', 'Die Sims'],
+  ['The Sims', 2000, 'sim', 'pc', 'Maxis', 'Electronic Arts', 'The Sims', 'top', 'e', 'USA', 'The Sims (video game)', 'Die Sims'],
   ['Diablo II', 2000, 'arpg,hns', 'pc', 'Blizzard North', 'Blizzard Entertainment', 'Diablo', 'top', 'e,m,k', 'USA', '', 'Diablo 2'],
   ["The Legend of Zelda: Majora's Mask", 2000, 'aa', 'nin', 'Nintendo', 'Nintendo', 'The Legend of Zelda', 'third', 'e', 'Japan', '', "Zelda: Majora's Mask"],
   ['Halo: Combat Evolved', 2001, 'fps', 'xb', 'Bungie', 'Microsoft Game Studios', 'Halo', 'ego', 'e,m,k', 'USA', '', 'Halo 1|Halo CE'],

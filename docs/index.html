@@ -5,6 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Gamedle – Spiele-Rätsel & Tier-Listen</title>
 <meta name="description" content="Errate täglich ein Videospiel und ranke Spiele gemeinsam mit Freunden – direkt im Browser.">
+<meta name="theme-color" content="#0d0e12">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='2' y='2' width='13' height='13' rx='3' fill='%232fbf71'/%3E%3Crect x='17' y='2' width='13' height='13' rx='3' fill='%23e7a93b'/%3E%3Crect x='2' y='17' width='13' height='13' rx='3' fill='%23e5484d'/%3E%3Crect x='17' y='17' width='13' height='13' rx='3' fill='%232fbf71'/%3E%3C/svg%3E">
+<!-- Link-Vorschau (WhatsApp, Discord, Telegram …) -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Gamedle">
+<meta property="og:title" content="Gamedle – Errate das Spiel des Tages">
+<meta property="og:description" content="Jeden Tag ein neues Videospiel-Rätsel – an Genre, Entwickler, Jahr oder am verpixelten Cover. Plus Tier-Listen mit Freunden.">
+<meta property="og:url" content="https://xquicklook.github.io/Gamedle/">
+<meta property="og:image" content="https://xquicklook.github.io/Gamedle/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="de_DE">
+<meta name="twitter:card" content="summary_large_image">
 <style>
 /* ───────── Tokens ───────── */
 :root {
@@ -921,7 +934,10 @@ button.gd-hint:hover { border-color: var(--accent); }
 .gd-cell.partial { background: #e7a93b; }
 .gd-cell.no, .gd-cell.up, .gd-cell.down { background: #e5484d; }
 .gd-cell.up.near, .gd-cell.down.near { background: #e7a93b; }
-.gd-arrow { position: absolute; inset: 0; display: grid; place-items: center; font-style: normal; font-size: 40px; opacity: .22; pointer-events: none; }
+/* Symbole zusätzlich zur Farbe – oben rechts in der Zelle */
+.gd-mark { position: absolute; top: 3px; right: 5px; font-style: normal; font-size: 10px; font-weight: 800; opacity: .85; pointer-events: none; }
+.gd-year { display: inline-flex; align-items: center; gap: 4px; }
+.gd-arrow { font-size: 15px; line-height: 1; }
 .gd-name {
   background: var(--bg-elev); border: 1px solid var(--border); color: var(--text);
   display: flex; align-items: center; gap: 10px; justify-content: flex-start; text-align: left;
@@ -932,8 +948,18 @@ button.gd-hint:hover { border-color: var(--accent); }
 .gd-row.anim .gd-cell:not(.gd-name) { animation: gdFlip .5s ease-out both; animation-delay: calc(var(--i) * .12s); }
 @keyframes gdFlip { from { transform: perspective(400px) rotateX(-90deg); opacity: 0; } to { transform: none; opacity: 1; } }
 .gd-legend { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; font-size: 12.5px; margin: 0; }
-.sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-left: 8px; }
+.sw {
+  display: inline-grid; place-items: center; width: 15px; height: 15px; border-radius: 4px; margin-left: 8px;
+  font-style: normal; font-size: 10px; font-weight: 800; color: #fff;
+}
 .sw.ok { background: #2fbf71; } .sw.partial { background: #e7a93b; } .sw.no { background: #e5484d; }
+
+/* Farbenblind-Modus: Blau / Orange / Grau */
+.gd-cb .gd-cell.ok, .gd-cb .sw.ok { background: #2563eb; }
+.gd-cb .gd-cell.partial, .gd-cb .gd-cell.up.near, .gd-cb .gd-cell.down.near, .gd-cb .sw.partial { background: #f59e0b; }
+.gd-cb .gd-cell.no, .gd-cb .gd-cell.up, .gd-cb .gd-cell.down, .gd-cb .sw.no { background: #6b7280; }
+.gd-cb .gd-result { border-color: #2563eb; box-shadow: 0 0 0 4px rgba(37,99,235,.15), var(--shadow-sm); }
+.gd-cb .gd-result-kicker { color: #3b82f6; }
 .gd-empty { text-align: center; margin: 10px 0; }
 .gd-yesterday { text-align: center; font-size: 13.5px; margin: 0; }
 
@@ -981,7 +1007,10 @@ button.gd-hint:hover { border-color: var(--accent); }
 .gd-dist-row { display: grid; grid-template-columns: 28px 1fr; gap: 6px; align-items: center; font-size: 12px; }
 .gd-bar { background: var(--accent); color: #fff; border-radius: 4px; padding: 1px 6px; text-align: right; font-weight: 700; min-width: 22px; }
 .gd-help-row { display: flex; align-items: center; gap: 10px; font-size: 14px; }
-.gd-help-row .gd-cell { width: 28px; min-height: 28px; flex: none; }
+.gd-help-row .gd-cell { width: 28px; min-height: 28px; flex: none; font-size: 13px; }
+.gd-sug-empty { padding: 10px 12px; font-size: 13.5px; color: var(--muted); }
+.gd-report { font-size: 12.5px; color: var(--muted); text-decoration: underline; text-underline-offset: 2px; align-self: flex-start; }
+.gd-report:hover { color: var(--accent); }
 
 @media (max-width: 820px) {
   .gd-top { padding: 8px 12px; flex-wrap: wrap; }
@@ -994,6 +1023,7 @@ button.gd-hint:hover { border-color: var(--accent); }
   .gd-name img { display: none; }
   .gd-result { flex-direction: column; text-align: center; }
   .gd-result-actions { justify-content: center; }
+  .gd-report { align-self: center; }
   .gd-stats { grid-template-columns: 1fr; }
 }
 
@@ -5328,6 +5358,24 @@ const GD_MODES = { e: 'Einzelspieler', m: 'Mehrspieler', k: 'Koop' };
 // Ohne brauchbares Cover in der Wikipedia → nicht im Cover-Modus
 const GD_NO_COVER = new Set(['Minecraft', 'Undertale', 'Fortnite']);
 
+/* Dasselbe Unternehmen unter verschiedenen (historischen) Namen → zählt als richtig */
+const GD_COMPANY = {
+  'Sony Computer Entertainment': 'Sony', 'Sony Interactive Entertainment': 'Sony',
+  'Microsoft': 'Microsoft', 'Microsoft Game Studios': 'Microsoft', 'Microsoft Studios': 'Microsoft',
+  'Namco': 'Bandai Namco', 'Namco Bandai Games': 'Bandai Namco', 'Bandai Namco Entertainment': 'Bandai Namco', 'Bandai Namco Studios': 'Bandai Namco',
+  'Square': 'Square Enix', 'Square Enix': 'Square Enix',
+  'Lucasfilm Games': 'LucasArts', 'LucasArts': 'LucasArts',
+  'Warner Bros. Interactive Entertainment': 'Warner Bros.', 'Warner Bros. Games': 'Warner Bros.',
+  'Electronic Arts': 'Electronic Arts', 'EA Sports': 'Electronic Arts',
+  'DMA Design': 'Rockstar North', '2K Boston': 'Irrational Games',
+};
+/* Studios derselben Familie → zählt als teilweise richtig */
+const GD_FAMILY = {
+  'Rockstar North': 'Rockstar', 'DMA Design': 'Rockstar', 'Rockstar San Diego': 'Rockstar', 'Rockstar Studios': 'Rockstar',
+  'Blizzard Entertainment': 'Blizzard', 'Blizzard North': 'Blizzard',
+  'EA Black Box': 'EA', 'EA Vancouver': 'EA',
+};
+
 const GD_GAMES = [
   // 1980er
   ['Pac-Man', 1980, 'arc', 'arc', 'Namco', 'Namco', 'Pac-Man', 'top', 'e', 'Japan'],
@@ -5384,7 +5432,7 @@ const GD_GAMES = [
   // 2000er
   ['Counter-Strike', 2000, 'fps', 'pc', 'Valve', 'Valve', 'Counter-Strike', 'ego', 'm', 'USA', 'Counter-Strike (video game)', 'CS 1.6'],
   ['Deus Ex', 2000, 'fps,rpg,stl', 'pc', 'Ion Storm', 'Eidos Interactive', 'Deus Ex', 'ego', 'e', 'USA', 'Deus Ex (video game)'],
-  ['The Sims', 2000, 'sim', 'pc', 'Maxis', 'Electronic Arts', 'Die Sims', 'top', 'e', 'USA', 'The Sims (video game)', 'Die Sims'],
+  ['The Sims', 2000, 'sim', 'pc', 'Maxis', 'Electronic Arts', 'The Sims', 'top', 'e', 'USA', 'The Sims (video game)', 'Die Sims'],
   ['Diablo II', 2000, 'arpg,hns', 'pc', 'Blizzard North', 'Blizzard Entertainment', 'Diablo', 'top', 'e,m,k', 'USA', '', 'Diablo 2'],
   ["The Legend of Zelda: Majora's Mask", 2000, 'aa', 'nin', 'Nintendo', 'Nintendo', 'The Legend of Zelda', 'third', 'e', 'Japan', '', "Zelda: Majora's Mask"],
   ['Halo: Combat Evolved', 2001, 'fps', 'xb', 'Bungie', 'Microsoft Game Studios', 'Halo', 'ego', 'e,m,k', 'USA', '', 'Halo 1|Halo CE'],
@@ -5586,16 +5634,10 @@ function gdHash(s) {
 
 const gdPool = mode => (mode === 'cover' ? GD.filter(g => !GD_NO_COVER.has(g.title)) : GD);
 
-/* Feste, gemischte Reihenfolge je Modus – Tag n bekommt den n-ten Eintrag */
-const gdOrders = new Map();
+/* Fester Spielplan (src/gamedle-schedule.js): Tag n bekommt den n-ten Eintrag.
+   Neue Spiele werden nur angehängt – so ändern sich laufende Rätsel nie. */
 function gdDaily(mode, date) {
-  if (!gdOrders.has(mode)) {
-    const ids = gdPool(mode).map(g => g.id).sort();
-    const rnd = gdRng(gdHash('gamedle:' + mode));
-    for (let i = ids.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [ids[i], ids[j]] = [ids[j], ids[i]]; }
-    gdOrders.set(mode, ids);
-  }
-  const order = gdOrders.get(mode);
+  const order = GD_SCHEDULE[mode === 'cover' ? 'cover' : 'classic'];
   const n = gdDayNumber(date) - 1;
   return GD_BY_ID.get(order[((n % order.length) + order.length) % order.length]);
 }
@@ -5609,24 +5651,40 @@ const GD_COLUMNS = [
   { key: 'series', label: 'Reihe', fmt: v => v || 'Keine' },
   { key: 'persp', label: 'Perspektive', fmt: v => GD_PERSP[v] },
   { key: 'modes', label: 'Spielmodus', set: true, fmt: v => v.map(x => GD_MODES[x]).join(', ') },
-  { key: 'country', label: 'Land' },
+  { key: 'country', label: 'Land', fmt: v => v.replace('Großbritannien', 'Groß­britannien') }, // weiches Trennzeichen für schmale Zellen
   { key: 'year', label: 'Jahr' },
 ];
+
+/* Firmen: gleicher Konzern unter anderem (älterem) Namen zählt als richtig,
+   Studios derselben Familie (z. B. Rockstar North / San Diego) als teilweise richtig. */
+const gdCompany = name => GD_COMPANY[name] || name;
+const gdFamily = name => GD_FAMILY[name] || null;
 
 function gdCompare(guess, answer) {
   return GD_COLUMNS.map(col => {
     const a = answer[col.key], g = guess[col.key];
-    let state;
+    let state, note = '';
     if (col.key === 'year') {
       state = g === a ? 'ok' : a > g ? 'up' : 'down';
-      return { key: col.key, state, near: state !== 'ok' && Math.abs(a - g) <= 3, text: String(g) };
+      return { key: col.key, label: col.label, state, near: state !== 'ok' && Math.abs(a - g) <= 3, text: String(g) };
     }
     if (col.set) {
       const same = g.length === a.length && g.every(x => a.includes(x));
       state = same ? 'ok' : g.some(x => a.includes(x)) ? 'partial' : 'no';
+    } else if (col.key === 'dev' || col.key === 'pub') {
+      if (g === a) state = 'ok';
+      else if (gdCompany(g) === gdCompany(a)) { state = 'ok'; note = 'Gleiches Unternehmen unter anderem Namen'; }
+      else if (gdFamily(g) && gdFamily(g) === gdFamily(a)) { state = 'partial'; note = `Gleiche Studio-Familie (${gdFamily(g)})`; }
+      else state = 'no';
     } else state = g === a ? 'ok' : 'no';
-    return { key: col.key, state, text: col.fmt ? col.fmt(g) : g };
+    return { key: col.key, label: col.label, state, note, text: col.fmt ? col.fmt(g) : g };
   });
+}
+
+/* Tipp „Anfangsbuchstabe“ – führende Artikel überspringen (The Legend of Zelda → L) */
+function gdHintLetter(title) {
+  const m = title.match(/^(?:the|a|an|die|der|das)\s+(.)/i);
+  return { letter: (m ? m[1] : title[0]).toUpperCase(), skipped: m ? title.split(' ')[0] : '' };
 }
 
 /* ── Suche (Titel & Alternativnamen) ── */
@@ -5652,17 +5710,17 @@ function gdSearch(q, exclude = new Set(), limit = 8) {
 
 /* ── Teilen (Wordle-Stil) ── */
 const GD_EMOJI = { ok: '🟩', partial: '🟨', no: '🟥', up: '⬆️', down: '⬇️' };
-function gdShareText(mode, date, guesses, url) {
+function gdShareText(mode, date, guesses, url, { answer = gdDaily(mode, date), hints = 0 } = {}) {
   const no = gdDayNumber(date);
   const n = guesses.length;
+  const solved = `Gelöst mit ${n} ${n === 1 ? 'Versuch' : 'Versuchen'}${hints ? ` · 💡 ${hints} ${hints === 1 ? 'Tipp' : 'Tipps'}` : ''}`;
   if (mode === 'cover') {
     const marks = guesses.map((id, i) => (i === n - 1 ? '🟩' : '🟥')).join('');
-    return `Gamedle #${no} · Cover 🖼️\nGelöst mit ${n} ${n === 1 ? 'Versuch' : 'Versuchen'}\n${marks}\n${url}`;
+    return `Gamedle #${no} · Cover 🖼️\n${solved}\n${marks}\n${url}`;
   }
-  const answer = gdDaily('classic', date);
   const rows = guesses.slice(-6).map(id => gdCompare(GD_BY_ID.get(id), answer).map(c => GD_EMOJI[c.state]).join(''));
   const more = n > 6 ? `… und ${n - 6} weitere Versuche davor\n` : '';
-  return `Gamedle #${no} · Klassik 🎮\nGelöst mit ${n} ${n === 1 ? 'Versuch' : 'Versuchen'}\n${more}${rows.join('\n')}\n${url}`;
+  return `Gamedle #${no} · Klassik 🎮\n${solved}\n${more}${rows.join('\n')}\n${url}`;
 }
 
 /* ── Statistik ── */
@@ -5686,11 +5744,417 @@ function gdCurrentStreak(stats, mode, today) {
   return s.lastWin === today || s.lastWin === gdShiftDate(today, -1) ? s.streak : 0;
 }
 
+/* ───────── Gamedle: fester Rätsel-Spielplan ─────────
+   Tag n (Gamedle #n) bekommt den n-ten Eintrag; danach beginnt der Plan von vorn.
+   NICHT von Hand umsortieren – neue Spiele hängt tools/gamedle-schedule.js ans Ende. */
+const GD_SCHEDULE = {
+  classic: [
+    'super-mario-galaxy', // 1
+    'fifa-23', // 2
+    'clair-obscur-expedition-33', // 3
+    'assassin-s-creed-ii', // 4
+    'stardew-valley', // 5
+    'grand-theft-auto-iii', // 6
+    'donkey-kong', // 7
+    'kingdom-hearts', // 8
+    'super-metroid', // 9
+    'god-of-war-ragnarok', // 10
+    'age-of-empires-ii', // 11
+    'resident-evil-4', // 12
+    'batman-arkham-asylum', // 13
+    'shadow-of-the-colossus', // 14
+    'fallout-4', // 15
+    'ghost-of-yotei', // 16
+    'need-for-speed-most-wanted', // 17
+    'resident-evil-village', // 18
+    'among-us', // 19
+    'metroid', // 20
+    'pokemon-red-blue', // 21
+    'assassin-s-creed', // 22
+    'grand-theft-auto-v', // 23
+    'far-cry-3', // 24
+    'gran-turismo', // 25
+    'doom', // 26
+    'hades-ii', // 27
+    'the-legend-of-zelda-the-wind-waker', // 28
+    'the-last-of-us-part-ii', // 29
+    'shenmue', // 30
+    'halo-combat-evolved', // 31
+    'halo-2', // 32
+    'super-mario-sunshine', // 33
+    'minecraft', // 34
+    'fallout-3', // 35
+    'star-fox-64', // 36
+    'outer-wilds', // 37
+    'marvel-s-spider-man', // 38
+    'grand-theft-auto-iv', // 39
+    'the-elder-scrolls-v-skyrim', // 40
+    'the-elder-scrolls-iv-oblivion', // 41
+    'monster-hunter-world', // 42
+    'gothic', // 43
+    'dishonored', // 44
+    'max-payne', // 45
+    'undertale', // 46
+    'grand-theft-auto-san-andreas', // 47
+    'diablo', // 48
+    'persona-5', // 49
+    'pro-evolution-soccer-6', // 50
+    'resident-evil', // 51
+    'the-legend-of-zelda', // 52
+    'fortnite', // 53
+    'baldur-s-gate', // 54
+    'star-wars-knights-of-the-old-republic', // 55
+    'super-mario-kart', // 56
+    'black-myth-wukong', // 57
+    'demon-s-souls', // 58
+    'super-mario-bros', // 59
+    'halo-3', // 60
+    'red-dead-redemption', // 61
+    'celeste', // 62
+    'super-mario-odyssey', // 63
+    'sonic-the-hedgehog', // 64
+    'the-last-of-us', // 65
+    'warcraft-iii-reign-of-chaos', // 66
+    'disco-elysium', // 67
+    'crash-team-racing', // 68
+    'fallout-new-vegas', // 69
+    'super-mario-bros-wonder', // 70
+    'hollow-knight-silksong', // 71
+    'chrono-trigger', // 72
+    'pokemon-sword-shield', // 73
+    'batman-arkham-city', // 74
+    'overwatch', // 75
+    'hollow-knight', // 76
+    'luigi-s-mansion', // 77
+    'the-sims', // 78
+    'uncharted-drake-s-fortune', // 79
+    'super-mario-world', // 80
+    'the-witcher-2-assassins-of-kings', // 81
+    'wii-sports', // 82
+    'counter-strike-global-offensive', // 83
+    'elden-ring', // 84
+    'starcraft', // 85
+    'dark-souls', // 86
+    'tomb-raider', // 87
+    'hades', // 88
+    'forza-horizon-4', // 89
+    'kingdom-come-deliverance-ii', // 90
+    'red-dead-redemption-2', // 91
+    'street-fighter-ii', // 92
+    'horizon-forbidden-west', // 93
+    'final-fantasy-vii-rebirth', // 94
+    'the-legend-of-zelda-a-link-to-the-past', // 95
+    'sekiro-shadows-die-twice', // 96
+    'mario-kart-64', // 97
+    'mario-kart-world', // 98
+    'bioshock', // 99
+    'final-fantasy-x', // 100
+    'hogwarts-legacy', // 101
+    'uncharted-2-among-thieves', // 102
+    'metal-gear-solid-v-the-phantom-pain', // 103
+    'mega-man-2', // 104
+    'the-legend-of-zelda-ocarina-of-time', // 105
+    'journey', // 106
+    'final-fantasy-vii', // 107
+    'doom-2016', // 108
+    'assassin-s-creed-iv-black-flag', // 109
+    'tekken-3', // 110
+    'mass-effect-2', // 111
+    'super-mario-64', // 112
+    'bioshock-infinite', // 113
+    'pac-man', // 114
+    'mass-effect', // 115
+    'portal', // 116
+    'metroid-prime', // 117
+    'resident-evil-4-remake', // 118
+    'quake', // 119
+    'silent-hill', // 120
+    'starcraft-ii-wings-of-liberty', // 121
+    'kingdom-come-deliverance', // 122
+    'league-of-legends', // 123
+    'astro-bot', // 124
+    'persona-4', // 125
+    'portal-2', // 126
+    'resident-evil-2-remake', // 127
+    'dark-souls-iii', // 128
+    'death-stranding', // 129
+    'call-of-duty', // 130
+    'cyberpunk-2077', // 131
+    'deus-ex', // 132
+    'baldur-s-gate-3', // 133
+    'tony-hawk-s-pro-skater', // 134
+    'final-fantasy', // 135
+    'the-legend-of-zelda-breath-of-the-wild', // 136
+    'resident-evil-7-biohazard', // 137
+    'diablo-ii', // 138
+    'the-secret-of-monkey-island', // 139
+    'balatro', // 140
+    'cuphead', // 141
+    'metal-gear-solid-3-snake-eater', // 142
+    'bloodborne', // 143
+    'metaphor-refantazio', // 144
+    'rocket-league', // 145
+    'metal-gear-solid', // 146
+    'god-of-war-2018', // 147
+    'the-witcher-3-wild-hunt', // 148
+    'terraria', // 149
+    'age-of-empires', // 150
+    'grand-theft-auto-vice-city', // 151
+    'halo-reach', // 152
+    'death-stranding-2-on-the-beach', // 153
+    'world-of-warcraft', // 154
+    'apex-legends', // 155
+    'metal-gear-solid-2-sons-of-liberty', // 156
+    'spyro-the-dragon', // 157
+    'left-4-dead', // 158
+    'the-legend-of-zelda-majora-s-mask', // 159
+    'horizon-zero-dawn', // 160
+    'half-life-2', // 161
+    'prince-of-persia', // 162
+    'the-legend-of-zelda-tears-of-the-kingdom', // 163
+    'super-smash-bros-ultimate', // 164
+    'mario-kart-wii', // 165
+    'diablo-iii', // 166
+    'pokemon-gold-silver', // 167
+    'half-life', // 168
+    'mario-kart-8', // 169
+    'splatoon', // 170
+    'the-elder-scrolls-iii-morrowind', // 171
+    'crysis', // 172
+    'uncharted-4-a-thief-s-end', // 173
+    'super-smash-bros', // 174
+    'goldeneye-007', // 175
+    'ghost-of-tsushima', // 176
+    'banjo-kazooie', // 177
+    'limbo', // 178
+    'gothic-ii', // 179
+    'super-smash-bros-melee', // 180
+    'it-takes-two', // 181
+    'crash-bandicoot', // 182
+    'silent-hill-2', // 183
+    'gears-of-war', // 184
+    'warcraft-ii-tides-of-darkness', // 185
+    'call-of-duty-4-modern-warfare', // 186
+    'prince-of-persia-the-sands-of-time', // 187
+    'sea-of-thieves', // 188
+    'borderlands-2', // 189
+    'counter-strike', // 190
+    'animal-crossing-new-horizons', // 191
+    'helldivers-2', // 192
+    'donkey-kong-country', // 193
+    'doom-eternal', // 194
+    'half-life-alyx', // 195
+    'super-mario-bros-3', // 196
+    'command-conquer', // 197
+    'mortal-kombat', // 198
+  ],
+  cover: [
+    'dark-souls-iii', // 1
+    'tony-hawk-s-pro-skater', // 2
+    'mass-effect', // 3
+    'apex-legends', // 4
+    'borderlands-2', // 5
+    'quake', // 6
+    'disco-elysium', // 7
+    'metaphor-refantazio', // 8
+    'cyberpunk-2077', // 9
+    'the-elder-scrolls-iv-oblivion', // 10
+    'league-of-legends', // 11
+    'halo-combat-evolved', // 12
+    'mortal-kombat', // 13
+    'super-mario-bros-3', // 14
+    'assassin-s-creed-ii', // 15
+    'limbo', // 16
+    'portal-2', // 17
+    'outer-wilds', // 18
+    'rocket-league', // 19
+    'kingdom-hearts', // 20
+    'forza-horizon-4', // 21
+    'uncharted-drake-s-fortune', // 22
+    'diablo-iii', // 23
+    'mega-man-2', // 24
+    'mass-effect-2', // 25
+    'marvel-s-spider-man', // 26
+    'resident-evil-4', // 27
+    'shadow-of-the-colossus', // 28
+    'dishonored', // 29
+    'bioshock', // 30
+    'final-fantasy-vii-rebirth', // 31
+    'metal-gear-solid', // 32
+    'super-mario-kart', // 33
+    'max-payne', // 34
+    'the-witcher-2-assassins-of-kings', // 35
+    'prince-of-persia', // 36
+    'the-legend-of-zelda-breath-of-the-wild', // 37
+    'stardew-valley', // 38
+    'call-of-duty', // 39
+    'super-smash-bros', // 40
+    'the-last-of-us-part-ii', // 41
+    'grand-theft-auto-iv', // 42
+    'hades-ii', // 43
+    'final-fantasy', // 44
+    'demon-s-souls', // 45
+    'tekken-3', // 46
+    'fifa-23', // 47
+    'batman-arkham-asylum', // 48
+    'super-mario-world', // 49
+    'halo-2', // 50
+    'donkey-kong', // 51
+    'the-secret-of-monkey-island', // 52
+    'banjo-kazooie', // 53
+    'super-mario-sunshine', // 54
+    'super-smash-bros-melee', // 55
+    'chrono-trigger', // 56
+    'fallout-3', // 57
+    'metal-gear-solid-2-sons-of-liberty', // 58
+    'assassin-s-creed-iv-black-flag', // 59
+    'metroid-prime', // 60
+    'balatro', // 61
+    'portal', // 62
+    'age-of-empires-ii', // 63
+    'pokemon-gold-silver', // 64
+    'grand-theft-auto-san-andreas', // 65
+    'metal-gear-solid-v-the-phantom-pain', // 66
+    'spyro-the-dragon', // 67
+    'animal-crossing-new-horizons', // 68
+    'baldur-s-gate', // 69
+    'grand-theft-auto-iii', // 70
+    'luigi-s-mansion', // 71
+    'left-4-dead', // 72
+    'the-legend-of-zelda', // 73
+    'uncharted-4-a-thief-s-end', // 74
+    'super-mario-bros-wonder', // 75
+    'the-legend-of-zelda-tears-of-the-kingdom', // 76
+    'doom', // 77
+    'grand-theft-auto-v', // 78
+    'dark-souls', // 79
+    'super-smash-bros-ultimate', // 80
+    'ghost-of-yotei', // 81
+    'crash-bandicoot', // 82
+    'crash-team-racing', // 83
+    'donkey-kong-country', // 84
+    'hollow-knight-silksong', // 85
+    'super-metroid', // 86
+    'elden-ring', // 87
+    'starcraft-ii-wings-of-liberty', // 88
+    'bloodborne', // 89
+    'gothic', // 90
+    'terraria', // 91
+    'the-sims', // 92
+    'prince-of-persia-the-sands-of-time', // 93
+    'wii-sports', // 94
+    'the-elder-scrolls-iii-morrowind', // 95
+    'diablo', // 96
+    'journey', // 97
+    'starcraft', // 98
+    'resident-evil-4-remake', // 99
+    'hogwarts-legacy', // 100
+    'mario-kart-64', // 101
+    'the-legend-of-zelda-the-wind-waker', // 102
+    'assassin-s-creed', // 103
+    'resident-evil', // 104
+    'resident-evil-7-biohazard', // 105
+    'hades', // 106
+    'persona-5', // 107
+    'diablo-ii', // 108
+    'gears-of-war', // 109
+    'metal-gear-solid-3-snake-eater', // 110
+    'sekiro-shadows-die-twice', // 111
+    'metroid', // 112
+    'world-of-warcraft', // 113
+    'hollow-knight', // 114
+    'death-stranding-2-on-the-beach', // 115
+    'far-cry-3', // 116
+    'mario-kart-world', // 117
+    'final-fantasy-vii', // 118
+    'fallout-4', // 119
+    'astro-bot', // 120
+    'final-fantasy-x', // 121
+    'ghost-of-tsushima', // 122
+    'black-myth-wukong', // 123
+    'star-fox-64', // 124
+    'call-of-duty-4-modern-warfare', // 125
+    'deus-ex', // 126
+    'cuphead', // 127
+    'god-of-war-ragnarok', // 128
+    'tomb-raider', // 129
+    'fallout-new-vegas', // 130
+    'kingdom-come-deliverance', // 131
+    'half-life-2', // 132
+    'halo-reach', // 133
+    'shenmue', // 134
+    'silent-hill', // 135
+    'star-wars-knights-of-the-old-republic', // 136
+    'pokemon-sword-shield', // 137
+    'counter-strike-global-offensive', // 138
+    'helldivers-2', // 139
+    'kingdom-come-deliverance-ii', // 140
+    'bioshock-infinite', // 141
+    'death-stranding', // 142
+    'batman-arkham-city', // 143
+    'celeste', // 144
+    'monster-hunter-world', // 145
+    'god-of-war-2018', // 146
+    'age-of-empires', // 147
+    'persona-4', // 148
+    'horizon-zero-dawn', // 149
+    'half-life', // 150
+    'the-elder-scrolls-v-skyrim', // 151
+    'uncharted-2-among-thieves', // 152
+    'pro-evolution-soccer-6', // 153
+    'counter-strike', // 154
+    'the-legend-of-zelda-ocarina-of-time', // 155
+    'super-mario-bros', // 156
+    'horizon-forbidden-west', // 157
+    'gothic-ii', // 158
+    'mario-kart-8', // 159
+    'grand-theft-auto-vice-city', // 160
+    'warcraft-iii-reign-of-chaos', // 161
+    'sonic-the-hedgehog', // 162
+    'the-legend-of-zelda-a-link-to-the-past', // 163
+    'sea-of-thieves', // 164
+    'red-dead-redemption', // 165
+    'gran-turismo', // 166
+    'super-mario-64', // 167
+    'half-life-alyx', // 168
+    'crysis', // 169
+    'street-fighter-ii', // 170
+    'super-mario-galaxy', // 171
+    'mario-kart-wii', // 172
+    'clair-obscur-expedition-33', // 173
+    'need-for-speed-most-wanted', // 174
+    'among-us', // 175
+    'baldur-s-gate-3', // 176
+    'the-witcher-3-wild-hunt', // 177
+    'command-conquer', // 178
+    'overwatch', // 179
+    'silent-hill-2', // 180
+    'halo-3', // 181
+    'super-mario-odyssey', // 182
+    'pac-man', // 183
+    'red-dead-redemption-2', // 184
+    'warcraft-ii-tides-of-darkness', // 185
+    'resident-evil-village', // 186
+    'the-legend-of-zelda-majora-s-mask', // 187
+    'it-takes-two', // 188
+    'pokemon-red-blue', // 189
+    'the-last-of-us', // 190
+    'doom-2016', // 191
+    'splatoon', // 192
+    'goldeneye-007', // 193
+    'doom-eternal', // 194
+    'resident-evil-2-remake', // 195
+  ],
+};
+
 /* ───────── Gamedle: Oberfläche ─────────
    Modi: Klassik (Eigenschaften vergleichen), Cover (verpixeltes Cover), Endlos (Übung, zählt nicht). */
 const GD_COVER_LEVELS = [7, 11, 16, 24, 36, 56]; // Pixelbreite pro Stufe, danach scharf
 const GD_HINT_LETTER = 4, GD_HINT_COVER = 8;     // Tipps nach so vielen Fehlversuchen
 const GD_URL = () => location.href.split('#')[0];
+const GD_ISSUES = 'https://github.com/xQuicklook/Gamedle/issues/new';
+const GD_STATE_LABEL = { ok: 'richtig', partial: 'teilweise richtig', no: 'falsch', up: 'Lösung ist neuer', down: 'Lösung ist älter' };
+const GD_STATE_ICON = { ok: '✓', partial: '~', no: '✕', up: '▲', down: '▼' };
 
 const Gamedle = {
   mode: 'classic',
@@ -5709,6 +6173,7 @@ const Gamedle = {
     $('#hubInfo').onclick = () => infoModal();
     const cached = Store.get('gd.covers');
     if (cached && Date.now() - cached.at < 7 * 86400000) this.covers = cached.map;
+    document.body.classList.toggle('gd-cb', !!Store.get('gd.colorblind'));
   },
 
   /* Wird vom Router aufgerufen */
@@ -5738,11 +6203,16 @@ const Gamedle = {
       const found = await Wiki.byTitles(GD.map(g => g.wiki));
       for (const [w, info] of found) if (info.img) this.covers[w] = info.img;
       Store.set('gd.covers', { at: Date.now(), map: this.covers });
-      if (!$('#gamedle').hidden) this.render();
-    } catch (e) { console.warn('Cover nicht geladen', e); }
+      this.coverError = false;
+    } catch (e) {
+      console.warn('Cover nicht geladen', e);
+      this.coverError = true; // Cover-Modus und Cover-Tipp zeigen dann einen Hinweis statt „lädt …“
+    }
+    if (!$('#gamedle').hidden) this.render();
   },
 
   cover(g) { return this.covers[g.wiki] || ''; },
+  hasCover(g) { return !GD_NO_COVER.has(g.title) && !this.coverError; },
 
   /* ── Fortschritt ── */
   progress() {
@@ -5755,6 +6225,7 @@ const Gamedle = {
   },
   save(p) {
     if (this.mode === 'endless') { this.endless = p; return; }
+    p.answer = this.answer().id; // die Lösung des Tages mitspeichern (falls sich Daten später ändern)
     const all = Store.get('gd.progress', {});
     // Nur die letzten 30 Tage aufheben
     for (const d of Object.keys(all)) if (gdDays(d, this.date) > 30) delete all[d];
@@ -5766,7 +6237,9 @@ const Gamedle = {
       if (!this.endless) this.newEndless();
       return GD_BY_ID.get(this.endless.answer);
     }
-    return gdDaily(this.mode, this.date);
+    // Wer heute schon angefangen hat, behält seine Lösung – auch wenn sich der Plan ändern sollte
+    const stored = Store.get('gd.progress', {})[this.date]?.[this.mode]?.answer;
+    return (stored && GD_BY_ID.get(stored)) || gdDaily(this.mode, this.date);
   },
   newEndless() {
     const pool = gdPool('classic');
@@ -5830,7 +6303,16 @@ const Gamedle = {
     const list = h('div.gd-suggest', { role: 'listbox', hidden: true });
     let items = [], active = 0;
     const draw = () => {
-      list.hidden = !items.length;
+      // Kein Treffer: erklären statt stumm bleiben
+      const noHit = !items.length && gdNorm(input.value).length >= 2;
+      list.hidden = !items.length && !noHit;
+      if (noHit) {
+        const already = gdSearch(input.value, new Set(), 1)[0];
+        list.replaceChildren(h('div.gd-sug-empty', already && p.guesses.includes(already.id)
+          ? `„${already.title}“ hast du schon geraten.`
+          : `Kein Treffer im Spiele-Pool (${GD.length} bekannte Spiele). Probier den Originaltitel oder eine Abkürzung.`));
+        return;
+      }
       list.replaceChildren(...items.map((g, i) => {
         const src = this.cover(g);
         return h('button.gd-sug' + (i === active ? '.active' : ''), { type: 'button', role: 'option', onmousedown: e => e.preventDefault(), onclick: () => pick(g) },
@@ -5859,13 +6341,21 @@ const Gamedle = {
         ? null
         : h('button.gd-hint', { onclick: () => { p.hints = show; this.save(p); this.render(); } }, '💡 ', label);
     };
+    // Ohne Cover (Minecraft, Undertale, Fortnite – oder Wikipedia nicht erreichbar) gibt es stattdessen das Jahr
+    const coverHint = this.hasCover(ans);
     const shown = [];
-    if (p.hints >= 1) shown.push(h('div.gd-hint-box', 'Anfangsbuchstabe: ', h('strong', ans.title.slice(0, 1))));
+    if (p.hints >= 1) {
+      const { letter, skipped } = gdHintLetter(ans.title);
+      shown.push(h('div.gd-hint-box', 'Anfangsbuchstabe: ', h('strong', letter), skipped ? h('span.muted', ` (ohne „${skipped}“)`) : null));
+    }
     if (p.hints >= 2) {
       const src = this.cover(ans);
-      shown.push(h('div.gd-hint-box', 'Verschwommenes Cover:', src ? h('img.gd-blur', { src, alt: '', referrerpolicy: 'no-referrer' }) : h('span.muted', ' (wird geladen …)')));
+      shown.push(coverHint
+        ? h('div.gd-hint-box', 'Verschwommenes Cover:', src ? h('img.gd-blur', { src, alt: '', referrerpolicy: 'no-referrer' }) : h('span.muted', ' (wird geladen …)'))
+        : h('div.gd-hint-box', 'Erscheinungsjahr: ', h('strong', ans.year)));
     }
-    return h('div.gd-hints', hint(GD_HINT_LETTER, 'Tipp: Anfangsbuchstabe', 1), p.hints >= 1 ? hint(GD_HINT_COVER, 'Tipp: Cover', 2) : null, ...shown);
+    return h('div.gd-hints', hint(GD_HINT_LETTER, 'Tipp: Anfangsbuchstabe', 1),
+      p.hints >= 1 ? hint(GD_HINT_COVER, coverHint ? 'Tipp: Cover' : 'Tipp: Erscheinungsjahr', 2) : null, ...shown);
   },
 
   table(ans, p) {
@@ -5877,11 +6367,20 @@ const Gamedle = {
       const src = this.cover(g);
       return h('div.gd-row' + (anim ? '.anim' : ''),
         h('div.gd-cell.gd-name', src ? h('img', { src, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }) : null, h('span', g.title)),
-        gdCompare(g, ans).map((c, i) => h(`div.gd-cell.${c.state}${c.near ? '.near' : ''}`, { style: { '--i': i } },
-          h('span', c.text), c.state === 'up' ? h('i.gd-arrow', '▲') : c.state === 'down' ? h('i.gd-arrow', '▼') : null)));
+        gdCompare(g, ans).map((c, i) => {
+          const state = c.near ? `${GD_STATE_LABEL[c.state]}, höchstens 3 Jahre daneben` : GD_STATE_LABEL[c.state];
+          return h(`div.gd-cell.${c.state}${c.near ? '.near' : ''}`, {
+            style: { '--i': i }, role: 'cell', 'aria-label': `${c.label}: ${c.text} – ${state}`, title: c.note || state,
+          },
+          // Symbol zusätzlich zur Farbe (hilft bei Farbschwäche); beim Jahr als deutlicher Pfeil
+          c.key === 'year' && c.state !== 'ok'
+            ? h('span.gd-year', h('b.gd-arrow', GD_STATE_ICON[c.state]), c.text)
+            : h('span', c.text),
+          c.key === 'year' && c.state !== 'ok' ? null : h('i.gd-mark', { 'aria-hidden': 'true' }, GD_STATE_ICON[c.state]));
+        }));
     });
-    return h('div.gd-table-wrap', h('div.gd-table', head, rows), h('p.gd-legend.muted',
-      h('i.sw.ok'), 'richtig ', h('i.sw.partial'), 'teilweise ', h('i.sw.no'), 'falsch · ▲▼ Lösung ist neuer/älter (gelb: höchstens 3 Jahre)'));
+    return h('div.gd-table-wrap', h('div.gd-table', { role: 'table', 'aria-label': 'Deine Versuche' }, head, rows), h('p.gd-legend.muted',
+      h('i.sw.ok', '✓'), 'richtig ', h('i.sw.partial', '~'), 'teilweise ', h('i.sw.no', '✕'), 'falsch · ▲▼ Lösung ist neuer/älter (gelb: höchstens 3 Jahre)'));
   },
 
   coverStage(ans, p) {
@@ -5895,7 +6394,9 @@ const Gamedle = {
       img.onload = () => stage.replaceChildren(gdPixelate(img, level), h('span.gd-cover-level', level ? `Schärfe ${GD_COVER_LEVELS.indexOf(level) + 1}/${GD_COVER_LEVELS.length + 1}` : 'Volle Schärfe'));
       img.onerror = () => stage.replaceChildren(h('div.gd-cover-msg', 'Das Cover konnte nicht geladen werden. Probier den Klassik-Modus.'));
       img.src = src;
-    } else if (navigator.onLine === false) stage.replaceChildren(h('div.gd-cover-msg', 'Für den Cover-Modus brauchst du eine Internetverbindung.'));
+    } else if (navigator.onLine === false || this.coverError) {
+      stage.replaceChildren(h('div.gd-cover-msg', 'Die Cover kommen von Wikipedia – die ist gerade nicht erreichbar. Prüf deine Internetverbindung oder spiel solange Klassik.'));
+    }
     return stage;
   },
 
@@ -5918,11 +6419,15 @@ const Gamedle = {
         h('div.gd-result-actions',
           this.mode === 'endless'
             ? h('button.btn.primary', { onclick: () => { this.newEndless(); this.render(); } }, 'Nächstes Spiel')
-            : h('button.btn.primary', { onclick: () => gdShare(gdShareText(this.mode, this.date, p.guesses, GD_URL())) }, icon('upload'), 'Ergebnis teilen'),
+            : h('button.btn.primary', {
+              // Der geteilte Link führt direkt in diesen Modus
+              onclick: () => gdShare(gdShareText(this.mode, this.date, p.guesses, GD_URL() + (this.mode === 'cover' ? '#/gamedle/cover' : '#/gamedle'), { answer: ans, hints: p.hints || 0 })),
+            }, icon('upload'), 'Ergebnis teilen'),
           this.mode !== 'endless' && !otherDone
             ? h('a.btn', { href: other === 'cover' ? '#/gamedle/cover' : '#/gamedle' }, other === 'cover' ? 'Weiter zum Cover-Rätsel' : 'Weiter zum Klassik-Rätsel')
             : null),
-        this.mode !== 'endless' ? h('p.gd-next.muted', 'Nächstes Rätsel in ', h('strong#gdCountdown', gdFmtDuration(gdMsUntilNext()))) : null));
+        this.mode !== 'endless' ? h('p.gd-next.muted', 'Nächstes Rätsel in ', h('strong#gdCountdown', gdFmtDuration(gdMsUntilNext()))) : null,
+        h('a.gd-report', { href: gdReportUrl(ans), target: '_blank', rel: 'noopener' }, 'Daten zu diesem Spiel falsch? Melden')));
   },
 };
 
@@ -5943,6 +6448,13 @@ function gdPixelate(img, level) {
 function gdFmtDuration(ms) {
   const s = Math.max(0, Math.floor(ms / 1000));
   return [Math.floor(s / 3600), Math.floor(s / 60) % 60, s % 60].map(x => String(x).padStart(2, '0')).join(':');
+}
+
+/* Vorbefülltes GitHub-Issue mit allen Eigenschaften des Spiels */
+function gdReportUrl(g) {
+  const props = GD_COLUMNS.map(c => `- ${c.label}: ${c.key === 'year' ? g.year : c.fmt ? c.fmt(g[c.key]).replace(/­/g, '') : g[c.key]}`).join('\n');
+  const body = `Spiel: ${g.title}\n\nAktuelle Daten:\n${props}\n\nWas ist falsch und wie wäre es richtig? (gern mit Quelle)\n`;
+  return `${GD_ISSUES}?${new URLSearchParams({ title: `Daten: ${g.title}`, body })}`;
 }
 
 async function gdShare(text) {
@@ -5990,18 +6502,27 @@ function gdStatsModal() {
 }
 
 function gdHelpModal() {
-  const legend = (cls, text) => h('div.gd-help-row', h('span.gd-cell.' + cls, ' '), h('span', text));
-  openModal({
+  const legend = (cls, text) => h('div.gd-help-row', h('span.gd-cell.' + cls, GD_STATE_ICON[cls]), h('span', text));
+  const cb = h('input', {
+    type: 'checkbox', checked: !!Store.get('gd.colorblind'),
+    onchange: e => { Store.set('gd.colorblind', e.target.checked); document.body.classList.toggle('gd-cb', e.target.checked); m.close(); gdHelpModal(); },
+  });
+  const cbOn = !!Store.get('gd.colorblind');
+  const m = openModal({
     title: 'So funktioniert Gamedle', width: 520, autofocus: false,
     body: [
       h('p', 'Jeden Tag wartet ein neues Spiel – für alle dasselbe. Das Rätsel wechselt um Mitternacht (deutsche Zeit).'),
       h('h3', { style: { fontSize: '15px' } }, 'Klassik'),
       h('p.help', 'Tipp ein beliebiges Spiel ein. Für jede Eigenschaft siehst du, wie nah du dran bist:'),
-      legend('ok', 'Grün – stimmt genau'),
-      legend('partial', 'Gelb – teilweise (z. B. eines von mehreren Genres oder Plattformen)'),
-      legend('no', 'Rot – passt nicht'),
-      h('p.help', '▲ / ▼ beim Jahr: Die Lösung ist neuer bzw. älter. Gelb heißt: höchstens drei Jahre daneben. „Plattform“ meint die Plattformen bei der Erstveröffentlichung.'),
-      h('p.help', `Nach ${GD_HINT_LETTER} Fehlversuchen gibt es den Anfangsbuchstaben als Tipp, nach ${GD_HINT_COVER} ein verschwommenes Cover.`),
+      legend('ok', `${cbOn ? 'Blau' : 'Grün'} ✓ – stimmt genau`),
+      legend('partial', `${cbOn ? 'Orange' : 'Gelb'} ~ – teilweise (z. B. eines von mehreren Genres oder Plattformen)`),
+      legend('no', `${cbOn ? 'Grau' : 'Rot'} ✕ – passt nicht`),
+      h('p.help', '▲ / ▼ beim Jahr: Die Lösung ist neuer bzw. älter; die mittlere Farbe heißt höchstens drei Jahre daneben. „Plattform“ meint die Plattformen bei der Erstveröffentlichung.'),
+      h('p.help', 'Entwickler & Publisher: Dasselbe Unternehmen unter anderem Namen zählt als richtig (z. B. Sony Computer Entertainment = Sony Interactive Entertainment), Studios einer Familie als teilweise (z. B. Rockstar North ~ Rockstar San Diego).'),
+      h('p.help', `Nach ${GD_HINT_LETTER} Fehlversuchen gibt es den Anfangsbuchstaben als Tipp, nach ${GD_HINT_COVER} ein verschwommenes Cover (bei Spielen ohne Cover das Erscheinungsjahr).`),
+      h('label.switch-row',
+        h('span', h('strong', 'Farbenblind-Modus'), h('br'), h('span.help', 'Blau / Orange / Grau statt Grün / Gelb / Rot.')),
+        h('span.switch', cb, h('span'))),
       h('h3', { style: { fontSize: '15px' } }, 'Cover'),
       h('p.help', 'Erkenne das Spiel am Cover. Es startet stark verpixelt und wird mit jedem Fehlversuch schärfer.'),
       h('h3', { style: { fontSize: '15px' } }, 'Endlos'),

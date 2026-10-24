@@ -7,9 +7,9 @@ const path = require('node:path');
 const vm = require('node:vm');
 
 const src = f => fs.readFileSync(path.join(__dirname, '..', 'src', f), 'utf8');
-const G = vm.runInNewContext(`${src('gamedle-data.js')}\n${src('gamedle-core.js')}\n;({
-  GD, GD_BY_ID, GD_GENRES, GD_PLATFORMS, GD_PERSP, GD_MODES, GD_NO_COVER, GD_LAUNCH,
-  gdToday, gdDayNumber, gdShiftDate, gdMsUntilNext, gdDaily, gdPool, gdCompare, gdSearch, gdShareText, gdRecordWin, gdCurrentStreak,
+const G = vm.runInNewContext(`${src('gamedle-data.js')}\n${src('gamedle-core.js')}\n${src('gamedle-schedule.js')}\n;({
+  GD, GD_BY_ID, GD_GENRES, GD_PLATFORMS, GD_PERSP, GD_MODES, GD_NO_COVER, GD_LAUNCH, GD_SCHEDULE,
+  gdToday, gdDayNumber, gdShiftDate, gdMsUntilNext, gdDaily, gdPool, gdCompare, gdSearch, gdShareText, gdRecordWin, gdCurrentStreak, gdHintLetter,
 })`, { Intl, Date, Map, Set });
 
 test('Daten: eindeutige IDs und nur bekannte Kategorien', () => {
@@ -75,12 +75,12 @@ test('Teilen: Wordle-artiger Text', () => {
   const date = '2026-10-24';
   const answer = G.gdDaily('classic', date);
   const other = G.GD.find(g => g.id !== answer.id);
-  const txt = G.gdShareText('classic', date, [other.id, answer.id], 'https://example.org/');
+  const txt = G.gdShareText('classic', date, [other.id, answer.id], 'https://example.org/#/gamedle', { hints: 1 });
   const lines = txt.split('\n');
   assert.equal(lines[0], 'Gamedle #1 · Klassik 🎮');
-  assert.equal(lines[1], 'Gelöst mit 2 Versuchen');
+  assert.equal(lines[1], 'Gelöst mit 2 Versuchen · 💡 1 Tipp');
   assert.equal(lines[3], '🟩'.repeat(9));
-  assert.equal(lines.at(-1), 'https://example.org/');
+  assert.equal(lines.at(-1), 'https://example.org/#/gamedle');
 });
 
 test('Statistik: Serie zählt nur aufeinanderfolgende Tage', () => {
@@ -96,4 +96,44 @@ test('Statistik: Serie zählt nur aufeinanderfolgende Tage', () => {
   assert.equal(s.classic.dist['10+'], 1);
   assert.equal(G.gdCurrentStreak(s, 'classic', '2026-10-29'), 1);
   assert.equal(G.gdCurrentStreak(s, 'classic', '2026-10-31'), 0);
+});
+
+test('Spielplan ist festgeschrieben: bekannte Antworten bleiben, jedes Spiel genau einmal', () => {
+  // Stichproben aus dem veröffentlichten Plan – ändert sich hier etwas, wurde der Plan versehentlich umsortiert
+  const golden = [
+    ['2026-10-24', 'super-mario-galaxy', 'dark-souls-iii'],
+    ['2026-10-25', 'fifa-23', 'tony-hawk-s-pro-skater'],
+    ['2026-10-26', 'clair-obscur-expedition-33', 'mass-effect'],
+    ['2026-11-23', 'halo-combat-evolved', 'final-fantasy-vii-rebirth'],
+    ['2027-02-01', 'hogwarts-legacy', 'mario-kart-64'],
+  ];
+  for (const [d, classic, cover] of golden) {
+    assert.equal(G.gdDaily('classic', d).id, classic, `Klassik ${d}`);
+    assert.equal(G.gdDaily('cover', d).id, cover, `Cover ${d}`);
+  }
+  for (const mode of ['classic', 'cover']) {
+    const plan = G.GD_SCHEDULE[mode];
+    assert.equal(new Set(plan).size, plan.length, `${mode}: keine Doppelten`);
+    const pool = G.gdPool(mode).map(g => g.id);
+    assert.equal(plan.length, pool.length, `${mode}: alle Spiele im Plan – nach neuen Spielen tools/gamedle-schedule.js ausführen`);
+    for (const id of plan) assert.ok(G.GD_BY_ID.has(id), `${mode}: ${id} existiert`);
+  }
+});
+
+test('Firmen: Umbenennung zählt als richtig, Studio-Familie als teilweise', () => {
+  const cells = (a, b) => Object.fromEntries(G.gdCompare(G.GD_BY_ID.get(a), G.GD_BY_ID.get(b)).map(c => [c.key, c]));
+  const tlou = cells('the-last-of-us', 'the-last-of-us-part-ii');
+  assert.equal(tlou.pub.state, 'ok', 'Sony Computer Entertainment = Sony Interactive Entertainment');
+  assert.ok(tlou.pub.note);
+  assert.equal(cells('grand-theft-auto-v', 'red-dead-redemption').dev.state, 'partial', 'Rockstar North ~ Rockstar San Diego');
+  assert.equal(cells('grand-theft-auto-iii', 'grand-theft-auto-v').dev.state, 'ok', 'DMA Design = Rockstar North');
+  assert.equal(cells('diablo', 'warcraft-iii-reign-of-chaos').dev.state, 'partial', 'Blizzard North ~ Blizzard Entertainment');
+  assert.equal(cells('halo-3', 'gran-turismo').pub.state, 'no');
+});
+
+test('Tipp-Buchstabe überspringt Artikel', () => {
+  assert.equal(G.gdHintLetter('The Legend of Zelda').letter, 'L');
+  assert.equal(G.gdHintLetter('The Legend of Zelda').skipped, 'The');
+  assert.equal(G.gdHintLetter('Doom').letter, 'D');
+  assert.equal(G.gdHintLetter('Theme Hospital').letter, 'T');
 });

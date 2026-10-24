@@ -50,16 +50,10 @@ function gdHash(s) {
 
 const gdPool = mode => (mode === 'cover' ? GD.filter(g => !GD_NO_COVER.has(g.title)) : GD);
 
-/* Feste, gemischte Reihenfolge je Modus – Tag n bekommt den n-ten Eintrag */
-const gdOrders = new Map();
+/* Fester Spielplan (src/gamedle-schedule.js): Tag n bekommt den n-ten Eintrag.
+   Neue Spiele werden nur angehängt – so ändern sich laufende Rätsel nie. */
 function gdDaily(mode, date) {
-  if (!gdOrders.has(mode)) {
-    const ids = gdPool(mode).map(g => g.id).sort();
-    const rnd = gdRng(gdHash('gamedle:' + mode));
-    for (let i = ids.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [ids[i], ids[j]] = [ids[j], ids[i]]; }
-    gdOrders.set(mode, ids);
-  }
-  const order = gdOrders.get(mode);
+  const order = GD_SCHEDULE[mode === 'cover' ? 'cover' : 'classic'];
   const n = gdDayNumber(date) - 1;
   return GD_BY_ID.get(order[((n % order.length) + order.length) % order.length]);
 }
@@ -73,24 +67,40 @@ const GD_COLUMNS = [
   { key: 'series', label: 'Reihe', fmt: v => v || 'Keine' },
   { key: 'persp', label: 'Perspektive', fmt: v => GD_PERSP[v] },
   { key: 'modes', label: 'Spielmodus', set: true, fmt: v => v.map(x => GD_MODES[x]).join(', ') },
-  { key: 'country', label: 'Land' },
+  { key: 'country', label: 'Land', fmt: v => v.replace('Großbritannien', 'Groß­britannien') }, // weiches Trennzeichen für schmale Zellen
   { key: 'year', label: 'Jahr' },
 ];
+
+/* Firmen: gleicher Konzern unter anderem (älterem) Namen zählt als richtig,
+   Studios derselben Familie (z. B. Rockstar North / San Diego) als teilweise richtig. */
+const gdCompany = name => GD_COMPANY[name] || name;
+const gdFamily = name => GD_FAMILY[name] || null;
 
 function gdCompare(guess, answer) {
   return GD_COLUMNS.map(col => {
     const a = answer[col.key], g = guess[col.key];
-    let state;
+    let state, note = '';
     if (col.key === 'year') {
       state = g === a ? 'ok' : a > g ? 'up' : 'down';
-      return { key: col.key, state, near: state !== 'ok' && Math.abs(a - g) <= 3, text: String(g) };
+      return { key: col.key, label: col.label, state, near: state !== 'ok' && Math.abs(a - g) <= 3, text: String(g) };
     }
     if (col.set) {
       const same = g.length === a.length && g.every(x => a.includes(x));
       state = same ? 'ok' : g.some(x => a.includes(x)) ? 'partial' : 'no';
+    } else if (col.key === 'dev' || col.key === 'pub') {
+      if (g === a) state = 'ok';
+      else if (gdCompany(g) === gdCompany(a)) { state = 'ok'; note = 'Gleiches Unternehmen unter anderem Namen'; }
+      else if (gdFamily(g) && gdFamily(g) === gdFamily(a)) { state = 'partial'; note = `Gleiche Studio-Familie (${gdFamily(g)})`; }
+      else state = 'no';
     } else state = g === a ? 'ok' : 'no';
-    return { key: col.key, state, text: col.fmt ? col.fmt(g) : g };
+    return { key: col.key, label: col.label, state, note, text: col.fmt ? col.fmt(g) : g };
   });
+}
+
+/* Tipp „Anfangsbuchstabe“ – führende Artikel überspringen (The Legend of Zelda → L) */
+function gdHintLetter(title) {
+  const m = title.match(/^(?:the|a|an|die|der|das)\s+(.)/i);
+  return { letter: (m ? m[1] : title[0]).toUpperCase(), skipped: m ? title.split(' ')[0] : '' };
 }
 
 /* ── Suche (Titel & Alternativnamen) ── */
@@ -116,17 +126,17 @@ function gdSearch(q, exclude = new Set(), limit = 8) {
 
 /* ── Teilen (Wordle-Stil) ── */
 const GD_EMOJI = { ok: '🟩', partial: '🟨', no: '🟥', up: '⬆️', down: '⬇️' };
-function gdShareText(mode, date, guesses, url) {
+function gdShareText(mode, date, guesses, url, { answer = gdDaily(mode, date), hints = 0 } = {}) {
   const no = gdDayNumber(date);
   const n = guesses.length;
+  const solved = `Gelöst mit ${n} ${n === 1 ? 'Versuch' : 'Versuchen'}${hints ? ` · 💡 ${hints} ${hints === 1 ? 'Tipp' : 'Tipps'}` : ''}`;
   if (mode === 'cover') {
     const marks = guesses.map((id, i) => (i === n - 1 ? '🟩' : '🟥')).join('');
-    return `Gamedle #${no} · Cover 🖼️\nGelöst mit ${n} ${n === 1 ? 'Versuch' : 'Versuchen'}\n${marks}\n${url}`;
+    return `Gamedle #${no} · Cover 🖼️\n${solved}\n${marks}\n${url}`;
   }
-  const answer = gdDaily('classic', date);
   const rows = guesses.slice(-6).map(id => gdCompare(GD_BY_ID.get(id), answer).map(c => GD_EMOJI[c.state]).join(''));
   const more = n > 6 ? `… und ${n - 6} weitere Versuche davor\n` : '';
-  return `Gamedle #${no} · Klassik 🎮\nGelöst mit ${n} ${n === 1 ? 'Versuch' : 'Versuchen'}\n${more}${rows.join('\n')}\n${url}`;
+  return `Gamedle #${no} · Klassik 🎮\n${solved}\n${more}${rows.join('\n')}\n${url}`;
 }
 
 /* ── Statistik ── */

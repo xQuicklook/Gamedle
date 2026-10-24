@@ -3,6 +3,9 @@
 const GD_COVER_LEVELS = [7, 11, 16, 24, 36, 56]; // Pixelbreite pro Stufe, danach scharf
 const GD_HINT_LETTER = 4, GD_HINT_COVER = 8;     // Tipps nach so vielen Fehlversuchen
 const GD_URL = () => location.href.split('#')[0];
+const GD_ISSUES = 'https://github.com/xQuicklook/Gamedle/issues/new';
+const GD_STATE_LABEL = { ok: 'richtig', partial: 'teilweise richtig', no: 'falsch', up: 'Lösung ist neuer', down: 'Lösung ist älter' };
+const GD_STATE_ICON = { ok: '✓', partial: '~', no: '✕', up: '▲', down: '▼' };
 
 const Gamedle = {
   mode: 'classic',
@@ -21,6 +24,7 @@ const Gamedle = {
     $('#hubInfo').onclick = () => infoModal();
     const cached = Store.get('gd.covers');
     if (cached && Date.now() - cached.at < 7 * 86400000) this.covers = cached.map;
+    document.body.classList.toggle('gd-cb', !!Store.get('gd.colorblind'));
   },
 
   /* Wird vom Router aufgerufen */
@@ -50,11 +54,16 @@ const Gamedle = {
       const found = await Wiki.byTitles(GD.map(g => g.wiki));
       for (const [w, info] of found) if (info.img) this.covers[w] = info.img;
       Store.set('gd.covers', { at: Date.now(), map: this.covers });
-      if (!$('#gamedle').hidden) this.render();
-    } catch (e) { console.warn('Cover nicht geladen', e); }
+      this.coverError = false;
+    } catch (e) {
+      console.warn('Cover nicht geladen', e);
+      this.coverError = true; // Cover-Modus und Cover-Tipp zeigen dann einen Hinweis statt „lädt …“
+    }
+    if (!$('#gamedle').hidden) this.render();
   },
 
   cover(g) { return this.covers[g.wiki] || ''; },
+  hasCover(g) { return !GD_NO_COVER.has(g.title) && !this.coverError; },
 
   /* ── Fortschritt ── */
   progress() {
@@ -67,6 +76,7 @@ const Gamedle = {
   },
   save(p) {
     if (this.mode === 'endless') { this.endless = p; return; }
+    p.answer = this.answer().id; // die Lösung des Tages mitspeichern (falls sich Daten später ändern)
     const all = Store.get('gd.progress', {});
     // Nur die letzten 30 Tage aufheben
     for (const d of Object.keys(all)) if (gdDays(d, this.date) > 30) delete all[d];
@@ -78,7 +88,9 @@ const Gamedle = {
       if (!this.endless) this.newEndless();
       return GD_BY_ID.get(this.endless.answer);
     }
-    return gdDaily(this.mode, this.date);
+    // Wer heute schon angefangen hat, behält seine Lösung – auch wenn sich der Plan ändern sollte
+    const stored = Store.get('gd.progress', {})[this.date]?.[this.mode]?.answer;
+    return (stored && GD_BY_ID.get(stored)) || gdDaily(this.mode, this.date);
   },
   newEndless() {
     const pool = gdPool('classic');
@@ -142,7 +154,16 @@ const Gamedle = {
     const list = h('div.gd-suggest', { role: 'listbox', hidden: true });
     let items = [], active = 0;
     const draw = () => {
-      list.hidden = !items.length;
+      // Kein Treffer: erklären statt stumm bleiben
+      const noHit = !items.length && gdNorm(input.value).length >= 2;
+      list.hidden = !items.length && !noHit;
+      if (noHit) {
+        const already = gdSearch(input.value, new Set(), 1)[0];
+        list.replaceChildren(h('div.gd-sug-empty', already && p.guesses.includes(already.id)
+          ? `„${already.title}“ hast du schon geraten.`
+          : `Kein Treffer im Spiele-Pool (${GD.length} bekannte Spiele). Probier den Originaltitel oder eine Abkürzung.`));
+        return;
+      }
       list.replaceChildren(...items.map((g, i) => {
         const src = this.cover(g);
         return h('button.gd-sug' + (i === active ? '.active' : ''), { type: 'button', role: 'option', onmousedown: e => e.preventDefault(), onclick: () => pick(g) },
@@ -171,13 +192,21 @@ const Gamedle = {
         ? null
         : h('button.gd-hint', { onclick: () => { p.hints = show; this.save(p); this.render(); } }, '💡 ', label);
     };
+    // Ohne Cover (Minecraft, Undertale, Fortnite – oder Wikipedia nicht erreichbar) gibt es stattdessen das Jahr
+    const coverHint = this.hasCover(ans);
     const shown = [];
-    if (p.hints >= 1) shown.push(h('div.gd-hint-box', 'Anfangsbuchstabe: ', h('strong', ans.title.slice(0, 1))));
+    if (p.hints >= 1) {
+      const { letter, skipped } = gdHintLetter(ans.title);
+      shown.push(h('div.gd-hint-box', 'Anfangsbuchstabe: ', h('strong', letter), skipped ? h('span.muted', ` (ohne „${skipped}“)`) : null));
+    }
     if (p.hints >= 2) {
       const src = this.cover(ans);
-      shown.push(h('div.gd-hint-box', 'Verschwommenes Cover:', src ? h('img.gd-blur', { src, alt: '', referrerpolicy: 'no-referrer' }) : h('span.muted', ' (wird geladen …)')));
+      shown.push(coverHint
+        ? h('div.gd-hint-box', 'Verschwommenes Cover:', src ? h('img.gd-blur', { src, alt: '', referrerpolicy: 'no-referrer' }) : h('span.muted', ' (wird geladen …)'))
+        : h('div.gd-hint-box', 'Erscheinungsjahr: ', h('strong', ans.year)));
     }
-    return h('div.gd-hints', hint(GD_HINT_LETTER, 'Tipp: Anfangsbuchstabe', 1), p.hints >= 1 ? hint(GD_HINT_COVER, 'Tipp: Cover', 2) : null, ...shown);
+    return h('div.gd-hints', hint(GD_HINT_LETTER, 'Tipp: Anfangsbuchstabe', 1),
+      p.hints >= 1 ? hint(GD_HINT_COVER, coverHint ? 'Tipp: Cover' : 'Tipp: Erscheinungsjahr', 2) : null, ...shown);
   },
 
   table(ans, p) {
@@ -189,11 +218,20 @@ const Gamedle = {
       const src = this.cover(g);
       return h('div.gd-row' + (anim ? '.anim' : ''),
         h('div.gd-cell.gd-name', src ? h('img', { src, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }) : null, h('span', g.title)),
-        gdCompare(g, ans).map((c, i) => h(`div.gd-cell.${c.state}${c.near ? '.near' : ''}`, { style: { '--i': i } },
-          h('span', c.text), c.state === 'up' ? h('i.gd-arrow', '▲') : c.state === 'down' ? h('i.gd-arrow', '▼') : null)));
+        gdCompare(g, ans).map((c, i) => {
+          const state = c.near ? `${GD_STATE_LABEL[c.state]}, höchstens 3 Jahre daneben` : GD_STATE_LABEL[c.state];
+          return h(`div.gd-cell.${c.state}${c.near ? '.near' : ''}`, {
+            style: { '--i': i }, role: 'cell', 'aria-label': `${c.label}: ${c.text} – ${state}`, title: c.note || state,
+          },
+          // Symbol zusätzlich zur Farbe (hilft bei Farbschwäche); beim Jahr als deutlicher Pfeil
+          c.key === 'year' && c.state !== 'ok'
+            ? h('span.gd-year', h('b.gd-arrow', GD_STATE_ICON[c.state]), c.text)
+            : h('span', c.text),
+          c.key === 'year' && c.state !== 'ok' ? null : h('i.gd-mark', { 'aria-hidden': 'true' }, GD_STATE_ICON[c.state]));
+        }));
     });
-    return h('div.gd-table-wrap', h('div.gd-table', head, rows), h('p.gd-legend.muted',
-      h('i.sw.ok'), 'richtig ', h('i.sw.partial'), 'teilweise ', h('i.sw.no'), 'falsch · ▲▼ Lösung ist neuer/älter (gelb: höchstens 3 Jahre)'));
+    return h('div.gd-table-wrap', h('div.gd-table', { role: 'table', 'aria-label': 'Deine Versuche' }, head, rows), h('p.gd-legend.muted',
+      h('i.sw.ok', '✓'), 'richtig ', h('i.sw.partial', '~'), 'teilweise ', h('i.sw.no', '✕'), 'falsch · ▲▼ Lösung ist neuer/älter (gelb: höchstens 3 Jahre)'));
   },
 
   coverStage(ans, p) {
@@ -207,7 +245,9 @@ const Gamedle = {
       img.onload = () => stage.replaceChildren(gdPixelate(img, level), h('span.gd-cover-level', level ? `Schärfe ${GD_COVER_LEVELS.indexOf(level) + 1}/${GD_COVER_LEVELS.length + 1}` : 'Volle Schärfe'));
       img.onerror = () => stage.replaceChildren(h('div.gd-cover-msg', 'Das Cover konnte nicht geladen werden. Probier den Klassik-Modus.'));
       img.src = src;
-    } else if (navigator.onLine === false) stage.replaceChildren(h('div.gd-cover-msg', 'Für den Cover-Modus brauchst du eine Internetverbindung.'));
+    } else if (navigator.onLine === false || this.coverError) {
+      stage.replaceChildren(h('div.gd-cover-msg', 'Die Cover kommen von Wikipedia – die ist gerade nicht erreichbar. Prüf deine Internetverbindung oder spiel solange Klassik.'));
+    }
     return stage;
   },
 
@@ -230,11 +270,15 @@ const Gamedle = {
         h('div.gd-result-actions',
           this.mode === 'endless'
             ? h('button.btn.primary', { onclick: () => { this.newEndless(); this.render(); } }, 'Nächstes Spiel')
-            : h('button.btn.primary', { onclick: () => gdShare(gdShareText(this.mode, this.date, p.guesses, GD_URL())) }, icon('upload'), 'Ergebnis teilen'),
+            : h('button.btn.primary', {
+              // Der geteilte Link führt direkt in diesen Modus
+              onclick: () => gdShare(gdShareText(this.mode, this.date, p.guesses, GD_URL() + (this.mode === 'cover' ? '#/gamedle/cover' : '#/gamedle'), { answer: ans, hints: p.hints || 0 })),
+            }, icon('upload'), 'Ergebnis teilen'),
           this.mode !== 'endless' && !otherDone
             ? h('a.btn', { href: other === 'cover' ? '#/gamedle/cover' : '#/gamedle' }, other === 'cover' ? 'Weiter zum Cover-Rätsel' : 'Weiter zum Klassik-Rätsel')
             : null),
-        this.mode !== 'endless' ? h('p.gd-next.muted', 'Nächstes Rätsel in ', h('strong#gdCountdown', gdFmtDuration(gdMsUntilNext()))) : null));
+        this.mode !== 'endless' ? h('p.gd-next.muted', 'Nächstes Rätsel in ', h('strong#gdCountdown', gdFmtDuration(gdMsUntilNext()))) : null,
+        h('a.gd-report', { href: gdReportUrl(ans), target: '_blank', rel: 'noopener' }, 'Daten zu diesem Spiel falsch? Melden')));
   },
 };
 
@@ -255,6 +299,13 @@ function gdPixelate(img, level) {
 function gdFmtDuration(ms) {
   const s = Math.max(0, Math.floor(ms / 1000));
   return [Math.floor(s / 3600), Math.floor(s / 60) % 60, s % 60].map(x => String(x).padStart(2, '0')).join(':');
+}
+
+/* Vorbefülltes GitHub-Issue mit allen Eigenschaften des Spiels */
+function gdReportUrl(g) {
+  const props = GD_COLUMNS.map(c => `- ${c.label}: ${c.key === 'year' ? g.year : c.fmt ? c.fmt(g[c.key]).replace(/­/g, '') : g[c.key]}`).join('\n');
+  const body = `Spiel: ${g.title}\n\nAktuelle Daten:\n${props}\n\nWas ist falsch und wie wäre es richtig? (gern mit Quelle)\n`;
+  return `${GD_ISSUES}?${new URLSearchParams({ title: `Daten: ${g.title}`, body })}`;
 }
 
 async function gdShare(text) {
@@ -302,18 +353,27 @@ function gdStatsModal() {
 }
 
 function gdHelpModal() {
-  const legend = (cls, text) => h('div.gd-help-row', h('span.gd-cell.' + cls, ' '), h('span', text));
-  openModal({
+  const legend = (cls, text) => h('div.gd-help-row', h('span.gd-cell.' + cls, GD_STATE_ICON[cls]), h('span', text));
+  const cb = h('input', {
+    type: 'checkbox', checked: !!Store.get('gd.colorblind'),
+    onchange: e => { Store.set('gd.colorblind', e.target.checked); document.body.classList.toggle('gd-cb', e.target.checked); m.close(); gdHelpModal(); },
+  });
+  const cbOn = !!Store.get('gd.colorblind');
+  const m = openModal({
     title: 'So funktioniert Gamedle', width: 520, autofocus: false,
     body: [
       h('p', 'Jeden Tag wartet ein neues Spiel – für alle dasselbe. Das Rätsel wechselt um Mitternacht (deutsche Zeit).'),
       h('h3', { style: { fontSize: '15px' } }, 'Klassik'),
       h('p.help', 'Tipp ein beliebiges Spiel ein. Für jede Eigenschaft siehst du, wie nah du dran bist:'),
-      legend('ok', 'Grün – stimmt genau'),
-      legend('partial', 'Gelb – teilweise (z. B. eines von mehreren Genres oder Plattformen)'),
-      legend('no', 'Rot – passt nicht'),
-      h('p.help', '▲ / ▼ beim Jahr: Die Lösung ist neuer bzw. älter. Gelb heißt: höchstens drei Jahre daneben. „Plattform“ meint die Plattformen bei der Erstveröffentlichung.'),
-      h('p.help', `Nach ${GD_HINT_LETTER} Fehlversuchen gibt es den Anfangsbuchstaben als Tipp, nach ${GD_HINT_COVER} ein verschwommenes Cover.`),
+      legend('ok', `${cbOn ? 'Blau' : 'Grün'} ✓ – stimmt genau`),
+      legend('partial', `${cbOn ? 'Orange' : 'Gelb'} ~ – teilweise (z. B. eines von mehreren Genres oder Plattformen)`),
+      legend('no', `${cbOn ? 'Grau' : 'Rot'} ✕ – passt nicht`),
+      h('p.help', '▲ / ▼ beim Jahr: Die Lösung ist neuer bzw. älter; die mittlere Farbe heißt höchstens drei Jahre daneben. „Plattform“ meint die Plattformen bei der Erstveröffentlichung.'),
+      h('p.help', 'Entwickler & Publisher: Dasselbe Unternehmen unter anderem Namen zählt als richtig (z. B. Sony Computer Entertainment = Sony Interactive Entertainment), Studios einer Familie als teilweise (z. B. Rockstar North ~ Rockstar San Diego).'),
+      h('p.help', `Nach ${GD_HINT_LETTER} Fehlversuchen gibt es den Anfangsbuchstaben als Tipp, nach ${GD_HINT_COVER} ein verschwommenes Cover (bei Spielen ohne Cover das Erscheinungsjahr).`),
+      h('label.switch-row',
+        h('span', h('strong', 'Farbenblind-Modus'), h('br'), h('span.help', 'Blau / Orange / Grau statt Grün / Gelb / Rot.')),
+        h('span.switch', cb, h('span'))),
       h('h3', { style: { fontSize: '15px' } }, 'Cover'),
       h('p.help', 'Erkenne das Spiel am Cover. Es startet stark verpixelt und wird mit jedem Fehlversuch schärfer.'),
       h('h3', { style: { fontSize: '15px' } }, 'Endlos'),
