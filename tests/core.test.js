@@ -9,11 +9,14 @@ const vm = require('node:vm');
 // presets.js + core.js (+ wiki.js und Gamedle-Daten für die Genres) in eine Sandbox laden
 // und die benötigten Funktionen herausreichen
 const src = f => fs.readFileSync(path.join(__dirname, '..', 'src', f), 'utf8');
-const ctx = vm.createContext({ crypto: globalThis.crypto, TextEncoder, console, structuredClone });
+const ctx = vm.createContext({
+  crypto: globalThis.crypto, TextEncoder, TextDecoder, console, structuredClone, btoa, atob, Blob, Response, CompressionStream, DecompressionStream,
+});
 const T = vm.runInContext(`${['gamedle-data.js', 'catalog.js', 'presets.js', 'core.js', 'wiki.js'].map(src).join('\n')}\n;({
   initialState, applyAction, visibleState, isBlind, placedCount, groupView, keyHash, itemIndex, adoptRanking, PROTOCOL,
   normalizeAction, opFor, statsFor, franchiseSuggestion, imgAllowed, FULL_SYNC_ACTIONS, placeMany,
   ratedTiers, boardItems, genreKeys, knownGenres, catalogEntry, presetPacks, norm, seriesChoices, seriesFranchise,
+  packOf, packItems, encodePack, decodePack, PACK_LINK_MAX,
   CATALOG, CATALOG_EXTRA, CATALOG_SHORT, GD_GAMES, GD_GENRES, GD_PLATFORMS, GD_MODES, PACK_MIN, SMALL_PACK_MIN,
 })`, ctx);
 const clone = o => JSON.parse(JSON.stringify(o));
@@ -433,6 +436,37 @@ test('Reihe laden: Franchise-Name wie im Katalog, sonst wie im Raum, sonst der R
   assert.equal(T.seriesFranchise('Sonic the Hedgehog', sonic, []), 'Sonic', 'Katalog nennt die Reihe „Sonic“');
   assert.equal(T.seriesFranchise('Anno', [{ wiki: 'Anno 1602', title: 'Anno 1602', year: 1998 }], []), 'Anno');
   assert.equal(T.seriesFranchise('The Sims video game series', [], ['The Sims']), 'The Sims', 'Name aus dem Raum, Zusatz entfernt');
+});
+
+/* ───────── Spieleliste als Link ───────── */
+
+test('Paket-Link: Spiele kommen unverändert an, leere Felder werden gespart', async () => {
+  const s = room();
+  const items = s.order.map(id => s.items[id]);
+  const pack = T.packOf(items, 'Meine Liste');
+  same(pack.g[0], ['Doom', 1993, 'Doom (1993 video game)'], 'ohne leere Reihe am Ende');
+  same(pack.g[2], ['Hollow Knight: Silksong', 2025, '', 'Hollow Knight']);
+  const code = await T.encodePack(pack);
+  assert.match(code, /^1[A-Za-z0-9_-]+$/, 'komprimiert, nur URL-sichere Zeichen');
+  const back = await T.decodePack(code);
+  assert.equal(back.n, 'Meine Liste');
+  same(T.packItems(back).map(it => [it.title, it.year, it.wiki, it.franchise]), items.map(it => [it.title, it.year, it.wiki, it.franchise]));
+  // Der ganze Katalog passt in einen handlichen Link
+  const big = await T.encodePack(T.packOf(T.CATALOG.map(g => ({ title: g.name, year: g.year, wiki: g.wiki, franchise: g.series })), 'Alles'));
+  assert.ok(big.length < 20000, `Katalog-Link zu lang: ${big.length}`);
+});
+
+test('Paket-Link: kaputte oder fremde Links werden abgelehnt, Inhalte begrenzt', async () => {
+  assert.equal(await T.decodePack('1abc'), null, 'abgeschnitten');
+  assert.equal(await T.decodePack(''), null);
+  assert.equal(T.packItems({ v: 2, g: [] }), null, 'unbekannte Version');
+  assert.equal(T.packItems(null), null);
+  const many = T.packItems({ v: 1, g: [...Array(T.PACK_LINK_MAX + 50)].map((_, i) => ['Spiel ' + i, 2000]) });
+  assert.equal(many.length, T.PACK_LINK_MAX);
+  same(T.packItems({ v: 1, g: [['', 2000], 'kaputt', ['x'.repeat(200), 'abc', 42]] }).map(it => [it.title.length, it.year, it.wiki]), [[90, null, '42']]);
+  // Unkomprimierte Links (ältere Browser) gehen auch
+  const plain = '0' + Buffer.from(JSON.stringify({ v: 1, n: 'A', g: [['Tetris', 1984]] })).toString('base64url');
+  same(T.packItems(await T.decodePack(plain)).map(it => it.title), ['Tetris']);
 });
 
 test('Bildquellen: Wikipedia und Uploads erlaubt, fremde Links nur nach Freigabe', () => {

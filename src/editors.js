@@ -395,7 +395,9 @@ function libraryModal(tab = null, query = '') {
       q.addEventListener('input', fill);
       fill();
       return [
-        h('div.lib-toolbar', q, coverBtn, genreBtn), bar, list,
+        h('div.lib-toolbar', q, coverBtn, genreBtn,
+          h('button.btn.sm', { type: 'button', title: 'Alle Spiele dieses Raums als Link verschicken', onclick: () => Share.open() }, icon('link'), 'Als Link teilen')),
+        bar, list,
         App.state.order.length ? h('div', h('button.btn.sm.danger', {
           onclick: () => confirmDialog('Alle Spiele entfernen?', 'Die Bibliothek und sämtliche Platzierungen aller Spieler werden geleert.', 'Alles entfernen', true)
             .then(ok => { if (ok) { App.dispatch({ type: 'items/clear' }); refresh(); } }),

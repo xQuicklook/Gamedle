@@ -367,6 +367,56 @@ function placeMany(rows, ids, tierId, index) {
   return out;
 }
 
+/* ───────── Spielelisten als Link ─────────
+   Ein Paket ist {v, n: Name, g: [[Titel, Jahr, Wikipedia-Artikel, Reihe], …]}, komprimiert und
+   base64url-kodiert im #-Teil des Links – es landet also nie auf einem Server. Cover und Genres
+   holt der Empfänger selbst (Katalog bzw. Wikipedia/Wikidata). */
+const PACK_LINK_MAX = 500;
+
+function packOf(items, name) {
+  return {
+    v: 1, n: str(name, 60),
+    g: items.slice(0, PACK_LINK_MAX).map(it => {
+      const row = [it.title, it.year || 0, it.wiki || '', it.franchise || ''];
+      while (row.length > 1 && !row[row.length - 1]) row.pop(); // leere Felder am Ende sparen Platz
+      return row;
+    }),
+  };
+}
+
+/* Paket → Spiele für items/add (geprüft; null, wenn es kein gültiges Paket ist) */
+function packItems(pack) {
+  if (!pack || pack.v !== 1 || !Array.isArray(pack.g)) return null;
+  return pack.g.slice(0, PACK_LINK_MAX).filter(Array.isArray)
+    .map(([title, year, wiki, franchise]) => ({ title: str(title, 90), year: parseInt(year, 10) || null, wiki: str(wiki, 200), franchise: str(franchise, 60) }))
+    .filter(it => it.title);
+}
+
+const b64url = bytes => {
+  let s = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+};
+const unb64url = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+const streamBytes = async (bytes, transform) => new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(transform)).arrayBuffer());
+
+/* Paket → Link-Teil: „1…“ komprimiert (deflate), „0…“ unkomprimiert für Browser ohne CompressionStream */
+async function encodePack(pack) {
+  const json = new TextEncoder().encode(JSON.stringify(pack));
+  if (typeof CompressionStream !== 'function') return '0' + b64url(json);
+  return '1' + b64url(await streamBytes(json, new CompressionStream('deflate')));
+}
+
+async function decodePack(code) {
+  try {
+    const bytes = unb64url(String(code).slice(1));
+    const json = code[0] === '1' ? await streamBytes(bytes, new DecompressionStream('deflate')) : bytes;
+    return JSON.parse(new TextDecoder().decode(json));
+  } catch {
+    return null;
+  }
+}
+
 /* Reducer: wendet eine Aktion auf den Zustand an (mutiert ihn).
    actor = Spieler-ID, die die Aktion ausgelöst hat. Gibt false zurück, wenn abgelehnt. */
 function applyAction(state, a, actor) {

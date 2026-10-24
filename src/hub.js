@@ -2,6 +2,7 @@
    #/            → Übersicht
    #/gamedle     → Gamedle (…/cover, …/endless)
    #/tierly      → Tierly
+   #/paket/…     → geteilte Spieleliste (siehe Share in export.js)
    #ABC123       → Tierly-Einladungslink (Raum-Code) – bleibt wie bisher gültig */
 const Router = {
   current: null,
@@ -14,6 +15,13 @@ const Router = {
 
   route() {
     const hash = location.hash;
+    if (/^#\/paket\//.test(hash)) {
+      // Geteilte Spieleliste: Adresse zurück auf Tierly bzw. den offenen Raum, dann anbieten
+      history.replaceState(null, '', App.state && Net.code ? '#' + Net.code : '#/tierly');
+      this.show('tierly');
+      Share.receive(hash.slice('#/paket/'.length));
+      return;
+    }
     if (/^#\/gamedle/.test(hash)) this.show('gamedle', hash.split('/')[2]);
     else if (hash === '#/tierly' || /^#[A-Z0-9]{6}$/i.test(hash)) this.show('tierly');
     else this.show('hub');

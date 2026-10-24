@@ -208,5 +208,100 @@ function drawTileCanvas(ctx, it, x, y, w, h2, { font, rr, imgs, showTitles }) {
   ctx.restore();
 }
 
+/* ───────── Spieleliste als Link teilen ─────────
+   Teilen: alle Spiele des Raums als Link (#/paket/…). Öffnen: Ist man in einem Raum, wird gefragt,
+   ob die Spiele dazukommen sollen – sonst merkt sich Tierly das Paket bis zum Betreten eines Raums. */
+const Share = {
+  pending: null,
+
+  base() {
+    // Als lokale Datei geöffnet? Dann zeigt der Link auf die veröffentlichte Seite
+    return /^https?:$/.test(location.protocol) ? location.href.split('#')[0] : $('meta[property="og:url"]')?.content || '';
+  },
+
+  open() {
+    const items = libItems();
+    if (!items.length) { toast('Noch keine Spiele zum Teilen.'); return; }
+    const name = h('input', { value: `Spieleliste von ${App.me.name}`, maxlength: 60, 'aria-label': 'Name der Liste' });
+    const link = h('input', { readonly: true, 'aria-label': 'Link', onfocus: e => e.target.select() });
+    const info = h('p.help');
+    let seq = 0;
+    const update = async () => {
+      const my = ++seq;
+      const url = this.base() + '#/paket/' + await encodePack(packOf(items, name.value.trim() || 'Spieleliste'));
+      if (my !== seq) return;
+      link.value = url;
+      info.textContent = `${Math.min(items.length, PACK_LINK_MAX)} Spiele · Link mit ${url.length.toLocaleString('de-DE')} Zeichen`
+        + (url.length > 8000 ? ' – sehr lang, manche Messenger kürzen so lange Links. Dann lieber per E-Mail schicken.' : '.');
+    };
+    let timer = 0;
+    name.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(update, 250); });
+    update();
+    const m = openModal({
+      title: 'Spieleliste als Link teilen', width: 520,
+      body: [
+        h('p.help', 'Wer den Link öffnet, kann alle Spiele dieses Raums mit einem Klick in seinen eigenen Raum laden – Platzierungen und eigene Bilder werden nicht mitgeschickt.'),
+        field('Name der Liste', name), field('Link', link), info,
+      ],
+      foot: [
+        h('button.btn.ghost', { onclick: () => m.close() }, 'Schließen'),
+        navigator.share ? h('button.btn', { onclick: () => navigator.share({ title: name.value, url: link.value }).catch(() => {}) }, 'Teilen …') : null,
+        h('button.btn.primary', { onclick: () => link.value && copyText(link.value, 'Link kopiert') }, icon('copy'), 'Link kopieren'),
+      ].filter(Boolean),
+    });
+  },
+
+  /* Paket-Link geöffnet: prüfen und anbieten (oder für später merken) */
+  async receive(code) {
+    const pack = await decodePack(code);
+    const items = packItems(pack);
+    if (!items?.length) { toast('Dieser Paket-Link ist ungültig oder unvollständig – vielleicht wurde er beim Kopieren abgeschnitten.', 7000); return; }
+    this.pending = { name: pack.n || 'Geteilte Spieleliste', items };
+    if (App.state && !$('#app').hidden) this.offer();
+    else toast(`„${this.pending.name}“ (${items.length} Spiele): Starte eine Solo-Liste oder betritt einen Raum – dann kannst du die Spiele hinzufügen.`, 10000);
+  },
+
+  offer() {
+    const p = this.pending;
+    if (!p || !App.state) return;
+    this.pending = null;
+    // Katalog-Spiele bekommen Name, Genres und Reihe aus dem Katalog
+    const items = p.items.map(it => {
+      const g = catalogEntry(it);
+      return g ? { ...it, title: g.name, wiki: it.wiki || g.wiki, franchise: it.franchise || g.series, genres: g.genres } : it;
+    });
+    const index = itemIndex(App.state);
+    const fresh = items.filter(it => !index.duplicateOf(it));
+    const can = App.canEditConfig();
+    const m = openModal({
+      title: 'Spieleliste hinzufügen', width: 520,
+      body: [
+        h('p', h('strong', `„${p.name}“`), ` – ${items.length} Spiele`,
+          fresh.length < items.length ? `, davon ${items.length - fresh.length} schon in diesem Raum` : ''),
+        h('div.share-preview', fresh.slice(0, 24).map(it => makeTile({ id: 'share', title: it.title, year: it.year, franchise: it.franchise }, {})),
+          fresh.length > 24 ? h('span.muted', `+ ${fresh.length - 24}`) : null),
+        h('p.help', can ? 'Cover und Genres werden danach automatisch geladen.' : 'Der Host hat das Bearbeiten gesperrt – nur er kann Spiele hinzufügen.'),
+      ],
+      foot: [
+        h('button.btn.ghost', { onclick: () => m.close() }, 'Abbrechen'),
+        h('button.btn.primary', {
+          disabled: !can || !fresh.length,
+          onclick: async () => {
+            m.close();
+            const before = new Set(App.state.order);
+            for (let i = 0; i < fresh.length; i += 200) App.dispatch({ type: 'items/add', items: fresh.slice(i, i + 200) });
+            const added = App.state.order.filter(id => !before.has(id));
+            const t = toast(`${added.length} Spiele hinzugefügt – lade Cover …`, 60000);
+            await coversFor(added);
+            await genresFor(added);
+            t.remove();
+            toast(`„${p.name}“: ${added.length} Spiele hinzugefügt`);
+          },
+        }, icon('plus'), fresh.length ? `${fresh.length} Spiele hinzufügen` : 'Schon alle im Raum'),
+      ],
+    });
+  },
+};
+
 /* ───────── Start ───────── */
 App.init();

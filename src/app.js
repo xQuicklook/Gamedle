@@ -203,6 +203,7 @@ const App = {
     Layout.refresh(); // gespeicherte Breite erst jetzt begrenzen – vorher war die App unsichtbar
     this.render();
     if (!Store.get('onboarded')) setTimeout(showTips, 400);
+    if (Share.pending) setTimeout(() => Share.offer(), 500); // geteilte Spieleliste wartet auf einen Raum
   },
 
   /* ── Netzwerk-Hooks ── */

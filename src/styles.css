@@ -659,6 +659,11 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
 .linkish:hover { text-decoration: underline; }
 .credit { font-size: 11.5px; color: var(--muted); margin: 0; }
 
+/* Geteilte Spieleliste: kleine Vorschau der Kacheln */
+.share-preview { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.share-preview .tile { --tile-w: 48px; --tile-h: 64px; border-radius: 6px; cursor: default; }
+.share-preview .tile .tile-year, .share-preview .tile .tile-title { display: none; }
+
 /* Reihe laden: Suchtreffer und Checkliste */
 .series-ico {
   width: 48px; height: 64px; border-radius: 6px; display: grid; place-items: center;

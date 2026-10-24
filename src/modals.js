@@ -79,6 +79,7 @@ function toggleMenu() {
   menu.replaceChildren(
     item('users', Net.role === 'solo' ? 'Freunde einladen' : 'Raum & Spieler', () => roomModal()),
     item('image', 'Als Bild speichern', () => exportPng()),
+    item('link', 'Spieleliste als Link teilen', () => Share.open()),
     item('download', 'Exportieren (JSON)', () => exportJson()),
     ...(isHost ? [item('upload', 'Importieren (JSON)', () => importJson())] : []),
     item('library', 'Gespeicherte Räume', () => roomsModal()),
