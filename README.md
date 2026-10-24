@@ -40,6 +40,26 @@ Beide Module nutzen einen gemeinsamen Katalog (`src/catalog.js`):
 
 Die Tierly-Pakete (`src/presets.js`) sind Filter über den Katalog – nach Jahrzehnt, Genre, Plattform, Spielweise und Reihe. Ein neues Spiel landet so automatisch in allen passenden Paketen; Pakete unter 12 Spielen (Jahrzehnte und Reihen: unter 5) bleiben ausgeblendet, bis der Katalog groß genug ist.
 
+### Katalog erweitern
+
+1. Vorschläge holen – die bekanntesten Spiele auf Wikidata (gemessen an der Zahl der Wikipedia-Sprachversionen), die noch fehlen:
+
+   ```bash
+   node tools/catalog-candidates.js 380
+   ```
+
+   Vorab-Entscheidungen (Ausschuss mit Begründung, korrigierte Felder) stehen in `tools/catalog-curation.json` und werden bei jedem Lauf wieder angewendet.
+
+2. `tools/catalog-review.html` im Browser öffnen (Doppelklick genügt), jedes Spiel prüfen und übernehmen oder verwerfen – Tasten <kbd>J</kbd>/<kbd>K</kbd>, <kbd>A</kbd>, <kbd>X</kbd>. Der Stand bleibt im Browser gespeichert, am Ende „Exportieren“.
+
+3. Die exportierte Datei übernehmen, dann testen und bauen:
+
+   ```bash
+   node tools/catalog-apply.js katalog-entscheidungen.json
+   ```
+
+Plattformen meinen wie bei Gamedle die Plattformen *zum Start* – sie entscheiden über die Exklusiv-Pakete (Nintendo, PlayStation …).
+
 ## Neue Spiele für Gamedle
 
 1. Entwürfe aus Wikipedia erzeugen lassen (mit `PRÜFEN` markierte Felder von Hand kontrollieren – vor allem die Plattform *bei Erstveröffentlichung* und die Perspektive):
@@ -114,5 +134,6 @@ Nach ein bis zwei Minuten ist die neue Version online.
 | `src/wiki.js` | Cover, Jahr, Reihe und Genres über Wikipedia/Wikidata (Genres zuerst aus den Gamedle-Daten) |
 | `tests/` | Tests für Tierly- und Gamedle-Logik |
 | `tools/verify-gamedle.js` | Datenprüfung gegen Wikipedia |
+| `tools/catalog-candidates.js`, `catalog-review.html`, `catalog-apply.js` | Katalog erweitern: Vorschläge, Prüfseite, Übernahme |
 
 PeerJS 1.5.4 (MIT-Lizenz) liegt unter `vendor/`. Cover- und Szenen-Bilder stammen aus der englischsprachigen Wikipedia bzw. Wikimedia Commons, die Rechte liegen bei den Publishern. Zitate sind kurze Auszüge aus den Spielen, belegt über Wikiquote.

@@ -1,0 +1,1549 @@
+{
+  "skip": {
+    "Q106827": "Virtuelle Welt, kein klassisches Spiel",
+    "Q170331": "Browserspiel",
+    "Q110367996": "Browser-Rätsel",
+    "Q207786": "Spielzeug",
+    "Q23648408": "Noch nicht erschienen",
+    "Q308961": "Weniger bekannter Teil",
+    "Q20012932": "Browserspiel",
+    "Q64157198": "Jährliche Fußball-Ausgabe",
+    "Q842259": "Jährliche Fußball-Ausgabe",
+    "Q719740": "Jährliche Fußball-Ausgabe",
+    "Q20007251": "Jährliche Fußball-Ausgabe",
+    "Q96482598": "Jährliche Fußball-Ausgabe",
+    "Q137977": "Jährliche Fußball-Ausgabe",
+    "Q24442399": "Jährliche Fußball-Ausgabe",
+    "Q11256854": "Jährliche Fußball-Ausgabe",
+    "Q54153179": "Jährliche Fußball-Ausgabe",
+    "Q725280": "Jährliche Fußball-Ausgabe",
+    "Q583301": "Jährliche Fußball-Ausgabe",
+    "Q96416457": "Jährliche Fußball-Ausgabe",
+    "Q426939": "Jährliche Fußball-Ausgabe",
+    "Q17156010": "Jährliche Fußball-Ausgabe",
+    "Q427337": "Jährliche Fußball-Ausgabe",
+    "Q633461": "Jährliche Fußball-Ausgabe",
+    "Q1750568": "Jährliche Fußball-Ausgabe",
+    "Q586736": "Jährliche Fußball-Ausgabe",
+    "Q1318106": "Jährliche Fußball-Ausgabe",
+    "Q1987250": "Jährliche Fußball-Ausgabe",
+    "Q613088": "Jährliche Fußball-Ausgabe",
+    "Q1315644": "Jährliche Fußball-Ausgabe",
+    "Q1441569": "Jährliche Fußball-Ausgabe",
+    "Q7246721": "Jährliche Fußball-Ausgabe",
+    "Q20098839": "Jährliche Fußball-Ausgabe",
+    "Q16671192": "Jährliche Fußball-Ausgabe",
+    "Q1764451": "Jährliche Fußball-Ausgabe",
+    "Q202934": "Website",
+    "Q13576160": "Browserspiel",
+    "Q782919": "Historisch, heute kaum spielbar",
+    "Q858294": "Historisch, heute kaum spielbar",
+    "Q731466": "Historisch, heute kaum spielbar",
+    "Q1122324": "Historisch, heute kaum spielbar",
+    "Q379904": "Historisch, heute kaum spielbar",
+    "Q126194": "Windows-Beigabe",
+    "Q605445": "Denkspiel-Prinzip, kein einzelnes Spiel",
+    "Q901362": "Warband ist bekannter",
+    "Q18951": "Episode",
+    "Q390223": "Virtuelle Welt",
+    "Q743920": "Virtuelle Welt",
+    "Q569172": "Website",
+    "Q244503": "Website",
+    "Q63352": "In Deutschland wenig bekannt",
+    "Q219743": "Browserspiel",
+    "Q327602": "Browserspiel",
+    "Q264257": "Browserspiel",
+    "Q719337": "Browserspiel",
+    "Q23895358": "Browserspiel",
+    "Q82235406": "Browserspiel",
+    "Q2681151": "Browserspiel",
+    "Q693937": "Erweiterung",
+    "Q831796": "Erweiterung",
+    "Q223629": "Technik-Demo",
+    "Q211229": "Mod-Neuauflage",
+    "Q771553": "Mod",
+    "Q1045397": "Weniger bekannter Ableger",
+    "Q475628": "In Deutschland wenig bekannt",
+    "Q477199": "In Deutschland wenig bekannt",
+    "Q489800": "In Deutschland wenig bekannt",
+    "Q509269": "In Deutschland wenig bekannt",
+    "Q482494": "Visual Novel, in Deutschland wenig bekannt",
+    "Q110607": "Visual Novel, in Deutschland wenig bekannt",
+    "Q857823": "Visual Novel, in Deutschland wenig bekannt",
+    "Q682892": "Visual Novel, in Deutschland wenig bekannt",
+    "Q1735675": "Visual Novel, in Deutschland wenig bekannt",
+    "Q14785138": "In Deutschland wenig bekannt",
+    "Q214142": "Open-Source-Nischenspiel",
+    "Q161234": "Open-Source-Nischenspiel",
+    "Q911827": "Open-Source-Nischenspiel",
+    "Q142908": "Open-Source-Nischenspiel",
+    "Q971909": "Open-Source-Nischenspiel",
+    "Q424271": "Open-Source-Nischenspiel",
+    "Q1163986": "Open-Source-Nischenspiel",
+    "Q725120": "Open-Source-Nischenspiel",
+    "Q856904": "Nischenspiel",
+    "Q248810": "Nischenspiel",
+    "Q1520905": "Nischen-Simulation",
+    "Q384055": "Nischen-Simulation",
+    "Q19900828": "Reihe ist mit den ersten Teilen vertreten",
+    "Q18913274": "Reihe ist mit den ersten Teilen vertreten",
+    "Q24060042": "Reihe ist mit den ersten Teilen vertreten",
+    "Q16246617": "Weniger bekannter Handy-Ableger",
+    "Q15984270": "Weniger bekannter Handy-Ableger",
+    "Q20796085": "Handy-Ableger",
+    "Q18753801": "Handy-Ableger",
+    "Q19562069": "Handy-Fortsetzung",
+    "Q144728": "Handy-Ableger",
+    "Q64029241": "Handy-Ableger",
+    "Q75230763": "Handy-Ableger",
+    "Q29564198": "In Deutschland wenig bekannt",
+    "Q51883198": "In Deutschland wenig bekannt",
+    "Q117750031": "In Deutschland wenig bekannt",
+    "Q1974968": "Nischenspiel",
+    "Q847820": "Weniger bekannter Teil",
+    "Q483919": "Online-Ableger",
+    "Q2298167": "Weniger bekannter Ableger",
+    "Q1341921": "Weniger bekannter Ableger",
+    "Q573779": "Weniger bekannter Ableger",
+    "Q50822580": "Steht als Fortnite im Katalog",
+    "Q14594724": "Online-Modus von GTA V",
+    "Q648099": "Weniger bekannter Ableger",
+    "Q20888644": "Ableger",
+    "Q63927755": "Eingestellter Ableger",
+    "Q112430705": "Weniger bekannter Ableger",
+    "Q16970796": "Euro Truck Simulator 2 reicht",
+    "Q1648331": "Euro Truck Simulator 2 reicht",
+    "Q1799621": "Weniger bekannter Teil",
+    "Q756558": "Weniger bekannter Teil",
+    "Q106928099": "Nischen-Strategie",
+    "Q1366277": "Nischen-Strategie",
+    "Q876975": "Nischen-Strategie",
+    "Q739918": "Neuester Teil reicht",
+    "Q222473": "Neuester Teil reicht",
+    "Q1061361": "Neuester Teil reicht",
+    "Q636012": "Neuester Teil reicht",
+    "Q837581": "Neuester Teil reicht",
+    "Q765103": "Neuester Teil reicht",
+    "Q1070633": "Neuere Teile sind bekannter",
+    "Q1139035": "Weniger bekannter Teil",
+    "Q1309459": "Weniger bekannter Teil",
+    "Q842591": "Online-Ableger",
+    "Q940134": "Weniger bekannter Teil",
+    "Q1194064": "Kein Videospiel im engeren Sinn",
+    "Q20670394": "Unveröffentlicht",
+    "Q581039": "Unveröffentlicht",
+    "Q60187866": "Erscheinungsstand unklar",
+    "Q2357719": "In Deutschland wenig bekannt",
+    "Q180434": "Eingestellt",
+    "Q27870279": "Weniger bekannt",
+    "Q1052646": "Weniger bekannt",
+    "Q728983": "Weniger bekannt",
+    "Q55532": "Weniger bekannt",
+    "Q810990": "Weniger bekannt",
+    "Q1192514": "Galaga ist bekannter",
+    "Q977919": "Atari 2600 – Plattform nicht abbildbar",
+    "Q906260": "Weniger bekannter Teil",
+    "Q1415062": "Weniger bekannter Teil",
+    "Q528310": "Weniger bekannter Teil",
+    "Q869960": "Weniger bekannter Teil",
+    "Q1142893": "Weniger bekannter Teil",
+    "Q672049": "Weniger bekannter Teil",
+    "Q1317811": "Weniger bekannter Teil",
+    "Q925269": "Weniger bekannter Teil",
+    "Q1503511": "Street Fighter II ist bekannter",
+    "Q1092945": "Weniger bekannter Ableger",
+    "Q866424": "Eingestellter Ableger",
+    "Q16968699": "Ableger",
+    "Q1982333": "Weniger bekannter Ableger",
+    "Q4053252": "World of Tanks reicht",
+    "Q2754466": "World of Tanks reicht",
+    "Q1058903": "Sammlung",
+    "Q1142888": "Neuauflage",
+    "Q622336": "Remake (Original steht im Katalog)",
+    "Q580667": "Remake",
+    "Q642359": "Weniger bekannter Teil",
+    "Q621616": "Weniger bekannter Teil",
+    "Q1996527": "Weniger bekannter Ableger",
+    "Q17157196": "Weniger bekannter Teil",
+    "Q1205293": "Weniger bekannter Teil",
+    "Q743187": "Weniger bekannter Teil",
+    "Q1797666": "Weniger bekannter Teil",
+    "Q558621": "Weniger bekannter Teil",
+    "Q2075296": "Weniger bekannter Teil",
+    "Q76868": "Ableger",
+    "Q1992159": "Ableger",
+    "Q2075360": "Ableger",
+    "Q739580": "Ableger",
+    "Q1053024": "Ableger",
+    "Q1799879": "Weniger bekannter Teil",
+    "Q938935": "Weniger bekannter Teil",
+    "Q288596": "Weniger bekannter Teil",
+    "Q1754133": "Weniger bekannter Teil",
+    "Q840699": "Weniger bekannter Teil",
+    "Q745427": "Nur als Kuriosum bekannt",
+    "Q1257775": "Weniger bekannter Teil",
+    "Q290534": "Weniger bekannter Teil",
+    "Q714782": "Weniger bekannt",
+    "Q618266": "Payday 2 ist bekannter",
+    "Q1750961": "Weniger bekannter Teil",
+    "Q20116199": "Handy-Ableger",
+    "Q1774415": "Weniger bekannter Ableger",
+    "Q367135": "Weniger bekannter Ableger",
+    "Q850092": "Weniger bekannter Teil",
+    "Q1051980": "Weniger bekannter Teil",
+    "Q2081510": "Weniger bekannter Teil",
+    "Q40177": "Weniger bekannter Teil",
+    "Q1140411": "Weniger bekannter Ableger",
+    "Q19515406": "Ableger",
+    "Q873037": "Weniger bekannter Ableger",
+    "Q577381": "Weniger bekannt",
+    "Q59536524": "Ableger",
+    "Q650023": "Weniger bekannt",
+    "Q650025": "Weniger bekannt",
+    "Q349413": "Weniger bekannt",
+    "Q532912": "Teil III ist bekannter",
+    "Q641684": "Teil III ist bekannter",
+    "Q1065861": "Weniger bekannt",
+    "Q2088341": "Weniger bekannter Teil",
+    "Q1139044": "Weniger bekannt",
+    "Q1139501": "Weniger bekannt",
+    "Q862524": "Weniger bekannter Teil",
+    "Q254851": "Weniger bekannter Teil",
+    "Q932113": "Weniger bekannter Teil",
+    "Q1057630": "Weniger bekannter Teil",
+    "Q850445": "Weniger bekannter Teil",
+    "Q1129775": "Teil 2 ist bekannter",
+    "Q528128": "Teil 2 ist bekannter",
+    "Q733561": "Weniger bekannt",
+    "Q372412": "Nischen-Strategie",
+    "Q843205": "Weniger bekannter Ableger",
+    "Q1750429": "Weniger bekannter Ableger",
+    "Q257816": "Weniger bekannter Ableger",
+    "Q30242632": "Weniger bekannter Ableger",
+    "Q1798032": "Weniger bekannter Teil",
+    "Q2264301": "Weniger bekannt",
+    "Q756856": "Weniger bekannter Teil",
+    "Q600707": "Weniger bekannter Teil",
+    "Q553308": "Episode",
+    "Q1988120": "Teilt sich den Wikipedia-Artikel mit Pokémon Rot & Blau"
+  },
+  "fix": {
+    "Q692989": {
+      "genres": [
+        "sbx"
+      ],
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q28937399": {
+      "genres": [
+        "br",
+        "tps"
+      ],
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q65059474": {
+      "genres": [
+        "arpg"
+      ]
+    },
+    "Q771541": {
+      "genres": [
+        "moba"
+      ]
+    },
+    "Q216293": {
+      "genres": [
+        "arc",
+        "spo"
+      ]
+    },
+    "Q94501": {
+      "year": 1997,
+      "plats": [
+        "pc",
+        "ps"
+      ]
+    },
+    "Q185482": {
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q213217": {
+      "genres": [
+        "aa",
+        "tps"
+      ],
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q182771": {
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q94460": {
+      "plats": [
+        "pc",
+        "ps"
+      ]
+    },
+    "Q220665": {
+      "genres": [
+        "shm",
+        "arc"
+      ],
+      "plats": [
+        "arc"
+      ]
+    },
+    "Q207797": {
+      "plats": [
+        "pc",
+        "ps",
+        "xb",
+        "nin"
+      ]
+    },
+    "Q12579896": {
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q22095476": {
+      "genres": [
+        "str",
+        "card"
+      ]
+    },
+    "Q94778": {
+      "plats": [
+        "ps"
+      ]
+    },
+    "Q210844": {
+      "genres": [
+        "sim",
+        "str"
+      ]
+    },
+    "Q86919275": {
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q379128": {
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q486233": {
+      "plats": [
+        "pc",
+        "ps",
+        "xb",
+        "nin"
+      ]
+    },
+    "Q9176944": {
+      "genres": [
+        "arc"
+      ],
+      "plats": [
+        "mob"
+      ]
+    },
+    "Q590342": {
+      "genres": [
+        "tps"
+      ],
+      "plats": [
+        "pc"
+      ],
+      "series": ""
+    },
+    "Q2632206": {
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q207986": {
+      "plats": [
+        "pc",
+        "ps",
+        "xb",
+        "nin"
+      ]
+    },
+    "Q4052939": {
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q4558721": {
+      "plats": [
+        "mob"
+      ]
+    },
+    "Q337865": {
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q187732": {
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q817369": {
+      "genres": [
+        "aa",
+        "hns"
+      ]
+    },
+    "Q271062": {
+      "series": "Age of Empires"
+    },
+    "Q677351": {
+      "genres": [
+        "aa",
+        "stl"
+      ],
+      "plats": [
+        "ps",
+        "xb"
+      ]
+    },
+    "Q368286": {
+      "plats": [
+        "pc"
+      ],
+      "aliases": [
+        "Sid Meier's Civilization"
+      ]
+    },
+    "Q791454": {
+      "plats": [
+        "pc",
+        "ps",
+        "xb"
+      ]
+    },
+    "Q733992": {
+      "plats": [
+        "ps"
+      ]
+    },
+    "Q6497116": {
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q822849": {
+      "plats": [
+        "ps"
+      ]
+    },
+    "Q247210": {
+      "plats": [
+        "pc",
+        "ps",
+        "xb",
+        "nin"
+      ]
+    },
+    "Q1757876": {
+      "name": "Tomb Raider (2013)",
+      "plats": [
+        "pc",
+        "ps",
+        "xb"
+      ]
+    },
+    "Q8262784": {
+      "genres": [
+        "card"
+      ],
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q471803": {
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q18149274": {
+      "genres": [
+        "sim"
+      ]
+    },
+    "Q17618314": {
+      "genres": [
+        "hor"
+      ],
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q21246348": {
+      "genres": [
+        "adv"
+      ]
+    },
+    "Q94871": {
+      "plats": [
+        "nin"
+      ]
+    },
+    "Q739784": {
+      "plats": [
+        "ps"
+      ]
+    },
+    "Q327594": {
+      "plats": [
+        "ps"
+      ]
+    },
+    "Q18536861": {
+      "plats": [
+        "pc",
+        "ps",
+        "xb"
+      ]
+    },
+    "Q203310": {
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q590836": {
+      "genres": [
+        "arc"
+      ],
+      "plats": [
+        "mob"
+      ]
+    },
+    "Q601050": {
+      "genres": [
+        "tps",
+        "hor"
+      ],
+      "plats": [
+        "ps",
+        "xb"
+      ]
+    },
+    "Q474573": {
+      "plats": [
+        "ps"
+      ]
+    },
+    "Q1371726": {
+      "plats": [
+        "pc",
+        "ps",
+        "xb"
+      ]
+    },
+    "Q837923": {
+      "genres": [
+        "sbx"
+      ]
+    },
+    "Q15707420": {
+      "genres": [
+        "arc"
+      ]
+    },
+    "Q30138107": {
+      "plats": [
+        "pc",
+        "ps",
+        "xb",
+        "nin"
+      ]
+    },
+    "Q18940": {
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q719960": {
+      "plats": [
+        "pc"
+      ],
+      "wiki": "Harry Potter and the Philosopher's Stone (PC video game)"
+    },
+    "Q663665": {
+      "plats": [
+        "pc",
+        "ps",
+        "xb",
+        "nin"
+      ]
+    },
+    "Q15297043": {
+      "genres": [
+        "aa",
+        "surv"
+      ]
+    },
+    "Q24514682": {
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q162751": {
+      "genres": [
+        "fps",
+        "hor"
+      ],
+      "plats": [
+        "pc",
+        "xb"
+      ]
+    },
+    "Q187339": {
+      "genres": [
+        "arpg"
+      ]
+    },
+    "Q755186": {
+      "genres": [
+        "fps"
+      ],
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q610968": {
+      "year": 1983,
+      "genres": [
+        "plat",
+        "arc"
+      ],
+      "plats": [
+        "arc"
+      ]
+    },
+    "Q647855": {
+      "genres": [
+        "adv"
+      ]
+    },
+    "Q281246": {
+      "plats": [
+        "pc",
+        "ps",
+        "xb",
+        "nin"
+      ]
+    },
+    "Q16972008": {
+      "year": 2020,
+      "genres": [
+        "sim",
+        "str"
+      ],
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q1129094": {
+      "genres": [
+        "aa",
+        "adv"
+      ]
+    },
+    "Q30138024": {
+      "genres": [
+        "aa",
+        "arpg"
+      ]
+    },
+    "Q20829312": {
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q54617566": {
+      "genres": [
+        "aa",
+        "arpg"
+      ],
+      "plats": [
+        "pc",
+        "ps",
+        "xb"
+      ]
+    },
+    "Q92464687": {
+      "genres": [
+        "aa",
+        "arpg"
+      ]
+    },
+    "Q85760410": {
+      "genres": [
+        "par",
+        "br"
+      ]
+    },
+    "Q17138": {
+      "genres": [
+        "aa",
+        "tps"
+      ]
+    },
+    "Q626802": {
+      "genres": [
+        "arpg"
+      ]
+    },
+    "Q753511": {
+      "genres": [
+        "arpg",
+        "tps"
+      ],
+      "plats": [
+        "pc",
+        "ps",
+        "xb"
+      ]
+    },
+    "Q4037583": {
+      "genres": [
+        "arpg"
+      ]
+    },
+    "Q471974": {
+      "plats": [
+        "pc",
+        "ps",
+        "xb",
+        "nin"
+      ]
+    },
+    "Q764069": {
+      "genres": [
+        "shm"
+      ]
+    },
+    "Q575505": {
+      "genres": [
+        "aa",
+        "hor"
+      ],
+      "plats": [
+        "xb"
+      ]
+    },
+    "Q55449345": {
+      "genres": [
+        "aa"
+      ],
+      "series": "Star Wars"
+    },
+    "Q4104": {
+      "plats": [
+        "pc",
+        "ps",
+        "xb"
+      ]
+    },
+    "Q220965": {
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q1707918": {
+      "plats": [
+        "pc",
+        "ps",
+        "xb"
+      ]
+    },
+    "Q1779100": {
+      "plats": [
+        "ps",
+        "xb"
+      ]
+    },
+    "Q1069059": {
+      "series": "Sonic"
+    },
+    "Q2045645": {
+      "name": "Pokémon Smaragd"
+    },
+    "Q307441": {
+      "name": "osu!"
+    },
+    "Q526350": {
+      "genres": [
+        "aa",
+        "plat"
+      ],
+      "plats": [
+        "ps",
+        "xb"
+      ]
+    },
+    "Q21043786": {
+      "genres": [
+        "fps"
+      ]
+    },
+    "Q21072291": {
+      "genres": [
+        "aa",
+        "fps"
+      ]
+    },
+    "Q569898": {
+      "plats": [
+        "pc",
+        "ps",
+        "xb"
+      ]
+    },
+    "Q816451": {
+      "plats": [
+        "pc",
+        "ps"
+      ]
+    },
+    "Q845290": {
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q2374": {
+      "genres": [
+        "str"
+      ]
+    },
+    "Q166226": {
+      "genres": [
+        "adv"
+      ]
+    },
+    "Q35627": {
+      "series": "Sonic"
+    },
+    "Q728061": {
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q592507": {
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q743155": {
+      "genres": [
+        "aa",
+        "plat"
+      ],
+      "plats": [
+        "pc",
+        "ps",
+        "xb",
+        "nin"
+      ]
+    },
+    "Q748890": {
+      "genres": [
+        "shm",
+        "arc"
+      ],
+      "plats": [
+        "arc"
+      ]
+    },
+    "Q849328": {
+      "plats": [
+        "arc"
+      ]
+    },
+    "Q864389": {
+      "genres": [
+        "sim"
+      ]
+    },
+    "Q7897632": {
+      "genres": [
+        "hor",
+        "adv"
+      ]
+    },
+    "Q17486360": {
+      "plats": [
+        "ps",
+        "xb"
+      ]
+    },
+    "Q388225": {
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q18215878": {
+      "genres": [
+        "hor"
+      ],
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q429246": {
+      "plats": [
+        "pc",
+        "ps"
+      ]
+    },
+    "Q21078985": {
+      "genres": [
+        "arpg",
+        "hns"
+      ],
+      "series": "NieR"
+    },
+    "Q1471545": {
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q840121": {
+      "genres": [
+        "spo"
+      ]
+    },
+    "Q846167": {
+      "genres": [
+        "stl",
+        "tps"
+      ]
+    },
+    "Q944752": {
+      "year": 2004,
+      "genres": [
+        "arpg"
+      ],
+      "plats": [
+        "xb"
+      ]
+    },
+    "Q239889": {
+      "genres": [
+        "stl"
+      ],
+      "plats": [
+        "pc",
+        "ps",
+        "xb"
+      ]
+    },
+    "Q960786": {
+      "genres": [
+        "aa",
+        "tps"
+      ]
+    },
+    "Q726545": {
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q1043534": {
+      "genres": [
+        "shm",
+        "arc"
+      ],
+      "plats": [
+        "arc"
+      ],
+      "series": ""
+    },
+    "Q737103": {
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q737308": {
+      "series": "Star Wars"
+    },
+    "Q627877": {
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q753892": {
+      "genres": [
+        "aa",
+        "plat"
+      ]
+    },
+    "Q748317": {
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q642107": {
+      "genres": [
+        "arpg",
+        "stl"
+      ],
+      "plats": [
+        "pc",
+        "ps",
+        "xb"
+      ]
+    },
+    "Q7798922": {
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q678394": {
+      "genres": [
+        "mmo"
+      ],
+      "plats": [
+        "ps",
+        "pc"
+      ]
+    },
+    "Q791569": {
+      "genres": [
+        "aa",
+        "hns"
+      ],
+      "plats": [
+        "ps",
+        "xb"
+      ]
+    },
+    "Q2351827": {
+      "name": "Pokémon Kristall"
+    },
+    "Q105688771": {
+      "name": "Pokémon-Legenden: Arceus",
+      "genres": [
+        "arpg"
+      ]
+    },
+    "Q91282": {
+      "genres": [
+        "arc"
+      ],
+      "plats": [
+        "arc"
+      ]
+    },
+    "Q149998": {
+      "genres": [
+        "rpg"
+      ]
+    },
+    "Q1037042": {
+      "genres": [
+        "stl"
+      ],
+      "plats": [
+        "pc",
+        "ps"
+      ]
+    },
+    "Q751936": {
+      "genres": [
+        "aa",
+        "hns"
+      ],
+      "plats": [
+        "pc",
+        "ps",
+        "xb"
+      ]
+    },
+    "Q1880781": {
+      "name": "Need for Speed: Most Wanted (2012)"
+    },
+    "Q1068669": {
+      "name": "Sonic the Hedgehog (2006)",
+      "plats": [
+        "xb"
+      ],
+      "series": "Sonic"
+    },
+    "Q1987120": {
+      "genres": [
+        "arc"
+      ]
+    },
+    "Q853344": {
+      "genres": [
+        "stl",
+        "hor"
+      ],
+      "plats": [
+        "ps"
+      ]
+    },
+    "Q524267": {
+      "genres": [
+        "arc"
+      ],
+      "plats": [
+        "arc"
+      ]
+    },
+    "Q538821": {
+      "genres": [
+        "fps"
+      ]
+    },
+    "Q837931": {
+      "name": "Need for Speed: Hot Pursuit (2010)",
+      "plats": [
+        "pc",
+        "ps",
+        "xb",
+        "nin"
+      ]
+    },
+    "Q28127320": {
+      "genres": [
+        "hor",
+        "stl"
+      ],
+      "plats": [
+        "pc",
+        "xb"
+      ]
+    },
+    "Q1188904": {
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q840889": {
+      "genres": [
+        "aa",
+        "hns"
+      ],
+      "plats": [
+        "ps"
+      ]
+    },
+    "Q15304961": {
+      "genres": [
+        "surv"
+      ]
+    },
+    "Q15613717": {
+      "genres": [
+        "hor",
+        "stl"
+      ]
+    },
+    "Q20031741": {
+      "name": "Need for Speed (2015)"
+    },
+    "Q930345": {
+      "genres": [
+        "hns"
+      ],
+      "plats": [
+        "ps",
+        "xb"
+      ]
+    },
+    "Q30238508": {
+      "genres": [
+        "fps",
+        "hor"
+      ]
+    },
+    "Q1154227": {
+      "name": "Pokémon Platin"
+    },
+    "Q88759": {
+      "genres": [
+        "plat",
+        "arc"
+      ]
+    },
+    "Q1322480": {
+      "plats": [
+        "nin"
+      ]
+    },
+    "Q739450": {
+      "genres": [
+        "rpg"
+      ]
+    },
+    "Q1327449": {
+      "name": "Fahrenheit",
+      "genres": [
+        "adv"
+      ],
+      "plats": [
+        "pc",
+        "ps",
+        "xb"
+      ],
+      "aliases": [
+        "Indigo Prophecy"
+      ]
+    },
+    "Q746351": {
+      "plats": [
+        "pc",
+        "xb"
+      ]
+    },
+    "Q1063119": {
+      "series": ""
+    },
+    "Q856562": {
+      "plats": [
+        "sega"
+      ],
+      "series": "Sonic"
+    },
+    "Q864177": {
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q3702740": {
+      "genres": [
+        "arpg",
+        "sou"
+      ]
+    },
+    "Q6552947": {
+      "genres": [
+        "stl"
+      ],
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q474798": {
+      "genres": [
+        "aa"
+      ]
+    },
+    "Q580202": {
+      "genres": [
+        "adv"
+      ],
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q1135241": {
+      "genres": [
+        "spo",
+        "par"
+      ]
+    },
+    "Q1145336": {
+      "genres": [
+        "aa",
+        "hor"
+      ],
+      "plats": [
+        "xb"
+      ]
+    },
+    "Q30276412": {
+      "plats": [
+        "pc",
+        "ps",
+        "xb"
+      ]
+    },
+    "Q939806": {
+      "genres": [
+        "tps",
+        "hor"
+      ]
+    },
+    "Q71701894": {
+      "genres": [
+        "str"
+      ]
+    },
+    "Q129277": {
+      "genres": [
+        "stl"
+      ]
+    },
+    "Q137924": {
+      "plats": [
+        "pc",
+        "ps",
+        "xb",
+        "nin"
+      ]
+    },
+    "Q1050284": {
+      "plats": [
+        "sega"
+      ]
+    },
+    "Q648128": {
+      "series": "Battlefield"
+    },
+    "Q1070984": {
+      "plats": [
+        "sega"
+      ],
+      "series": "Sonic"
+    },
+    "Q893423": {
+      "genres": [
+        "fps",
+        "arpg"
+      ]
+    },
+    "Q7200554": {
+      "plats": [
+        "mob"
+      ]
+    },
+    "Q676563": {
+      "series": "Battlefield",
+      "plats": [
+        "pc",
+        "ps",
+        "xb"
+      ]
+    },
+    "Q377242": {
+      "genres": [
+        "stl"
+      ],
+      "plats": [
+        "xb"
+      ]
+    },
+    "Q465689": {
+      "genres": [
+        "aa",
+        "hor"
+      ],
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q16267841": {
+      "genres": [
+        "surv",
+        "hor"
+      ],
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q533304": {
+      "genres": [
+        "stl"
+      ]
+    },
+    "Q836690": {
+      "genres": [
+        "aa",
+        "rac"
+      ]
+    },
+    "Q843486": {
+      "plats": [
+        "arc"
+      ]
+    },
+    "Q15709637": {
+      "genres": [
+        "aa",
+        "arpg"
+      ]
+    },
+    "Q1151634": {
+      "genres": [
+        "fps"
+      ]
+    },
+    "Q20671114": {
+      "genres": [
+        "hns",
+        "fig"
+      ]
+    },
+    "Q113675008": {
+      "plats": [
+        "pc",
+        "ps",
+        "xb"
+      ]
+    },
+    "Q113835296": {
+      "genres": [
+        "spo"
+      ]
+    },
+    "Q96216496": {
+      "plats": [
+        "pc",
+        "ps",
+        "xb"
+      ]
+    },
+    "Q3265748": {
+      "plats": [
+        "ps",
+        "xb"
+      ]
+    },
+    "Q78059950": {
+      "name": "Resident Evil 3 (Remake)",
+      "plats": [
+        "pc",
+        "ps",
+        "xb"
+      ]
+    },
+    "Q146124": {
+      "plats": [
+        "nin"
+      ]
+    },
+    "Q1041427": {
+      "genres": [
+        "rog"
+      ]
+    },
+    "Q606894": {
+      "plats": [
+        "pc",
+        "ps",
+        "xb",
+        "nin"
+      ]
+    },
+    "Q747836": {
+      "plats": [
+        "xb"
+      ]
+    },
+    "Q1068962": {
+      "series": "Sonic"
+    },
+    "Q668568": {
+      "plats": [
+        "pc",
+        "ps"
+      ]
+    },
+    "Q7156711": {
+      "plats": [
+        "pc",
+        "ps",
+        "xb"
+      ]
+    },
+    "Q676123": {
+      "genres": [
+        "fps",
+        "sim"
+      ]
+    },
+    "Q905308": {
+      "genres": [
+        "puz"
+      ],
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q917647": {
+      "name": "SimCity (2013)"
+    },
+    "Q10865101": {
+      "genres": [
+        "fps",
+        "hor"
+      ]
+    },
+    "Q2292393": {
+      "plats": [
+        "pc",
+        "nin"
+      ]
+    },
+    "Q18085691": {
+      "genres": [
+        "surv"
+      ]
+    },
+    "Q18361009": {
+      "genres": [
+        "arpg",
+        "str"
+      ],
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q13415292": {
+      "genres": [
+        "aa",
+        "hor"
+      ]
+    },
+    "Q21039915": {
+      "year": 2018,
+      "genres": [
+        "surv",
+        "aa"
+      ],
+      "plats": [
+        "pc",
+        "ps",
+        "xb"
+      ]
+    },
+    "Q579708": {
+      "plats": [
+        "sega"
+      ],
+      "series": "Sonic"
+    },
+    "Q817163": {
+      "plats": [
+        "pc"
+      ]
+    },
+    "Q833139": {
+      "genres": [
+        "arpg"
+      ]
+    },
+    "Q14916183": {
+      "plats": [
+        "mob"
+      ]
+    }
+  }
+}

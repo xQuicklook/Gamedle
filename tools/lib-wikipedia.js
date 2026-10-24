@@ -87,7 +87,7 @@ const FAMILY = [
   ['pc', /windows|ms dos|dos|pc|mac|linux|apple ii|amiga|commodore|atari st|steam|zx spectrum|msx|fm towns/],
   ['ps', /playstation|ps[ 2-5]|psp|vita/],
   ['xb', /xbox/],
-  ['nin', /nintendo|wii|switch|game boy|nes|snes|gamecube|n64|3ds|\bds\b|famicom/],
+  ['nin', /nintendo|wii|switch|game boy|\bnes\b|\bsnes\b|gamecube|n64|3ds|\bds\b|famicom/], // \b: sonst wäre „Genesis“ Nintendo
   ['mob', /ios|android|mobile|iphone|ipad/],
   ['sega', /sega|genesis|mega drive|saturn|dreamcast|game gear|master system|mega cd/],
   ['arc', /arcade/],
@@ -96,4 +96,17 @@ const families = txt => FAMILY.filter(([, re]) => re.test(norm(txt))).map(([k]) 
 
 const years = txt => [...String(txt || '').matchAll(/\b(19[5-9]\d|20[0-4]\d)\b/g)].map(m => +m[1]);
 
-module.exports = { api, quoteApi, fetchPages, fetchQuotePages, flatText, clean, infobox, families, years, norm };
+/* SPARQL-Abfrage an Wikidata (mit User-Agent und Wiederholung bei 429) */
+async function sparql(query, tries = 4) {
+  const res = await fetch('https://query.wikidata.org/sparql?query=' + encodeURIComponent(query), {
+    headers: { ...UA, Accept: 'application/sparql-results+json' }, signal: AbortSignal.timeout(90000),
+  });
+  if ((res.status === 429 || res.status >= 500) && tries > 1) {
+    await new Promise(r => setTimeout(r, (5 - tries) * 5000));
+    return sparql(query, tries - 1);
+  }
+  if (!res.ok) throw new Error('Wikidata: HTTP ' + res.status);
+  return (await res.json()).results.bindings;
+}
+
+module.exports = { api, quoteApi, sparql, fetchPages, fetchQuotePages, flatText, clean, infobox, families, years, norm };

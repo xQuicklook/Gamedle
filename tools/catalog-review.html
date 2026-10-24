@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Katalog prüfen</title>
+<!-- Prüfseite für neue Katalog-Spiele. Daten: out/catalog-candidates.js (node tools/catalog-candidates.js).
+     Entscheidungen bleiben im Browser gespeichert; „Exportieren“ erzeugt die Datei für node tools/catalog-apply.js. -->
+<style>
+  :root {
+    --bg: #f4f5f8; --card: #fff; --line: #dfe2ea; --text: #1b1e27; --muted: #6b7180;
+    --accent: #6d5dfc; --accent-soft: #ebe8ff; --ok: #1f9d57; --ok-soft: #e1f5ea; --no: #d64545; --no-soft: #fbe6e6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #111318; --card: #1a1d24; --line: #2b2f3a; --text: #e8eaf0; --muted: #9096a6;
+      --accent: #8b7dff; --accent-soft: #2a2550; --ok: #3ccf7f; --ok-soft: #173a28; --no: #ff6b6b; --no-soft: #3f1f22; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header {
+    position: sticky; top: 0; z-index: 5; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line); padding: 12px 16px;
+  }
+  .bar { max-width: 1100px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  h1 { font-size: 18px; margin: 0 8px 0 0; }
+  .stats { color: var(--muted); font-size: 13px; }
+  .stats b { color: var(--text); }
+  .progress { flex-basis: 100%; height: 4px; border-radius: 4px; background: var(--line); overflow: hidden; }
+  .progress i { display: block; height: 100%; background: var(--accent); transition: width .2s; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
+  .seg button { border: 0; background: transparent; color: var(--muted); padding: 6px 10px; font: inherit; font-size: 13px; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  input, select { font: inherit; color: var(--text); background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; }
+  input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .btn { font: inherit; font-weight: 600; border: 1px solid var(--line); background: var(--card); color: var(--text); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.ok { color: var(--ok); } .btn.no { color: var(--no); }
+  .grow { flex: 1; }
+  .help { max-width: 1100px; margin: 8px auto 0; color: var(--muted); font-size: 12.5px; }
+  kbd { font: 11px ui-monospace, monospace; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; }
+  main { max-width: 1100px; margin: 16px auto 80px; padding: 0 16px; display: flex; flex-direction: column; gap: 10px; }
+  .card {
+    display: grid; grid-template-columns: 84px minmax(0, 1fr) 132px; gap: 14px; align-items: start;
+    background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--line); border-radius: 12px; padding: 12px;
+  }
+  .card:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .card.ok { border-left-color: var(--ok); } .card.no { border-left-color: var(--no); opacity: .75; }
+  .cover { width: 84px; height: 112px; border-radius: 8px; background: var(--line) center/cover no-repeat; display: grid; place-items: center; color: var(--muted); font-weight: 700; overflow: hidden; }
+  .cover img { width: 100%; height: 100%; object-fit: cover; }
+  .head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .head input.name { font-weight: 700; font-size: 15px; flex: 1; min-width: 200px; }
+  .meta { color: var(--muted); font-size: 12.5px; margin: 4px 0 8px; }
+  .meta a { color: var(--accent); }
+  .fields { display: grid; grid-template-columns: 90px minmax(0, 1fr) minmax(0, 1fr); gap: 8px; margin-bottom: 8px; }
+  .fields label { display: flex; flex-direction: column; gap: 2px; font-size: 11.5px; color: var(--muted); }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0; align-items: center; }
+  .chips > span { font-size: 11.5px; color: var(--muted); width: 74px; }
+  .chip { border: 1px solid var(--line); background: transparent; color: var(--muted); border-radius: 999px; padding: 2px 9px; font: inherit; font-size: 12px; cursor: pointer; }
+  .chip[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); border-color: transparent; font-weight: 600; }
+  .chip.wish { border-style: dashed; }
+  .more { display: none; }
+  .chips.open .more { display: inline-block; }
+  .toggle { border: 0; background: none; color: var(--accent); font: inherit; font-size: 12px; cursor: pointer; padding: 2px 4px; }
+  .notes { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .notes .claude { color: var(--accent); }
+  .notes .warn { color: #c9821a; }
+  .side { display: flex; flex-direction: column; gap: 6px; }
+  .side .state { font-size: 12px; font-weight: 700; text-align: center; padding: 3px; border-radius: 6px; }
+  .card.ok .state { background: var(--ok-soft); color: var(--ok); }
+  .card.no .state { background: var(--no-soft); color: var(--no); }
+  .empty { text-align: center; color: var(--muted); padding: 40px; }
+  @media (max-width: 700px) {
+    .card { grid-template-columns: 64px minmax(0, 1fr); }
+    .cover { width: 64px; height: 86px; }
+    .side { grid-column: 1 / -1; flex-direction: row; }
+    .side .btn { flex: 1; }
+    .fields { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <h1>Katalog prüfen</h1>
+    <span class="stats" id="stats"></span>
+    <span class="grow"></span>
+    <input type="search" id="q" placeholder="Suchen …" aria-label="Suchen">
+    <div class="seg" id="filter"></div>
+    <button class="btn" id="importBtn" type="button" title="Früher exportierten Stand laden">Stand laden</button>
+    <button class="btn primary" id="exportBtn" type="button">Exportieren</button>
+    <div class="progress"><i id="bar"></i></div>
+  </div>
+  <p class="help"><kbd>J</kbd>/<kbd>K</kbd> nächstes/voriges Spiel · <kbd>A</kbd> übernehmen · <kbd>X</kbd> verwerfen · <kbd>U</kbd> wieder offen.
+    Felder lassen sich direkt ändern; der Stand bleibt in diesem Browser gespeichert. Am Ende „Exportieren“ und die Datei an
+    <code>node tools/catalog-apply.js</code> geben.</p>
+</header>
+<main id="list"></main>
+<input type="file" id="importFile" accept="application/json,.json" hidden>
+<script src="out/catalog-candidates.js"></script>
+<script>
+'use strict';
+const KEY = 'catalog-review.v1';
+const V = window.CATALOG_VOCAB, ALL = window.CATALOG_CANDIDATES;
+const $ = s => document.querySelector(s);
+const el = (tag, attrs = {}, ...kids) => {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v == null || v === false) continue;
+    if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k in e && typeof v !== 'string') e[k] = v; else e.setAttribute(k, v);
+  }
+  for (const k of kids.flat()) if (k != null && k !== false) e.append(k instanceof Node ? k : document.createTextNode(String(k)));
+  return e;
+};
+
+if (!ALL) {
+  document.body.append(el('p', { class: 'empty' }, 'Keine Vorschläge gefunden – zuerst „node tools/catalog-candidates.js“ ausführen.'));
+  throw new Error('Keine Daten');
+}
+
+let store = {};
+try { store = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { store = {}; }
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch { /* voll oder gesperrt */ } };
+const dec = g => store[g.qid] || {};
+// Aktuelle Werte: Vorschlag + eigene Änderungen
+const val = g => ({ name: g.name, year: g.year, genres: g.genres, plats: g.plats, modes: g.modes, series: g.series, aliases: g.aliases, ...dec(g).edits });
+const status = g => dec(g).status || (g.skip ? 'skip' : 'open');
+
+const FILTERS = [['open', 'Offen'], ['ok', 'Übernommen'], ['no', 'Verworfen'], ['skip', 'Von Claude aussortiert'], ['all', 'Alle']];
+let filter = 'open', query = '';
+const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+function drawFilter() {
+  $('#filter').replaceChildren(...FILTERS.map(([k, label]) => el('button', {
+    type: 'button', 'aria-pressed': String(filter === k), onclick: () => { filter = k; drawList(); drawFilter(); },
+  }, label)));
+}
+
+function drawStats() {
+  const n = { open: 0, ok: 0, no: 0, skip: 0 };
+  for (const g of ALL) n[status(g)]++;
+  const total = n.open + n.ok + n.no;
+  $('#stats').replaceChildren(el('b', {}, n.ok), ' übernommen · ', el('b', {}, n.no), ' verworfen · ', el('b', {}, n.open), ' offen',
+    el('span', {}, ` · ${n.skip} von Claude aussortiert`));
+  $('#bar').style.width = (total ? ((n.ok + n.no) / total) * 100 : 0) + '%';
+}
+
+function setEdit(g, patch) {
+  const d = store[g.qid] ||= {};
+  d.edits = { ...d.edits, ...patch };
+  save();
+}
+function decide(g, s) {
+  const d = store[g.qid] ||= {};
+  if (s === 'open') delete d.status; else d.status = s;
+  save();
+  drawStats();
+}
+
+function chipRow(label, vocab, key, g, { max = 9, top = [] } = {}) {
+  const row = el('div', { class: 'chips' });
+  const draw = () => {
+    const sel = val(g)[key];
+    const keys = Object.keys(vocab);
+    // Ausgewählte und häufige zuerst, der Rest hinter „mehr“
+    const first = keys.filter(k => sel.includes(k) || top.includes(k));
+    row.replaceChildren(el('span', {}, label), ...keys.sort((a, b) => first.includes(b) - first.includes(a)).map(k => el('button', {
+      type: 'button', class: 'chip' + (first.includes(k) ? '' : ' more'), 'aria-pressed': String(sel.includes(k)),
+      onclick: () => {
+        const cur = val(g)[key];
+        const next = cur.includes(k) ? cur.filter(x => x !== k) : [...cur, k].slice(-max);
+        setEdit(g, { [key]: next });
+        draw();
+      },
+    }, vocab[k])), ...(keys.length > first.length ? [el('button', { type: 'button', class: 'toggle', onclick: () => row.classList.toggle('open') }, 'mehr …')] : []));
+  };
+  draw();
+  return row;
+}
+
+function card(g, index) {
+  const v = val(g);
+  const st = status(g);
+  const c = el('article', { class: 'card ' + (st === 'ok' ? 'ok' : st === 'no' ? 'no' : ''), tabindex: '0', 'data-qid': g.qid });
+  const cover = el('div', { class: 'cover' }, g.img ? el('img', { src: g.img, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }) : g.name.slice(0, 2));
+  const input = (key, attrs, toVal = x => x) => el('input', { ...attrs, value: key === 'aliases' ? v.aliases.join(' | ') : (v[key] ?? ''),
+    onchange: e => setEdit(g, { [key]: toVal(e.target.value) }) });
+  const fixed = (g.fixed || []).map(f => ({ genres: 'Genres', plats: 'Plattformen', name: 'Name', year: 'Jahr', series: 'Reihe', aliases: 'Alternativnamen', modes: 'Spielmodi' }[f]));
+  c.append(
+    cover,
+    el('div', {},
+      el('div', { class: 'head' }, input('name', { class: 'name', 'aria-label': 'Name' }, x => x.trim() || g.title)),
+      el('div', { class: 'meta' }, `#${index + 1} · ${g.links} Wikipedia-Sprachversionen · `, el('a', { href: 'https://en.wikipedia.org/wiki/' + encodeURIComponent(g.wiki.replace(/ /g, '_')), target: '_blank', rel: 'noopener' }, g.wiki), g.desc ? ` · ${g.desc}` : ''),
+      el('div', { class: 'fields' },
+        el('label', {}, 'Jahr', input('year', { type: 'number', min: 1970, max: 2030 }, x => +x || null)),
+        el('label', {}, 'Reihe', input('series', { list: 'seriesList', placeholder: '–' }, x => x.trim())),
+        el('label', {}, 'Alternativnamen (mit | trennen)', input('aliases', { placeholder: '–' }, x => x.split('|').map(s => s.trim()).filter(Boolean)))),
+      chipRow('Genres', V.genres, 'genres', g, { max: 4, top: ['aa', 'rpg', 'arpg', 'fps', 'tps', 'plat', 'str', 'sim', 'rac', 'hor', 'adv', 'puz'] }),
+      chipRow('Plattformen', V.plats, 'plats', g, { top: Object.keys(V.plats) }),
+      chipRow('Spielmodi', V.modes, 'modes', g, { top: Object.keys(V.modes) }),
+      el('div', { class: 'notes' },
+        g.skip ? el('div', { class: 'warn' }, 'Von Claude aussortiert: ' + g.skip) : null,
+        fixed.length ? el('div', { class: 'claude' }, 'Von Claude korrigiert: ' + fixed.join(', ')) : null,
+        g.hint.length ? el('div', { class: 'warn' }, 'Hinweis: ' + g.hint.join(' · ')) : null,
+        el('details', {}, el('summary', {}, 'Rohdaten von Wikidata'),
+          el('div', {}, 'Genres: ' + (g.raw.genres.join(', ') || '–')),
+          el('div', {}, 'Plattformen (zum Start): ' + (g.raw.firstPlats.join(', ') || '–')),
+          el('div', {}, 'Plattformen (alle): ' + (g.raw.plats.join(', ') || '–')),
+          el('div', {}, 'Reihe: ' + (g.raw.series.join(', ') || '–') + ' · Spielmodi: ' + (g.raw.modes.join(', ') || '–'))))),
+    el('div', { class: 'side' },
+      el('div', { class: 'state' }, st === 'ok' ? 'Übernommen' : st === 'no' ? 'Verworfen' : ''),
+      el('button', { class: 'btn ok', type: 'button', onclick: () => act(g, 'ok') }, '✓ Übernehmen'),
+      el('button', { class: 'btn no', type: 'button', onclick: () => act(g, 'no') }, '✕ Verwerfen'),
+      st === 'ok' || st === 'no' ? el('button', { class: 'btn', type: 'button', onclick: () => act(g, 'open') }, 'Wieder offen') : null),
+  );
+  return c;
+}
+
+function visible() {
+  const q = norm(query);
+  return ALL.filter(g => (filter === 'all' || status(g) === filter) && (!q || norm(val(g).name + ' ' + g.title + ' ' + val(g).series).includes(q)));
+}
+
+function drawList() {
+  const list = visible();
+  $('#list').replaceChildren(...list.map(g => card(g, ALL.indexOf(g))));
+  if (!list.length) $('#list').append(el('p', { class: 'empty' }, filter === 'open' ? 'Alles geprüft – jetzt „Exportieren“.' : 'Nichts in dieser Ansicht.'));
+}
+
+// Entscheidung treffen; in „Offen“ verschwindet die Karte und die nächste bekommt den Fokus
+function act(g, s) {
+  const node = document.querySelector(`.card[data-qid="${g.qid}"]`);
+  const next = node?.nextElementSibling;
+  decide(g, s);
+  const fresh = card(g, ALL.indexOf(g));
+  if (filter !== 'all' && status(g) !== filter) {
+    node.remove();
+    (next?.classList.contains('card') ? next : document.querySelector('.card'))?.focus();
+    if (!document.querySelector('.card')) drawList();
+  } else {
+    node.replaceWith(fresh);
+    fresh.focus();
+  }
+}
+
+document.addEventListener('keydown', e => {
+  if (e.target.closest('input, select, textarea') || e.ctrlKey || e.metaKey || e.altKey) return;
+  const cards = [...document.querySelectorAll('.card')];
+  const cur = document.activeElement?.closest?.('.card');
+  const i = cards.indexOf(cur);
+  const go = j => { const t = cards[Math.max(0, Math.min(cards.length - 1, j))]; t?.focus(); t?.scrollIntoView({ block: 'center', behavior: 'smooth' }); };
+  const k = e.key.toLowerCase();
+  if (k === 'j' || e.key === 'ArrowDown') { e.preventDefault(); go(i + 1); return; }
+  if (k === 'k' || e.key === 'ArrowUp') { e.preventDefault(); go(i - 1); return; }
+  const g = cur && ALL.find(x => x.qid === cur.dataset.qid);
+  if (!g) return;
+  if (k === 'a') act(g, 'ok'); else if (k === 'x') act(g, 'no'); else if (k === 'u') act(g, 'open');
+});
+
+$('#q').addEventListener('input', e => { query = e.target.value; drawList(); });
+
+// Export: übernommene Spiele mit ihren endgültigen Werten + alle Entscheidungen (zum späteren Laden)
+$('#exportBtn').onclick = () => {
+  const accepted = ALL.filter(g => status(g) === 'ok').map(g => ({ qid: g.qid, wiki: g.wiki, title: g.title, ...val(g) }));
+  if (!accepted.length && !confirm('Noch kein Spiel übernommen. Trotzdem exportieren?')) return;
+  const data = { app: 'tierly-catalog-review', v: 1, exportedAt: new Date().toISOString(), accepted, decisions: store };
+  const a = el('a', { href: URL.createObjectURL(new Blob([JSON.stringify(data, null, 1)], { type: 'application/json' })), download: 'katalog-entscheidungen.json' });
+  document.body.append(a); a.click(); a.remove();
+  alert(`${accepted.length} übernommene Spiele exportiert.\nDanach: node tools/catalog-apply.js <Pfad zur Datei>`);
+};
+$('#importBtn').onclick = () => $('#importFile').click();
+$('#importFile').onchange = async e => {
+  try {
+    const data = JSON.parse(await e.target.files[0].text());
+    if (data.app !== 'tierly-catalog-review') throw new Error('Keine Export-Datei dieser Seite');
+    store = data.decisions || {};
+    save(); drawStats(); drawList();
+  } catch (err) { alert('Laden fehlgeschlagen: ' + err.message); }
+  e.target.value = '';
+};
+
+document.body.append(el('datalist', { id: 'seriesList' }, ...V.series.map(s => el('option', { value: s }))));
+drawFilter(); drawStats(); drawList();
+</script>
+</body>
+</html>

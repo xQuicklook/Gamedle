@@ -1,2 +1,4 @@
 # Lokale Werkzeug-Einstellungen
 .claude/
+# Erzeugte Werkzeug-Ausgaben (z. B. Katalog-Vorschläge)
+tools/out/

@@ -9,6 +9,7 @@ const GD_GENRES = {
   puz: 'Puzzle', hor: 'Horror', adv: 'Adventure', sbx: 'Sandbox', mmo: 'MMORPG', br: 'Battle Royale',
   rog: 'Roguelike', mv: 'Metroidvania', par: 'Party', stl: 'Stealth', hns: 'Hack ’n’ Slay', sou: 'Soulslike',
   moba: 'MOBA', arc: 'Arcade', surv: 'Survival', shm: 'Shoot ’em up', card: 'Kartenspiel',
+  rhy: 'Musik & Rhythmus',
 };
 const GD_PLATFORMS = { pc: 'PC', ps: 'PlayStation', xb: 'Xbox', nin: 'Nintendo', mob: 'Mobile', sega: 'Sega', arc: 'Arcade' };
 const GD_PERSP = { ego: 'Ego', third: 'Third-Person', top: 'Von oben', side: 'Seitlich (2D)', mixed: 'Gemischt' };

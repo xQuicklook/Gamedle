@@ -598,6 +598,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
   text-transform: uppercase; color: var(--muted);
 }
 .pack-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 8px; }
+.pack-group > .linkish { margin-top: 8px; }
 
 .room-code-big {
   font-size: 40px; font-weight: 800; letter-spacing: .25em; text-align: center;

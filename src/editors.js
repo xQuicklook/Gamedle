@@ -173,13 +173,12 @@ function libraryModal(tab = null, query = '') {
             try { found = await Wiki.byTitles(fresh.map(g => g.wiki)); }
             catch (e) { console.warn(e); toast('Cover nicht erreichbar – Spiele werden ohne Cover hinzugefügt.'); }
             const before = App.state.order.length;
-            App.dispatch({
-              type: 'items/add',
-              items: fresh.map(g => {
-                const info = found.get(g.wiki);
-                return { title: g.name, year: g.year, franchise: g.series, wiki: info?.wiki || g.wiki, img: info?.img || '', genres: g.genres };
-              }),
+            const items = fresh.map(g => {
+              const info = found.get(g.wiki);
+              return { title: g.name, year: g.year, franchise: g.series, wiki: info?.wiki || g.wiki, img: info?.img || '', genres: g.genres };
             });
+            // In Etappen: eine Aktion nimmt höchstens 500 Spiele an (und bleibt so klein genug fürs Netz)
+            for (let i = 0; i < items.length; i += 200) App.dispatch({ type: 'items/add', items: items.slice(i, i + 200) });
             const n = App.state.order.length - before;
             toast(n ? `${n} Spiele hinzugefügt` : 'Alle Spiele waren schon vorhanden.');
             refresh();
@@ -187,10 +186,19 @@ function libraryModal(tab = null, query = '') {
         }, fresh.length ? (fresh.length === p.games.length ? 'Hinzufügen' : `+ ${fresh.length} neue`) : 'Schon drin');
         return h('div.pack', h('div.pack-info', h('strong', p.name), h('span', `${p.desc} · ${p.games.length} Spiele`)), btn);
       };
+      // Lange Gruppen (die vielen Reihen) zeigen erst die größten Pakete
+      const group = name => {
+        const list = packs.filter(p => p.group === name);
+        const cut = list.length > 10 ? 8 : list.length;
+        const grid = h('div.pack-grid', list.slice(0, cut).map(pack));
+        const more = cut < list.length ? h('button.linkish', {
+          type: 'button', onclick: () => { grid.append(...list.slice(cut).map(pack)); more.remove(); },
+        }, `Alle ${list.length} ${name} zeigen`) : null;
+        return h('section.pack-group', h('h4', name), grid, more);
+      };
       return [
         h('p.help', `Pakete aus unserem Katalog mit ${CATALOG.length} bekannten Spielen – inklusive Cover, Genre und Reihe. Pakete lassen sich kombinieren, vorhandene Spiele werden übersprungen.`),
-        ...[...new Set(packs.map(p => p.group))].map(group => h('section.pack-group',
-          h('h4', group), h('div.pack-grid', packs.filter(p => p.group === group).map(pack)))),
+        ...[...new Set(packs.map(p => p.group))].map(group),
       ];
     },
 

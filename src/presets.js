@@ -7,8 +7,8 @@ const onlyOn = (g, plat) => g.plats.length === 1 && g.plats[0] === plat; // zum 
 const PACK_MIN = 12, SMALL_PACK_MIN = 5; // klein: Jahrzehnte und Reihen dürfen kürzer sein
 
 const PRESET_PACKS = [
-  { group: 'Jahrzehnte', id: 'all', name: 'Alle Spiele', desc: 'Der komplette Katalog von 1980 bis heute', filter: () => true },
-  { group: 'Jahrzehnte', id: '80', name: '1980er', desc: 'Arcade, NES & frühe Heimcomputer', filter: g => g.year < 1990, min: SMALL_PACK_MIN },
+  { group: 'Jahrzehnte', id: 'all', name: 'Alle Spiele', desc: 'Der komplette Katalog – von Pong bis heute', filter: () => true },
+  { group: 'Jahrzehnte', id: '80', name: '1970er & 80er', desc: 'Spielhalle, NES & frühe Heimcomputer', filter: g => g.year < 1990, min: SMALL_PACK_MIN },
   { group: 'Jahrzehnte', id: '90', name: '1990er', desc: '16-Bit, PlayStation & N64', filter: g => g.year >= 1990 && g.year < 2000, min: SMALL_PACK_MIN },
   { group: 'Jahrzehnte', id: '00', name: '2000er', desc: 'PS2, GameCube, Xbox & PC-Hochzeit', filter: g => g.year >= 2000 && g.year < 2010, min: SMALL_PACK_MIN },
   { group: 'Jahrzehnte', id: '10', name: '2010er', desc: 'Open Worlds, Souls & Indies', filter: g => g.year >= 2010 && g.year < 2020, min: SMALL_PACK_MIN },
@@ -18,7 +18,7 @@ const PRESET_PACKS = [
   { group: 'Genres', id: 'aa', name: 'Action-Adventure', desc: 'Zelda, Uncharted, Arkham & Co.', filter: g => hasGenre(g, 'aa') },
   { group: 'Genres', id: 'shooter', name: 'Shooter', desc: 'Ego, Third-Person & Battle Royale', filter: g => hasGenre(g, 'fps', 'tps', 'br', 'shm') },
   { group: 'Genres', id: 'plat', name: 'Jump ’n’ Run & Metroidvania', desc: 'Hüpfen, springen, erkunden', filter: g => hasGenre(g, 'plat', 'mv') },
-  { group: 'Genres', id: 'fun', name: 'Rennen, Kampf & Party', desc: 'Rennspiele, Prügler, Sport & Partyspiele', filter: g => hasGenre(g, 'rac', 'fig', 'spo', 'par') },
+  { group: 'Genres', id: 'fun', name: 'Rennen, Kampf & Party', desc: 'Rennspiele, Prügler, Sport, Party- & Musikspiele', filter: g => hasGenre(g, 'rac', 'fig', 'spo', 'par', 'rhy') },
   { group: 'Genres', id: 'strategy', name: 'Strategie & Simulation', desc: 'Echtzeit, Runden, Aufbau & Sandbox', filter: g => hasGenre(g, 'str', 'sim', 'sbx', 'moba', 'card') },
   { group: 'Genres', id: 'horror', name: 'Horror & Survival', desc: 'Für den Gruselabend', filter: g => hasGenre(g, 'hor', 'surv') },
   { group: 'Genres', id: 'souls', name: 'Soulslikes & Hack ’n’ Slay', desc: 'Schwer, schnell, gnadenlos', filter: g => hasGenre(g, 'sou', 'hns') },
@@ -30,6 +30,7 @@ const PRESET_PACKS = [
   { group: 'Plattformen', id: 'xbox', name: 'Xbox-Exklusives', desc: 'Zum Start nur auf Xbox', filter: g => onlyOn(g, 'xb') },
   { group: 'Plattformen', id: 'pc', name: 'PC-Klassiker', desc: 'Zum Start nur auf dem PC', filter: g => onlyOn(g, 'pc') },
   { group: 'Plattformen', id: 'retro', name: 'Arcade & Sega', desc: 'Spielhalle, Master System & Mega Drive', filter: g => g.plats.includes('arc') || g.plats.includes('sega') },
+  { group: 'Plattformen', id: 'mobile', name: 'Handy-Spiele', desc: 'Zum Start nur auf dem Smartphone', filter: g => onlyOn(g, 'mob') },
 
   { group: 'Spielweise', id: 'coop', name: 'Koop-Spiele', desc: 'Gemeinsam spielbar – lokal oder online', filter: g => g.modes.includes('k') },
 ];

@@ -181,6 +181,7 @@ const GENRE_RULES = [
   ['sou', /souls-?like/],
   ['moba', /multiplayer online battle arena|\bmoba\b/],
   ['card', /card game|deck-?building/],
+  ['rhy', /rhythm|music video game/],
 ];
 function genreKeys(labels) {
   const out = new Set();
@@ -234,7 +235,7 @@ async function fetchMissingGenres(items, onProgress = () => {}) {
 
 /* Wählt aus den Wikidata-Reihen die passendste – bevorzugt Namen, die es im Raum schon gibt */
 function pickSeries(labels, title, existing) {
-  const clean = labels.map(l => str(l.replace(/\s*\((video game )?(series|franchise)\)$/i, '').replace(/ (video game )?(series|franchise)$/i, ''), 60)).filter(Boolean);
+  const clean = labels.map(l => str(l.replace(/\s*\((video game )?(series|franchise)\)$/i, '').replace(/ (video game )?(series|franchise)$/i, '').replace(/ video games$/i, ''), 60)).filter(Boolean);
   if (!clean.length) return '';
   const known = existing.find(e => clean.some(l => norm(l) === norm(e)));
   if (known) return known;
