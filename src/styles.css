@@ -24,7 +24,8 @@
   --label: 92px;
   --gap: 6px;
   --pool-w: 360px;
-  --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* Nur Systemschriften – keine Anfragen an externe Font-Server */
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   color-scheme: dark;
 }
 :root[data-theme="light"] {
@@ -742,6 +743,9 @@ kbd {
   font: 600 12px var(--font); padding: 2px 7px; border-radius: 6px; white-space: nowrap;
   background: var(--bg-elev-2); border: 1px solid var(--border-strong); border-bottom-width: 2px;
 }
+
+.info-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 13.5px; color: var(--muted); }
+.info-list strong { color: var(--text); }
 
 /* Verbindungstest */
 .diag-list { display: flex; flex-direction: column; gap: 10px; }

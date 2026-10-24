@@ -53,7 +53,7 @@ async function exportPng() {
   const { rows } = App.viewData();
   const css = getComputedStyle(document.documentElement);
   const col = name => css.getPropertyValue(name).trim();
-  const font = (w, px) => `${w} ${px}px Inter, system-ui, -apple-system, "Segoe UI", sans-serif`;
+  const font = (w, px) => `${w} ${px}px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
   const showTitles = document.body.classList.contains('show-titles');
 
   // Cover vorladen
@@ -82,8 +82,10 @@ async function exportPng() {
 
   // Kopfzeile
   const boardName = App.board === 'games' ? 'Spiele' : 'Franchises';
+  // Aus der Statistik-Ansicht wird das Gruppenergebnis exportiert (viewData liefert dort dieselben Reihen)
+  const groupLike = App.view === 'group' || App.view === 'stats';
   const viewName = App.view === 'me' ? `Liste von ${App.me.name}`
-    : App.view === 'group' ? `Gruppenergebnis (${groupView(s, App.board).lists} Listen)`
+    : groupLike ? `Gruppenergebnis (${groupView(s, App.board, App.groupOpts).lists} Listen)`
       : `Liste von ${s.players[App.view]?.name || ''}`;
   ctx.fillStyle = col('--text');
   ctx.font = font(800, 28);
@@ -131,7 +133,7 @@ async function exportPng() {
     ctx.textAlign = 'left';
   }
 
-  c.toBlob(blob => downloadBlob(blob, `tierly-${App.board}-${App.view === 'group' ? 'gruppe' : 'liste'}-${fileStamp()}.png`), 'image/png');
+  c.toBlob(blob => downloadBlob(blob, `tierly-${App.board}-${groupLike ? 'gruppe' : 'liste'}-${fileStamp()}.png`), 'image/png');
 }
 
 /* Zeichnet ein Bild wie object-fit: cover in das Rechteck */

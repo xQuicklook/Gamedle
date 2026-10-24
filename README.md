@@ -16,7 +16,7 @@ powershell -ExecutionPolicy Bypass -File build.ps1
 ```
 
 ```bash
-node --test tests/core.test.js
+node --test "tests/*.test.js"
 ```
 
 `build.ps1` setzt `src/*` und `vendor/peerjs.min.js` zu einer einzigen Datei zusammen (`tierly.html` und `docs/index.html`).
@@ -25,7 +25,7 @@ node --test tests/core.test.js
 
 Es wird nur eine statische Datei ausgeliefert – kein Server-Code. Der Raum lebt weiterhin im Browser des Hosts.
 
-GitHub Pages veröffentlicht den Ordner `docs/` aus dem Branch `main`. Nach einer Änderung:
+Bei jedem Push auf `main` testet und baut eine GitHub Action (`.github/workflows/pages.yml`) das Projekt und veröffentlicht erst dann – schlägt ein Test fehl, bleibt die alte Version online. Nach einer Änderung:
 
 ```bash
 powershell -ExecutionPolicy Bypass -File build.ps1

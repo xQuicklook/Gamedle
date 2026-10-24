@@ -340,7 +340,9 @@ function editItemModal(id, after) {
         onclick: () => {
           if (!title.value.trim()) { title.focus(); return; }
           const patch = { title: title.value, franchise: fr.value, year: year.value, img, wiki };
-          App.dispatch({ type: 'items/update', id, patch, asset: upload ? { id: uid(10), data: upload } : undefined });
+          const asset = upload ? { id: uid(10), data: upload } : undefined;
+          App.dispatch({ type: 'items/update', id, patch, asset });
+          if (asset && App.state.items[id]?.img !== 'asset:' + asset.id) toast('Bild nicht gespeichert: Der Raum hat das Limit für eigene Bilder erreicht (120 Bilder bzw. 4 MB).', 6000);
           m.close(); after?.();
         },
       }, 'Speichern'),

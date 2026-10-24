@@ -203,10 +203,13 @@ function addAsset(state, id, data) {
   id = str(id, 16);
   if (!/^[a-z0-9]{6,16}$/.test(id) || typeof data !== 'string' || data.length > 80000 || !ASSET_RE.test(data)) return false;
   if (!state.assets) state.assets = {};
-  if (!state.assets[id] && Object.keys(state.assets).length >= 300) return false;
+  // Obergrenzen pro Raum: 120 eigene Bilder, zusammen höchstens ca. 4 MB
+  const list = Object.entries(state.assets).filter(([k]) => k !== id);
+  if (list.length >= MAX_ASSETS || list.reduce((n, [, d]) => n + d.length, 0) + data.length > MAX_ASSET_CHARS) return false;
   state.assets[id] = data;
   return true;
 }
+const MAX_ASSETS = 120, MAX_ASSET_CHARS = 4000000;
 
 /* Nicht mehr verwendete hochgeladene Bilder entfernen */
 function gcAssets(state) {

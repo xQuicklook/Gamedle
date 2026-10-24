@@ -90,6 +90,7 @@ function toggleMenu() {
         .then(ok => ok && App.dispatch({ type: 'ranking/reset', board: App.board })
           && toast('Liste zurückgesetzt', 5000, { label: 'Rückgängig', onClick: () => Undo.undoLast() }))),
     item('edit', 'Hilfe & Tastatur', () => showTips()),
+    item('lock', 'Datenschutz & Quellen', () => infoModal()),
     h('hr'),
     h('div.menu-label', 'Darstellung'),
     h('div.theme-row', themeBtn('system', 'System'), themeBtn('light', 'Hell'), themeBtn('dark', 'Dunkel')),
@@ -112,6 +113,30 @@ function toggleMenu() {
     }, '.danger'),
   );
   menu.hidden = false;
+}
+
+/* ───────── Datenschutz & Quellen ───────── */
+function infoModal() {
+  const section = (title, ...kids) => h('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px' } }, h('h3', { style: { fontSize: '15px' } }, title), ...kids);
+  const li = (strong, text) => h('li', h('strong', strong), ' – ', text);
+  openModal({
+    title: 'Datenschutz & Quellen', width: 560, autofocus: false,
+    body: [
+      section('Was wo gespeichert wird',
+        h('p.help', 'Es gibt kein Konto und keinen Tierly-Server. Räume, Listen, Name und Einstellungen liegen nur im Speicher deines Browsers (localStorage). Im Raum gehen Daten direkt an die anderen Mitspieler (WebRTC), nicht an Dritte.')),
+      section('Welche Dienste angefragt werden',
+        h('ul.info-list',
+          li('PeerJS-Vermittlungsserver (0.peerjs.com)', 'nur zum Finden der Mitspieler über den Raum-Code; der Server sieht dabei deine IP-Adresse. Bei blockierten Direktverbindungen kann zusätzlich der PeerJS-Relay (TURN) genutzt werden.'),
+          li('Wikipedia & Wikidata (Wikimedia Foundation)', 'für die Spielesuche, Cover, Erscheinungsjahr und Reihe. Cover werden direkt von upload.wikimedia.org geladen.'),
+          li('Google STUN-Server', 'hilft beim Aufbau der Direktverbindung (ermittelt die öffentliche Adresse).'))),
+      section('Quellen & Lizenzen',
+        h('ul.info-list',
+          li('Cover-Bilder', 'stammen aus der englischsprachigen Wikipedia; die Rechte liegen bei den jeweiligen Publishern.'),
+          li('Spieldaten', 'Wikidata (CC0) und Wikipedia.'),
+          li('PeerJS 1.5.4', 'MIT-Lizenz, © Michelle Bu und Eric Zhang.'))),
+      h('p.help', 'Tierly ' + APP_VERSION),
+    ],
+  });
 }
 
 /* ───────── Raum & Spieler ───────── */

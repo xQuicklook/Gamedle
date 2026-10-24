@@ -4,6 +4,8 @@
    Änderungen („ops“). Den vollständigen Raum gibt es nur beim Beitritt, beim Aufdecken
    und wenn einem Gast eine Änderung fehlt (Lücke in der Nummerierung → „resync“). */
 const PEER_PREFIX = 'tierly-room-v1-';
+const MAX_ACTION_CHARS = 250000; // eine Aktion inkl. hochgeladenem Bild
+const RATE_WINDOW = 5000, RATE_MAX = 80; // höchstens 80 Aktionen pro 5 s und Gast
 const NET_ERRORS_RETRY = new Set(['network', 'server-error', 'socket-error', 'socket-closed', 'disconnected']);
 
 const JOIN_HELP = {
@@ -33,7 +35,7 @@ const Net = {
   flushTimer: null,
   on: {
     status() {}, state() {}, error() {}, joined() {}, joinFailed() {}, rejected() {}, hostOutdated() {},
-    hostJoin() {}, hostLeave() {}, hostAction() {}, hostReject() {}, idTaken() {},
+    hostJoin() {}, hostLeave() {}, hostAction() {}, hostReject() {}, idTaken() {}, hostOverload() {},
   },
 
   later(fn, ms) {
@@ -136,6 +138,16 @@ const Net = {
       const seq = Number(msg.seq) || 0;
       if (seq <= (this.lastSeq[e.pid] || 0)) return;
       this.lastSeq[e.pid] = seq;
+      // Schutz vor Überlast: zu große oder zu viele Aktionen in kurzer Zeit werden verworfen
+      const now = Date.now();
+      if (!e.rate || now - e.rate.t > RATE_WINDOW) e.rate = { t: now, n: 0 };
+      const tooMany = ++e.rate.n > RATE_MAX;
+      const tooBig = JSON.stringify(msg.a ?? null).length > MAX_ACTION_CHARS;
+      if (tooMany || tooBig) {
+        this.ackOnly(e.pid);
+        if (!e.warned || now - e.warned > 10000) { e.warned = now; this.on.hostOverload(e.pid, tooBig ? 'big' : 'many'); }
+        return;
+      }
       this.on.hostAction(msg.a, e.pid);
     } else if (msg.t === 'resync') {
       this.sendState(conn);
@@ -343,7 +355,10 @@ const Net = {
 
   /* Lokaler Stand = bestätigter Stand + eigene, noch unbestätigte Aktionen */
   emitLocal() {
-    const local = structuredClone(this.confirmed);
+    // Hochgeladene Bilder nicht mitkopieren (groß, ändern sich selten) – nur die Liste der Verweise
+    const { assets, ...rest } = this.confirmed;
+    const local = structuredClone(rest);
+    local.assets = { ...assets };
     for (const p of this.pending) applyAction(local, p.action, App.me.id);
     this.on.state(local);
   },

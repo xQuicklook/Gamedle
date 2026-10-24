@@ -88,6 +88,7 @@ const App = {
     link.textContent = `Gespeicherte Räume verwalten (${saved})`;
     link.onclick = () => roomsModal();
     $('#diagLink').onclick = () => diagModal();
+    $('#infoLink').onclick = () => infoModal();
     if (!last?.code) return;
     const label = last.code === 'SOLO' ? 'Deine Solo-Liste' : `Raum ${last.code} (${last.role === 'host' ? 'Host' : 'Gast'})`;
     box.append(
@@ -223,6 +224,10 @@ const App = {
       const btn = $('#joinForm button');
       btn.disabled = false;
       btn.textContent = 'Beitreten';
+    };
+    Net.on.hostOverload = (pid, why) => {
+      const name = this.state?.players[pid]?.name || 'Ein Gast';
+      toast(why === 'big' ? `Eine zu große Änderung von ${name} wurde verworfen.` : `${name} schickt sehr viele Änderungen – einige wurden verworfen.`, 5000);
     };
     Net.on.idTaken = code => {
       toast('Der Raum läuft gerade bei jemand anderem – du trittst als Gast bei.', 5000);
