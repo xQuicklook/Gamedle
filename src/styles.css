@@ -350,6 +350,16 @@ input.zoom-range { width: 92px; padding: 0; border: 0; background: transparent; 
   user-select: none;
 }
 .tier-label.long { font-size: 13px; font-weight: 700; }
+/* Stufe ohne Wertung (z. B. „Nicht gespielt“): gestreift und beschriftet */
+.tier.unrated .tier-label, .tier-badge.unrated {
+  background-image: repeating-linear-gradient(135deg, rgb(255 255 255 / .2) 0 6px, transparent 6px 12px);
+}
+.tier.unrated .tier-label { align-content: center; gap: 5px; }
+.tier-flag {
+  font-size: 9.5px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase;
+  line-height: 1.15; opacity: .75;
+}
+@container (max-width: 400px) { .tier-flag { display: none; } }
 .tier-items {
   display: flex; flex-wrap: wrap; align-content: flex-start; gap: var(--gap);
   padding: var(--gap); min-width: 0;
@@ -470,10 +480,15 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
   font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 999px;
   background: var(--bg-elev-2); color: var(--muted);
 }
-.pool-controls { display: flex; gap: 8px; }
-.search { flex: 1; display: flex; }
+/* Schmale Liste: Genre & Sortierung rutschen unter die Suche */
+.pool-controls { display: flex; flex-wrap: wrap; gap: 8px; }
+.search { flex: 1 1 170px; display: flex; }
 .search input { width: 100%; padding: 8px 12px; }
 .pool-controls select { padding: 8px 10px; }
+.pool-filters { display: flex; gap: 8px; flex: 1 1 190px; min-width: 0; }
+.pool-filters:has(#poolGenre[hidden]) { flex: 0 0 auto; }
+#poolGenre { flex: 1 1 auto; min-width: 0; }
+#poolSort { flex: none; }
 .chips { display: flex; gap: 6px; flex-wrap: wrap; }
 .chips:empty { display: none; }
 .chip {
@@ -482,6 +497,19 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
 }
 .chip:hover { color: var(--text); border-color: var(--border-strong); }
 .chip[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+.chip:disabled { opacity: .45; cursor: not-allowed; }
+
+/* Genre-Auswahl beim Hinzufügen/Bearbeiten (aufklappbar) */
+.genre-box { border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.genre-box summary {
+  display: flex; align-items: baseline; gap: 10px; padding: 9px 12px; cursor: pointer; list-style: none;
+  font-size: 13px; font-weight: 600; color: var(--muted);
+}
+.genre-box summary::-webkit-details-marker { display: none; }
+.genre-box summary::after { content: '▾'; margin-left: auto; }
+.genre-box[open] summary::after { content: '▴'; }
+.genre-box summary .muted { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; color: var(--text); }
+.genre-picks { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 12px 12px; }
 .pool-body {
   flex: 1; overflow-y: auto; min-height: 0;
   display: flex; flex-wrap: wrap; align-content: flex-start; gap: var(--gap);
@@ -523,8 +551,20 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
 .help code { background: var(--bg-elev-2); padding: 1px 5px; border-radius: 5px; font-size: 12.5px; }
 
 .tier-edit-row {
-  display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 8px; align-items: center;
+  display: grid; grid-template-columns: 40px minmax(0, 1fr) auto auto; gap: 8px; align-items: center;
   padding: 6px; border-radius: 12px; background: var(--bg-elev-2);
+}
+.tier-skip {
+  display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;
+  font-size: 12.5px; font-weight: 600; color: var(--muted); white-space: nowrap;
+}
+.tier-skip input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); cursor: pointer; }
+.tier-skip:has(input:checked) { color: var(--text); }
+.tier-skip:has(input:disabled) { opacity: .5; cursor: not-allowed; }
+/* Handy: „Nicht werten“ unter den Namen, damit der Name lesbar bleibt */
+@media (max-width: 480px) {
+  .tier-edit-row { grid-template-columns: 40px minmax(0, 1fr) auto; row-gap: 4px; }
+  .tier-skip { grid-column: 2; grid-row: 2; padding-left: 2px; }
 }
 .tier-edit-row input[type="color"] {
   width: 40px; height: 38px; padding: 3px; border-radius: 9px; cursor: pointer;

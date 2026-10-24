@@ -2,8 +2,9 @@
 function statsPanel(board) {
   const s = App.state;
   const st = statsFor(s, board);
+  const rated = ratedTiers(s); // ti zählt nur Stufen mit Wertung
   const tierBadge = ti => {
-    const t = s.tiers[clamp(Math.round(ti), 0, s.tiers.length - 1)];
+    const t = rated[clamp(Math.round(ti), 0, rated.length - 1)];
     return h('span.tier-badge', { style: { background: t.color } }, t.name);
   };
   const smallTile = it => h('div.stat-tile', makeTile(it, { readonly: true }));

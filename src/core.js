@@ -101,7 +101,7 @@ function icon(name, cls = '') {
 /* ───────── Version ─────────
    PROTOCOL steigt, wenn sich das Netzwerkprotokoll inkompatibel ändert –
    ältere Dateien werden dann beim Beitritt mit einem Hinweis abgewiesen. */
-const APP_VERSION = '3.1';
+const APP_VERSION = '3.2';
 const PROTOCOL = 3; // 3: Änderungen werden einzeln (als „ops“) verteilt statt als ganzer Raum
 
 /* ───────── Speicher ───────── */
@@ -259,7 +259,8 @@ function franchiseList(state) {
       const years = f.games.map(g => g.year).filter(Boolean);
       // Mosaik aus bis zu 4 Covern der Reihe, chronologisch
       const imgs = [...f.games].sort((a, b) => (a.year || 9999) - (b.year || 9999)).map(g => g.img).filter(Boolean).slice(0, 4);
-      return { ...f, imgs, count: f.games.length, year: years.length ? Math.min(...years) : null, yearTo: years.length ? Math.max(...years) : null };
+      const genres = [...new Set(f.games.flatMap(g => g.genres || []))]; // für den Genre-Filter: alle Genres der Reihe
+      return { ...f, imgs, genres, count: f.games.length, year: years.length ? Math.min(...years) : null, yearTo: years.length ? Math.max(...years) : null };
     });
 }
 
@@ -272,6 +273,8 @@ function sanitizeItem(raw) {
   const title = str(raw.title, 90);
   if (!title) return null;
   const y = parseInt(raw.year, 10);
+  // Genres als Kürzel (z. B. "aa", "rpg" – Namen in GD_GENRES), höchstens 4
+  const genres = [...new Set((Array.isArray(raw.genres) ? raw.genres : []).filter(g => typeof g === 'string' && /^[a-z]{2,4}$/.test(g)))].slice(0, 4);
   return {
     id: str(raw.id, 24) || uid(),
     title,
@@ -279,6 +282,7 @@ function sanitizeItem(raw) {
     franchise: str(raw.franchise, 60),
     img: safeImg(raw.img),
     wiki: str(raw.wiki, 200), // Wikipedia-Artikel, aus dem das Cover stammt
+    ...(genres.length ? { genres } : {}),
   };
 }
 
@@ -435,8 +439,10 @@ function applyAction(state, a, actor) {
         id: str(t.id, 12) || uid(6),
         name: str(t.name, 24) || '?',
         color: /^#[0-9a-f]{6}$/i.test(t.color) ? t.color : '#888888',
+        ...(t.unrated ? { unrated: true } : {}), // „Nicht werten“: zählt nicht für Gruppenergebnis & Statistik
       }));
       if (!tiers.length) return false;
+      if (tiers.every(t => t.unrated)) tiers.forEach(t => delete t.unrated); // mindestens eine Stufe muss werten
       const keep = new Set(tiers.map(t => t.id));
       for (const pid in state.rankings) {
         for (const b of BOARDS) {
@@ -576,12 +582,22 @@ function personalView(state, board, pid) {
   return { rows, pool: items.filter(it => !placed.has(it.id)) };
 }
 
+/* Stufen, die in die Wertung eingehen. „Nicht werten“ (z. B. „Nicht gespielt“) zählt weder
+   fürs Gruppenergebnis noch für die Statistik – die Indizes (ti) beziehen sich auf diese Liste. */
+function ratedTiers(state) {
+  const list = state.tiers.filter(t => !t.unrated);
+  return list.length ? list : state.tiers;
+}
+
 /* Gruppenergebnis: Durchschnitt aller Platzierungen (Tier-Index + Position innerhalb des Tiers). */
 function groupView(state, board, opts = {}) {
   const items = boardItems(state, board);
   const byId = new Map(items.map(it => [it.id, it]));
-  const tierIdx = new Map(state.tiers.map((t, i) => [t.id, i]));
+  const rated = ratedTiers(state);
+  const tierIdx = new Map(rated.map((t, i) => [t.id, i]));
+  const unrated = new Set(state.tiers.filter(t => !tierIdx.has(t.id)).map(t => t.id));
   const votes = new Map();
+  const skipped = new Map(); // Platzierungen in Stufen ohne Wertung: id → [{pid, tid}]
   let lists = 0;
 
   for (const [pid, r] of Object.entries(state.rankings)) {
@@ -590,39 +606,52 @@ function groupView(state, board, opts = {}) {
     let any = false;
     for (const [tid, ids] of Object.entries(rk)) {
       const ti = tierIdx.get(tid);
-      if (ti == null) continue;
+      if (ti == null && !unrated.has(tid)) continue;
       ids.forEach((id, pos) => {
         if (!byId.has(id)) return;
         any = true;
-        if (!votes.has(id)) votes.set(id, []);
-        votes.get(id).push({ pid, ti, pos: ids.length > 1 ? pos / (ids.length - 1) : 0.5 });
+        const map = ti == null ? skipped : votes;
+        if (!map.has(id)) map.set(id, []);
+        map.get(id).push(ti == null ? { pid, tid } : { pid, ti, pos: ids.length > 1 ? pos / (ids.length - 1) : 0.5 });
       });
     }
     if (any) lists++;
   }
 
   const rows = state.tiers.map(t => ({ tier: t, items: [] }));
+  const rowOf = new Map(rows.map(r => [r.tier.id, r]));
   const pool = [], few = [];
   const median = arr => { const s = [...arr].sort((a, b) => a - b), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
   for (const it of items) {
     const v = votes.get(it.id);
-    if (!v) { pool.push(it); continue; }
+    if (!v) {
+      // Nur in Stufen ohne Wertung gelandet → in der, die die meisten gewählt haben
+      const sk = skipped.get(it.id);
+      if (!sk) { pool.push(it); continue; }
+      const n = new Map();
+      for (const x of sk) n.set(x.tid, (n.get(x.tid) || 0) + 1);
+      const tid = [...n].sort((a, b) => b[1] - a[1])[0][0];
+      rowOf.get(tid).items.push({ ...it, _votes: sk, _unrated: true });
+      continue;
+    }
     if (v.length < (opts.minVotes || 1)) { few.push({ ...it, _votes: v }); continue; }
     const tis = v.map(x => x.ti);
     const mean = tis.reduce((s, x) => s + x, 0) / v.length;
     const center = opts.method === 'median' ? median(tis) : mean;
     const fine = v.reduce((s, x) => s + x.ti + x.pos * 0.98, 0) / v.length;
     const spread = Math.max(...tis) - Math.min(...tis);
-    rows[clamp(roundBetter(center), 0, rows.length - 1)].items.push({ ...it, _score: fine, _mean: mean, _center: center, _spread: spread, _votes: v });
+    rowOf.get(rated[clamp(roundBetter(center), 0, rated.length - 1)].id).items.push({ ...it, _score: fine, _mean: mean, _center: center, _spread: spread, _votes: v });
   }
-  rows.forEach(r => r.items.sort((a, b) => a._center - b._center || a._score - b._score || b._votes.length - a._votes.length));
-  return { rows, pool, few, votes, lists };
+  const byRank = (a, b) => a._center - b._center || a._score - b._score || b._votes.length - a._votes.length;
+  const byCount = (a, b) => b._votes.length - a._votes.length || a.title.localeCompare(b.title, 'de');
+  rows.forEach(r => r.items.sort(r.items[0]?._unrated ? byCount : byRank));
+  return { rows, pool, few, votes, skipped, lists };
 }
 
 /* ───────── Statistik ───────── */
 function statsFor(state, board) {
   const { votes } = groupView(state, board);
-  const n = Math.max(1, state.tiers.length - 1);
+  const n = Math.max(1, ratedTiers(state).length - 1);
   const items = new Map(boardItems(state, board).map(it => [it.id, it]));
   const players = Object.values(state.players).filter(p => [...votes.values()].some(v => v.some(x => x.pid === p.id)));
   const tierOf = (pid, id) => votes.get(id)?.find(x => x.pid === pid)?.ti;
@@ -686,7 +715,8 @@ function statsFor(state, board) {
 
 /* Franchise-Vorschlag aus den eigenen Spiele-Rankings: Schnitt der Stufen je Reihe */
 function franchiseSuggestion(state, pid) {
-  const tierIdx = new Map(state.tiers.map((t, i) => [t.id, i]));
+  const rated = ratedTiers(state); // Spiele in „Nicht werten“-Stufen fließen nicht ein
+  const tierIdx = new Map(rated.map((t, i) => [t.id, i]));
   const myGames = new Map();
   for (const [tid, ids] of Object.entries(state.rankings[pid]?.games || {})) ids.forEach(id => myGames.set(id, tierIdx.get(tid)));
   const placed = new Set(Object.values(state.rankings[pid]?.franchises || {}).flat());
@@ -698,6 +728,6 @@ function franchiseSuggestion(state, pid) {
     list.push({ id: f.id, avg: tis.reduce((s, x) => s + x, 0) / tis.length });
   }
   list.sort((a, b) => a.avg - b.avg);
-  for (const { id, avg } of list) (rows[state.tiers[clamp(roundBetter(avg), 0, state.tiers.length - 1)].id] ||= []).push(id);
+  for (const { id, avg } of list) (rows[rated[clamp(roundBetter(avg), 0, rated.length - 1)].id] ||= []).push(id);
   return { rows, count: list.length };
 }

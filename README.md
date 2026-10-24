@@ -3,7 +3,7 @@
 Zwei Module in einer Seite, ohne Server und ohne Konto:
 
 - **Gamedle** – das tägliche Spiele-Rätsel (wie Loldle/Wordle) mit fünf Tagesmodi: Klassik (Eigenschaften vergleichen), Zitat, Emoji, Cover (verpixelt) und Szene (Bildausschnitt, der herauszoomt) – dazu Endlos zum Üben. Unter jedem Rätsel steht die Lösung von gestern.
-- **Tierly** – Tier-Listen für Spiele und Franchises, gemeinsam mit Freunden direkt von Browser zu Browser (WebRTC). Mehrere Spiele lassen sich auf einmal einsortieren (Strg-/Umschalt-Klick oder „Mehrere“).
+- **Tierly** – Tier-Listen für Spiele und Franchises, gemeinsam mit Freunden direkt von Browser zu Browser (WebRTC). Mehrere Spiele lassen sich auf einmal einsortieren (Strg-/Umschalt-Klick oder „Mehrere“), die Spieleliste lässt sich nach Jahrzehnt und Genre filtern. Stufen mit „Nicht werten“ (z. B. „Nicht gespielt“) zählen nicht fürs Gruppenergebnis und die Statistik.
 
 **Live:** https://xquicklook.github.io/Gamedle/
 
@@ -99,7 +99,7 @@ Nach ein bis zwei Minuten ist die neue Version online.
 | `src/net.js` | Tierly: P2P, Spieler-Schlüssel, Delta-Sync, Verbindungsdiagnose |
 | `src/migration.js` | Tierly: automatische Raum-Übernahme |
 | `src/app.js` | Tierly: App-Ablauf, Rendering, Tastatur |
-| `src/wiki.js` | Cover, Jahr und Reihe über Wikipedia/Wikidata |
+| `src/wiki.js` | Cover, Jahr, Reihe und Genres über Wikipedia/Wikidata (Genres zuerst aus den Gamedle-Daten) |
 | `tests/` | Tests für Tierly- und Gamedle-Logik |
 | `tools/verify-gamedle.js` | Datenprüfung gegen Wikipedia |
 

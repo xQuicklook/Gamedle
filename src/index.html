@@ -152,11 +152,14 @@
           <div class="search">
             <input id="poolSearch" type="search" placeholder="Suchen …" aria-label="Spiele durchsuchen">
           </div>
-          <select id="poolSort" aria-label="Sortierung">
-            <option value="year">Jahr</option>
-            <option value="title">A–Z</option>
-            <option value="franchise">Franchise</option>
-          </select>
+          <div class="pool-filters">
+            <select id="poolGenre" aria-label="Nach Genre filtern" hidden></select>
+            <select id="poolSort" aria-label="Sortierung">
+              <option value="year">Jahr</option>
+              <option value="title">A–Z</option>
+              <option value="franchise">Franchise</option>
+            </select>
+          </div>
         </div>
         <div class="chips" id="poolChips"></div>
       </div>

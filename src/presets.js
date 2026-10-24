@@ -1,11 +1,13 @@
 /* ───────── Vorlagen: Spiele & Tier-Sets ─────────
-   Format: [Titel, Erscheinungsjahr, Franchise, englischer Wikipedia-Artikel (nur wenn abweichend)]
-   Über den Artikel werden die Cover beim Hinzufügen live von Wikipedia geladen. */
+   Format: [Titel, Erscheinungsjahr, Franchise, englischer Wikipedia-Artikel (nur wenn abweichend),
+            Genres (nur für Spiele, die nicht in den Gamedle-Daten stehen)]
+   Über den Artikel werden die Cover beim Hinzufügen live von Wikipedia geladen,
+   die Genres kommen aus den Gamedle-Daten (siehe knownGenres). */
 const GAME_PRESET = [
   // 1980er
   ['Pac-Man', 1980, 'Pac-Man'],
   ['Donkey Kong', 1981, 'Donkey Kong', 'Donkey Kong (1981 video game)'],
-  ['Tetris', 1984, 'Tetris'],
+  ['Tetris', 1984, 'Tetris', '', 'puz'],
   ['Super Mario Bros.', 1985, 'Super Mario'],
   ['The Legend of Zelda', 1986, 'The Legend of Zelda', 'The Legend of Zelda (video game)'],
   ['Metroid', 1986, 'Metroid', 'Metroid (video game)'],

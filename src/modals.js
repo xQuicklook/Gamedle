@@ -247,34 +247,39 @@ function itemModal(id) {
   const board = App.board;
   const item = boardItems(s, board).find(x => x.id === id);
   if (!item) return;
-  const { votes } = groupView(s, board);
+  const { votes, skipped } = groupView(s, board);
   const v = votes.get(id) || [];
-  const tierOf = ti => s.tiers[ti];
+  const sk = skipped.get(id) || [];
+  const rated = ratedTiers(s);
+  const tierOf = ti => rated[ti];
   const isFr = board === 'franchises';
 
   const meta = isFr
     ? `${item.count} Spiele · ${item.year}${item.yearTo !== item.year ? '–' + item.yearTo : ''}`
     : [item.year, item.franchise].filter(Boolean).join(' · ');
+  const genres = (item.genres || []).map(genreName).join(', ');
 
   const body = [
-    h('div.item-hero', makeTile(item, {}), h('div', h('h3', item.title), h('div.muted', meta))),
+    h('div.item-hero', makeTile(item, {}), h('div', h('h3', item.title), h('div.muted', meta), genres ? h('div.muted', genres) : null)),
   ];
 
   if (v.length) {
     const mean = v.reduce((a, x) => a + x.ti, 0) / v.length;
-    const avgTier = tierOf(clamp(Math.round(mean), 0, s.tiers.length - 1));
+    const avgTier = tierOf(clamp(Math.round(mean), 0, rated.length - 1));
     const spread = Math.max(...v.map(x => x.ti)) - Math.min(...v.map(x => x.ti));
     body.push(h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' } },
       h('span.muted', 'Gruppe:'), h('span.tier-badge', { style: { background: avgTier.color } }, avgTier.name),
       h('span.muted', `aus ${v.length} ${v.length === 1 ? 'Wertung' : 'Wertungen'}`),
       spread >= 3 ? h('span.pill', 'Umstritten') : spread === 0 && v.length > 1 ? h('span.pill.ok', 'Einig') : null));
+  } else if (sk.length) {
+    body.push(h('p.help', 'Bisher nur in Stufen ohne Wertung – zählt nicht fürs Gruppenergebnis.'));
   }
 
   const rows = App.sortedPlayers().map(p => {
     const vote = v.find(x => x.pid === p.id);
-    const t = vote && tierOf(vote.ti);
+    const t = vote ? tierOf(vote.ti) : s.tiers.find(x => x.id === sk.find(y => y.pid === p.id)?.tid);
     return h('div.vote-row', avatar(p, board), h('span.name', p.name),
-      t ? h('span.tier-badge', { style: { background: t.color } }, t.name) : h('span.muted', '–'));
+      t ? h('span.tier-badge' + (t.unrated ? '.unrated' : ''), { style: { backgroundColor: t.color }, title: t.unrated ? 'Zählt nicht in der Wertung' : null }, t.name) : h('span.muted', '–'));
   });
   body.push(h('div.vote-list', rows));
 

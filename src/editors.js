@@ -30,6 +30,46 @@ async function coversFor(ids, onProgress) {
   }
 }
 
+/* Genres für Spiele ohne Genre nachtragen (kuratiert, sonst Wikidata) */
+async function genresFor(ids, onProgress) {
+  const items = ids.map(id => App.state.items[id]).filter(it => it && !it.genres?.length);
+  if (!items.length) return 0;
+  try {
+    const patches = await fetchMissingGenres(items, onProgress);
+    if (patches.length) App.dispatch({ type: 'items/patch', patches });
+    return patches.length;
+  } catch (e) {
+    console.warn(e);
+    toast('Genres konnten nicht geladen werden – bist du online?');
+    return 0;
+  }
+}
+
+/* Aus dem Genre-Filter heraus: alle fehlenden Genres der Bibliothek laden */
+async function loadMissingGenres() {
+  const ids = libItems().filter(it => !it.genres?.length).map(it => it.id);
+  const t = toast(`Lade Genres für ${ids.length} Spiele …`, 60000);
+  const n = await genresFor(ids);
+  t.remove();
+  toast(n ? `${n} Spiele mit Genre ergänzt${n < ids.length ? ` – ${ids.length - n} ohne Treffer (per „Bearbeiten“ von Hand setzen)` : ''}` : 'Keine Genres gefunden', 5000);
+}
+
+/* Genre-Auswahl (bis zu 4) – aufklappbar, damit die vielen Genres nicht das ganze Formular füllen */
+function genrePicker(initial = []) {
+  const sel = new Set(initial);
+  const summary = h('summary');
+  const chips = h('div.genre-picks');
+  const draw = () => {
+    summary.replaceChildren(h('span', 'Genres'), h('span.muted', sel.size ? [...sel].map(genreName).join(', ') : 'keine'));
+    chips.replaceChildren(...Object.keys(GD_GENRES).sort((a, b) => genreName(a).localeCompare(genreName(b), 'de')).map(k => h('button.chip', {
+      type: 'button', 'aria-pressed': String(sel.has(k)), disabled: !sel.has(k) && sel.size >= 4,
+      onclick: () => { if (!sel.delete(k)) sel.add(k); draw(); },
+    }, genreName(k))));
+  };
+  draw();
+  return { el: h('details.genre-box.full', summary, chips), value: () => [...sel] };
+}
+
 function warnUnsafeImg() {
   toast('Dieser Bild-Link wird nicht angezeigt: Im Raum sind nur Wikipedia-Bilder und Uploads erlaubt (Host-Einstellung). Lade das Bild stattdessen hoch.', 7000);
 }
@@ -63,7 +103,7 @@ function libraryModal(tab = null, query = '') {
         const btn = h('button.btn.sm' + (has ? '.added' : '.primary'), {
           disabled: has,
           onclick: () => {
-            if (App.dispatch({ type: 'items/add', items: [{ title: r.title, year: r.year, franchise: r.franchise, img: r.img, wiki: r.wiki }] })) {
+            if (App.dispatch({ type: 'items/add', items: [{ title: r.title, year: r.year, franchise: r.franchise, img: r.img, wiki: r.wiki, genres: r.genres }] })) {
               toast(`„${r.title}“ hinzugefügt`);
               refreshTabs();
               btn.replaceWith(row(r).lastChild);
@@ -121,7 +161,7 @@ function libraryModal(tab = null, query = '') {
     packs() {
       const known = new Set(libItems().map(it => norm(it.title)));
       return [
-        h('p.help', 'Bekannte Spiele aus mehreren Jahrzehnten – inklusive Cover und Franchise-Zuordnung. Bereits vorhandene Titel werden übersprungen.'),
+        h('p.help', 'Bekannte Spiele aus mehreren Jahrzehnten – inklusive Cover, Genre und Franchise-Zuordnung. Bereits vorhandene Titel werden übersprungen.'),
         ...PRESET_PACKS.map(p => {
           const games = GAME_PRESET.filter(([, y]) => p.filter(y));
           const fresh = games.filter(([t]) => !known.has(norm(t)));
@@ -137,7 +177,8 @@ function libraryModal(tab = null, query = '') {
                 type: 'items/add',
                 items: fresh.map(g => {
                   const info = found.get(presetWikiTitle(g));
-                  return { title: g[0], year: g[1], franchise: g[2], wiki: info?.wiki || '', img: info?.img || '' };
+                  const genres = knownGenres({ wiki: presetWikiTitle(g), title: g[0], year: g[1] });
+                  return { title: g[0], year: g[1], franchise: g[2], wiki: info?.wiki || '', img: info?.img || '', genres };
                 }),
               });
               toast(`${fresh.length} Spiele hinzugefügt`);
@@ -163,13 +204,15 @@ function libraryModal(tab = null, query = '') {
           refreshTabs();
           btn.disabled = true;
           const n = await coversFor(added, (d, t) => { btn.textContent = `Suche Cover … ${d}/${t}`; });
+          btn.textContent = 'Suche Genres …';
+          await genresFor(added); // nach den Covern: dann ist der Wikipedia-Artikel bekannt
           toast(`${added.length} Spiele importiert, ${n} mit Cover`);
           btn.disabled = false;
           btn.replaceChildren(icon('upload'), 'Importieren');
         },
       }, icon('upload'), 'Importieren');
       return [
-        h('p.help', 'Ganze Liste auf einmal: ein Spiel pro Zeile, optional ', h('code', 'Titel; Jahr; Franchise'), '. Cover werden danach automatisch gesucht.'),
+        h('p.help', 'Ganze Liste auf einmal: ein Spiel pro Zeile, optional ', h('code', 'Titel; Jahr; Franchise'), '. Cover und Genres werden danach automatisch gesucht.'),
         ta, h('div', btn),
       ];
     },
@@ -191,15 +234,25 @@ function libraryModal(tab = null, query = '') {
           draw();
         },
       }, icon('image'), `Fehlende Cover laden (${missing.length})`) : null;
+      const noGenre = libItems().filter(it => !it.genres?.length);
+      const genreBtn = noGenre.length ? h('button.btn.sm', {
+        onclick: async () => {
+          genreBtn.disabled = true;
+          genreBtn.textContent = 'Suche Genres …';
+          const n = await genresFor(noGenre.map(it => it.id), (d, t) => { genreBtn.textContent = `Suche Genres … ${d}/${t}`; });
+          toast(n ? `${n} Genres ergänzt${n < noGenre.length ? `, ${noGenre.length - n} ohne Treffer` : ''}` : 'Keine weiteren Genres gefunden');
+          draw();
+        },
+      }, icon('layers'), `Fehlende Genres laden (${noGenre.length})`) : null;
 
       const fill = () => {
         const nq = norm(q.value);
         const items = libItems()
-          .filter(it => !nq || norm(it.title).includes(nq) || norm(it.franchise).includes(nq))
+          .filter(it => !nq || norm(it.title).includes(nq) || norm(it.franchise).includes(nq) || (it.genres || []).some(g => norm(genreName(g)).includes(nq)))
           .sort((a, b) => (a.year || 9999) - (b.year || 9999) || a.title.localeCompare(b.title, 'de'));
         list.replaceChildren(...items.map(it => h('div.lib-item',
           makeTile(it, {}),
-          h('div.lib-meta', h('strong', it.title), h('span', [it.year, it.franchise].filter(Boolean).join(' · ') || '–')),
+          h('div.lib-meta', h('strong', it.title), h('span', [it.year, it.franchise, (it.genres || []).map(genreName).join(', ')].filter(Boolean).join(' · ') || '–')),
           h('div', { style: { display: 'flex' } },
             h('button.icon-btn.sm', { title: 'Bearbeiten', 'aria-label': 'Bearbeiten', onclick: () => editItemModal(it.id, fill) }, icon('edit')),
             h('button.icon-btn.sm', {
@@ -215,7 +268,7 @@ function libraryModal(tab = null, query = '') {
       q.addEventListener('input', fill);
       fill();
       return [
-        h('div.lib-toolbar', q, coverBtn), bar, list,
+        h('div.lib-toolbar', q, coverBtn, genreBtn), bar, list,
         App.state.order.length ? h('div', h('button.btn.sm.danger', {
           onclick: () => confirmDialog('Alle Spiele entfernen?', 'Die Bibliothek und sämtliche Platzierungen aller Spieler werden geleert.', 'Alles entfernen', true)
             .then(ok => { if (ok) { App.dispatch({ type: 'items/clear' }); refresh(); } }),
@@ -234,6 +287,7 @@ function libraryModal(tab = null, query = '') {
       const year = h('input', { type: 'number', placeholder: 'Jahr', min: 1950, max: 2100, inputmode: 'numeric' });
       const img = h('input', { type: 'url', placeholder: 'https://… (optional)', onchange: e => { if (safeUrl(e.target.value) && !imgAllowed(App.state, safeUrl(e.target.value))) warnUnsafeImg(); } });
       const upBtn = h('button.btn.sm', { type: 'button', onclick: () => pickImage(d => { upload = d; upBtn.replaceChildren(icon('check'), 'Bild gewählt'); }) }, icon('upload'), 'Bild hochladen');
+      let genres = genrePicker();
       const form = h('form.form-grid', {
         onsubmit: e => {
           e.preventDefault();
@@ -241,18 +295,22 @@ function libraryModal(tab = null, query = '') {
           const id = upload ? uid(10) : '';
           const ok = App.dispatch({
             type: 'items/add',
-            items: [{ title: name, year: year.value, franchise: fr.value, img: id ? 'asset:' + id : img.value }],
+            items: [{ title: name, year: year.value, franchise: fr.value, img: id ? 'asset:' + id : img.value, genres: genres.value() }],
             assets: id ? { [id]: upload } : undefined,
           });
           if (!ok) { toast(name ? `„${name}“ ist schon in der Liste.` : 'Bitte einen Titel eingeben.'); return; }
           toast(`„${name}“ hinzugefügt`);
           title.value = ''; year.value = ''; img.value = ''; upload = '';
+          const fresh = genrePicker();
+          genres.el.replaceWith(fresh.el);
+          genres = fresh;
           upBtn.replaceChildren(icon('upload'), 'Bild hochladen');
           title.focus();
           refreshTabs();
         },
       },
       field('Titel', title, 'full'), field('Franchise / Reihe', fr), field('Jahr', year),
+      genres.el,
       field('Cover-Link', img, 'full'), h('div.full', upBtn),
       h('datalist#frList', franchiseNames().map(n => h('option', { value: n }))),
       h('button.btn.primary.full', { type: 'submit' }, icon('plus'), 'Hinzufügen'));
@@ -282,6 +340,7 @@ function editItemModal(id, after) {
   const fr = h('input', { value: it.franchise, list: 'frListEdit', maxlength: 60, placeholder: 'optional' });
   const year = h('input', { type: 'number', value: it.year || '', min: 1950, max: 2100, inputmode: 'numeric' });
   const url = h('input', { type: 'url', value: /^https?:/.test(img) ? img : '', placeholder: 'https://…' });
+  const genres = genrePicker(it.genres || []);
   const preview = h('div');
   const picks = h('div.cover-picks');
 
@@ -330,7 +389,7 @@ function editItemModal(id, after) {
         picks,
         h('p.help', 'Tipp: Ein Bild aus der Zwischenablage kannst du hier einfach mit Strg+V einfügen.'))),
       h('div.form-grid',
-        field('Titel', title, 'full'), field('Franchise / Reihe', fr), field('Jahr', year), field('Cover-Link', url, 'full'),
+        field('Titel', title, 'full'), field('Franchise / Reihe', fr), field('Jahr', year), genres.el, field('Cover-Link', url, 'full'),
         h('datalist#frListEdit', franchiseNames().map(n => h('option', { value: n })))),
     ],
     foot: [
@@ -339,7 +398,7 @@ function editItemModal(id, after) {
       h('button.btn.primary', {
         onclick: () => {
           if (!title.value.trim()) { title.focus(); return; }
-          const patch = { title: title.value, franchise: fr.value, year: year.value, img, wiki };
+          const patch = { title: title.value, franchise: fr.value, year: year.value, img, wiki, genres: genres.value() };
           const asset = upload ? { id: uid(10), data: upload } : undefined;
           App.dispatch({ type: 'items/update', id, patch, asset });
           if (asset && App.state.items[id]?.img !== 'asset:' + asset.id) toast('Bild nicht gespeichert: Der Raum hat das Limit für eigene Bilder erreicht (120 Bilder bzw. 4 MB).', 6000);
@@ -359,9 +418,13 @@ function tiersModal() {
   const iconBtn = (ic, label, disabled, fn) => h('button.icon-btn.sm', { title: label, 'aria-label': label, disabled, onclick: fn }, icon(ic));
   const move = (i, j) => { [tiers[i], tiers[j]] = [tiers[j], tiers[i]]; draw(); };
 
+  const lastRated = t => !t.unrated && tiers.filter(x => !x.unrated).length <= 1;
   const draw = () => list.replaceChildren(...tiers.map((t, i) => h('div.tier-edit-row',
     h('input', { type: 'color', value: t.color, 'aria-label': 'Farbe', oninput: e => { t.color = e.target.value; } }),
     h('input', { value: t.name, maxlength: 24, 'aria-label': 'Name der Stufe', oninput: e => { t.name = e.target.value; } }),
+    h('label.tier-skip', { title: lastRated(t) ? 'Mindestens eine Stufe muss in die Wertung eingehen.' : 'Spiele in dieser Stufe zählen nicht fürs Gruppenergebnis und die Statistik – z. B. für „Nicht gespielt“.' },
+      h('input', { type: 'checkbox', checked: !!t.unrated, disabled: lastRated(t), onchange: e => { t.unrated = e.target.checked; draw(); } }),
+      h('span', 'Nicht werten')),
     h('div.row-actions',
       iconBtn('up', 'Nach oben', i === 0, () => move(i, i - 1)),
       iconBtn('down', 'Nach unten', i === tiers.length - 1, () => move(i, i + 1)),
@@ -376,15 +439,22 @@ function tiersModal() {
         onclick: () => { tiers = p.tiers.map(([name, color], i) => ({ id: tiers[i]?.id || uid(6), name, color })); draw(); },
       }, p.name)))),
       list,
-      h('div', h('button.btn.sm', {
-        disabled: tiers.length >= 20,
-        onclick: () => {
-          tiers.push({ id: uid(6), name: 'Neu', color: '#94a3b8' });
-          draw();
-          list.lastElementChild.querySelector('input:not([type=color])').select();
-        },
-      }, icon('plus'), 'Stufe hinzufügen')),
-      h('p.help', 'Die Stufen gelten für alle im Raum. Spiele in einer gelöschten Stufe wandern zurück in die Auswahl.'),
+      h('div.row', { style: { flexWrap: 'wrap' } },
+        h('button.btn.sm', {
+          disabled: tiers.length >= 20,
+          onclick: () => {
+            tiers.push({ id: uid(6), name: 'Neu', color: '#94a3b8' });
+            draw();
+            list.lastElementChild.querySelector('input:not([type=color])').select();
+          },
+        }, icon('plus'), 'Stufe hinzufügen'),
+        h('button.btn.sm', {
+          disabled: tiers.length >= 20,
+          title: 'Stufe für Spiele, die du nicht kennst – zählt nicht in der Wertung',
+          onclick: () => { tiers.push({ id: uid(6), name: 'Nicht gespielt', color: '#64748b', unrated: true }); draw(); },
+        }, icon('plus'), '„Nicht gespielt“')),
+      h('p.help', 'Die Stufen gelten für alle im Raum. Spiele in einer gelöschten Stufe wandern zurück in die Auswahl. ',
+        'Stufen mit „Nicht werten“ zählen nicht fürs Gruppenergebnis und die Statistik.'),
     ],
     foot: [
       h('button.btn.ghost', { onclick: () => m.close() }, 'Abbrechen'),

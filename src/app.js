@@ -6,7 +6,7 @@ const App = {
   view: 'me',            // 'me' | 'group' | Spieler-ID
   sel: [],               // Tap-to-place-Auswahl (mehrere möglich, in Auswahl-Reihenfolge)
   multi: false,          // Mehrfachauswahl per Antippen (für Touch)
-  filter: { q: '', decade: null, sort: 'year' },
+  filter: { q: '', decade: null, genre: null, sort: 'year' },
   renderQueued: false,
   renderPending: false,
   persistTimer: null,
@@ -484,8 +484,10 @@ const App = {
       const o = this.groupOpts;
       const setOpt = patch => { this.groupOpts = { ...o, ...patch }; Store.set('groupOpts', this.groupOpts); this.render(); };
       const maxVotes = Math.max(1, lists);
+      const skip = s.tiers.filter(t => t.unrated).map(t => `„${t.name}“`);
       el.append(icon('users'),
-        h('span', { style: { flex: 1 } }, `Gruppenergebnis aus ${lists} ${lists === 1 ? 'Liste' : 'Listen'}`, few.length ? ` · ${few.length} mit zu wenigen Stimmen in der Liste` : ''),
+        h('span', { style: { flex: 1 } }, `Gruppenergebnis aus ${lists} ${lists === 1 ? 'Liste' : 'Listen'}`, few.length ? ` · ${few.length} mit zu wenigen Stimmen in der Liste` : '',
+          skip.length ? ` · ${skip.join(', ')} ${skip.length === 1 ? 'zählt' : 'zählen'} nicht` : ''),
         h('div.seg.mini', ['mean', 'median'].map(m => h('button', { 'aria-selected': String(o.method === m), title: m === 'mean' ? 'Durchschnitt aller Stufen' : 'Mittlere Wertung – robust gegen Ausreißer', onclick: () => setOpt({ method: m }) }, m === 'mean' ? 'Ø' : 'Median'))),
         h('select.mini', { 'aria-label': 'Mindestens so viele Stimmen', title: 'Spiele mit weniger Stimmen erscheinen in der Liste statt im Ergebnis', onchange: e => setOpt({ minVotes: +e.target.value }) },
           Array.from({ length: maxVotes }, (_, i) => h('option', { value: i + 1, selected: (o.minVotes || 1) === i + 1 }, `ab ${i + 1} ${i ? 'Stimmen' : 'Stimme'}`))));
@@ -551,11 +553,14 @@ const App = {
     const group = this.view === 'group';
     const old = new Map([...board.children].filter(el => el.classList.contains('tier')).map(el => [el.dataset.tier, el]));
     board.replaceChildren(...rows.map(({ tier, items }) => {
-      const sig = [tier.name, tier.color, readonly, group, ...items.map(it => tileKey(it, { readonly, group }))].join('¦');
+      const sig = [tier.name, tier.color, tier.unrated, readonly, group, ...items.map(it => tileKey(it, { readonly, group }))].join('¦');
       const prev = old.get(tier.id);
       if (prev && prev._sig === sig) { items.forEach(it => TileCache.touch(it, { readonly, group })); return prev; }
-      const row = h('div.tier', { 'data-tier': tier.id },
-        h('div.tier-label' + (tier.name.length > 3 ? '.long' : ''), { style: { background: tier.color } }, tier.name),
+      const row = h('div.tier' + (tier.unrated ? '.unrated' : ''), { 'data-tier': tier.id },
+        h('div.tier-label' + (tier.name.length > 3 ? '.long' : ''), {
+          style: { backgroundColor: tier.color }, // nur die Farbe – die Streifen für „ohne Wertung“ kommen aus dem CSS
+          title: tier.unrated ? 'Ohne Wertung: zählt nicht fürs Gruppenergebnis und die Statistik' : null,
+        }, tier.name, tier.unrated ? h('span.tier-flag', 'ohne Wertung') : null),
         h('div.tier-items', { 'data-tier': tier.id }, items.map(it => TileCache.get(it, { readonly, group }))));
       row._sig = sig;
       return row;
@@ -572,6 +577,7 @@ const App = {
       $('#poolTitle').textContent = 'Verdeckt';
       $('#poolCount').textContent = '–';
       $('#poolChips').replaceChildren();
+      $('#poolGenre').hidden = true;
       $('#poolBody').replaceChildren(h('div.pool-empty', 'Hier gibt es erst nach dem Aufdecken etwas zu sehen.',
         h('div', h('button.btn.sm', { onclick: () => this.setView('me') }, 'Zurück zu meiner Liste'))));
       return;
@@ -598,12 +604,14 @@ const App = {
       onclick: () => { this.filter.decade = val; this.renderPool(); },
     }, label);
     $('#poolChips').replaceChildren(...(decades.length > 1 ? [chip(null, 'Alle'), ...decades.map(d => chip(d, `${String(d).slice(2)}er`))] : []));
+    this.renderGenreFilter(all, pool, readonly);
 
     // Filtern & sortieren
     const q = norm(this.filter.q);
     let list = pool.filter(it =>
       (!q || norm(it.title).includes(q) || norm(it.franchise).includes(q)) &&
-      (!this.filter.decade || (it.year >= this.filter.decade && it.year < this.filter.decade + 10)));
+      (!this.filter.decade || (it.year >= this.filter.decade && it.year < this.filter.decade + 10)) &&
+      (!this.filter.genre || it.genres?.includes(this.filter.genre)));
     const byTitle = (a, b) => a.title.localeCompare(b.title, 'de');
     const sorters = {
       year: (a, b) => (a.year || 9999) - (b.year || 9999) || byTitle(a, b),
@@ -637,6 +645,27 @@ const App = {
     }
   },
 
+  /* Genre-Filter: alle Genres des Boards (bleiben stehen, auch wenn alle platziert sind),
+     Zahl = noch unplatziert. Fehlen Genres, lassen sie sich hier direkt nachladen. */
+  renderGenreFilter(all, pool, readonly) {
+    const sel = $('#poolGenre');
+    const count = new Map();
+    for (const it of all) for (const g of it.genres || []) count.set(g, 0);
+    for (const it of pool) for (const g of it.genres || []) count.set(g, count.get(g) + 1);
+    if (!count.has(this.filter.genre)) this.filter.genre = null;
+    const missing = this.board === 'games' && !readonly && this.canEditConfig() ? all.filter(it => !it.genres?.length).length : 0;
+    const genres = [...count].sort(([a], [b]) => genreName(a).localeCompare(genreName(b), 'de'));
+    sel.hidden = !genres.length && !missing;
+    const sig = [this.filter.genre, missing, ...genres.flat()].join('|');
+    if (sel._sig === sig) return;
+    sel._sig = sig;
+    sel.replaceChildren(
+      h('option', { value: '' }, 'Alle Genres'),
+      ...genres.map(([k, n]) => h('option', { value: k }, `${genreName(k)} (${n})`)),
+      ...(missing ? [h('option', { value: '__load' }, `+ Genres laden (${missing} ohne)`)] : []));
+    sel.value = this.filter.genre || '';
+  },
+
   /* ── Statische Event-Verdrahtung ── */
   wireApp() {
     $$('.tab').forEach(t => t.addEventListener('click', () => {
@@ -655,6 +684,15 @@ const App = {
     };
     $('#menuBtn').onclick = e => { e.stopPropagation(); toggleMenu(); };
     $('#poolSearch').addEventListener('input', e => { this.filter.q = e.target.value; this.renderPool(); });
+    $('#poolGenre').addEventListener('change', e => {
+      if (e.target.value === '__load') {
+        e.target.value = this.filter.genre || '';
+        loadMissingGenres();
+        return;
+      }
+      this.filter.genre = e.target.value || null;
+      this.renderPool();
+    });
     $('#poolSort').addEventListener('change', e => {
       this.filter.sort = e.target.value;
       Store.set('ui', { board: this.board, sort: this.filter.sort });

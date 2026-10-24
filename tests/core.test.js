@@ -6,12 +6,14 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
-// presets.js + core.js in eine Sandbox laden und die benötigten Funktionen herausreichen
+// presets.js + core.js (+ wiki.js und Gamedle-Daten für die Genres) in eine Sandbox laden
+// und die benötigten Funktionen herausreichen
 const src = f => fs.readFileSync(path.join(__dirname, '..', 'src', f), 'utf8');
 const ctx = vm.createContext({ crypto: globalThis.crypto, TextEncoder, console, structuredClone });
-const T = vm.runInContext(`${src('presets.js')}\n${src('core.js')}\n;({
+const T = vm.runInContext(`${['presets.js', 'core.js', 'wiki.js', 'gamedle-data.js', 'gamedle-core.js'].map(src).join('\n')}\n;({
   initialState, applyAction, visibleState, isBlind, placedCount, groupView, keyHash, itemIndex, adoptRanking, PROTOCOL,
   normalizeAction, opFor, statsFor, franchiseSuggestion, imgAllowed, FULL_SYNC_ACTIONS, placeMany,
+  ratedTiers, boardItems, genreKeys, knownGenres, GAME_PRESET, GD_GENRES,
 })`, ctx);
 const clone = o => JSON.parse(JSON.stringify(o));
 
@@ -256,6 +258,97 @@ test('Franchise-Vorschlag aus den eigenen Spiele-Rankings', () => {
   const sug = T.franchiseSuggestion(s, GUEST);
   assert.equal(sug.count, 1);
   same(sug.rows, { [s.tiers[0].id]: ['fr:hollow-knight'] });
+});
+
+/* ───────── Stufen ohne Wertung ───────── */
+
+// Letzte Stufe (F) als „Nicht werten“ markieren
+function unratedRoom() {
+  const s = room();
+  T.applyAction(s, { type: 'tiers/set', tiers: s.tiers.map((t, i) => (i === s.tiers.length - 1 ? { ...t, unrated: true } : t)) }, HOST);
+  return s;
+}
+
+test('tiers/set übernimmt „Nicht werten“, aber nie für alle Stufen', () => {
+  const s = unratedRoom();
+  assert.equal(s.tiers[5].unrated, true);
+  assert.equal(T.ratedTiers(s).length, 5);
+  T.applyAction(s, { type: 'tiers/set', tiers: s.tiers.map(t => ({ ...t, unrated: true })) }, HOST);
+  assert.ok(s.tiers.every(t => !t.unrated), 'mindestens eine Stufe muss werten');
+});
+
+test('Gruppenergebnis: Stufen ohne Wertung ziehen den Schnitt nicht herunter', () => {
+  const s = unratedRoom();
+  const skip = s.tiers[5];
+  place(s, HOST, 'hk', 0); place(s, GUEST, 'hk', 0); place(s, OTHER, 'hk', 5); // S, S, Nicht gespielt
+  place(s, HOST, 'doom93', 5); place(s, GUEST, 'doom93', 5);                  // nur „Nicht gespielt“
+  const g = T.groupView(s, 'games', { minVotes: 2 });
+  assert.equal(g.rows[0].items[0].id, 'hk');
+  assert.equal(g.votes.get('hk').length, 2, 'nur zwei echte Wertungen');
+  assert.equal(g.rows[0].items[0]._spread, 0);
+  // Nur ohne Wertung platziert → steht in der Stufe ohne Wertung, nicht bei „zu wenige Stimmen“
+  const row = g.rows.find(r => r.tier.id === skip.id);
+  same(row.items.map(i => i.id), ['doom93']);
+  assert.ok(!g.few.some(i => i.id === 'doom93'));
+  assert.equal(g.skipped.get('doom93').length, 2);
+  assert.equal(g.lists, 3);
+});
+
+test('Statistik und Franchise-Vorschlag ignorieren Stufen ohne Wertung', () => {
+  const s = unratedRoom();
+  place(s, HOST, 'hk', 0); place(s, GUEST, 'hk', 0); place(s, OTHER, 'hk', 5);
+  place(s, HOST, 'doom93', 4); place(s, GUEST, 'doom93', 4);
+  const st = T.statsFor(s, 'games');
+  assert.equal(st.controversial.length, 0, '„Nicht gespielt“ ist kein Streit');
+  assert.ok(st.players.every(p => p.id !== OTHER), 'wer nur ohne Wertung platziert, zählt nicht mit');
+  const hg = st.pairs.find(p => [p.a.id, p.b.id].sort().join() === [GUEST, HOST].sort().join());
+  assert.equal(hg.match, 100);
+
+  place(s, GUEST, 'silk', 5); // Hollow Knight: S, Silksong: Nicht gespielt → Reihe bleibt S
+  same(T.franchiseSuggestion(s, GUEST).rows, { [s.tiers[0].id]: ['fr:hollow-knight'] });
+});
+
+/* ───────── Genres ───────── */
+
+test('Genres: nur gültige Kürzel, höchstens 4; Franchises sammeln die Genres ihrer Spiele', () => {
+  const s = room();
+  T.applyAction(s, { type: 'items/patch', patches: [
+    { id: 'hk', genres: ['mv', 'plat', 'mv', 'BAD', 42, ['aa']] },
+    { id: 'silk', genres: ['mv', 'sou', 'aa', 'plat', 'rpg'] },
+  ] }, HOST);
+  same(s.items.hk.genres, ['mv', 'plat']);
+  assert.equal(s.items.silk.genres.length, 4);
+  assert.equal('genres' in s.items.doom93, false, 'ohne Genre kein leeres Feld');
+  const fr = T.boardItems(s, 'franchises').find(f => f.id === 'fr:hollow-knight');
+  same([...fr.genres].sort(), ['aa', 'mv', 'plat', 'sou']);
+  // Leere Liste löscht die Genres wieder
+  T.applyAction(s, { type: 'items/patch', patches: [{ id: 'hk', genres: [] }] }, HOST);
+  assert.equal('genres' in s.items.hk, false);
+});
+
+test('Genres: Wikidata-Namen werden auf unsere Genres abgebildet', () => {
+  same(T.genreKeys(['action role-playing game', 'Soulslike', 'open world']), ['arpg', 'sou']);
+  same(T.genreKeys(['massively multiplayer online role-playing game']), ['mmo']);
+  same(T.genreKeys(['role-playing video game', 'tactical role-playing game']), ['rpg']);
+  same(T.genreKeys(['action-adventure game']), ['aa']);
+  same(T.genreKeys(['point-and-click adventure game']), ['adv']);
+  same(T.genreKeys(['survival horror']), ['hor']);
+  same(T.genreKeys(['puzzle-platform game']), ['plat', 'puz']);
+  same(T.genreKeys(['real-time strategy', 'city-building game']), ['str', 'sim']);
+  same(T.genreKeys(['roguelike deck-building game']), ['rog', 'card']);
+  for (const k of T.genreKeys(['first-person shooter', 'battle royale game', 'kart racing game', 'fighting game', 'Metroidvania', 'stealth game', 'hack and slash', 'multiplayer online battle arena', 'sandbox game', 'party video game'])) {
+    assert.ok(T.GD_GENRES[k], k);
+  }
+});
+
+test('Genres: alle Vorlagen-Spiele haben kuratierte Genres, gleichnamige andere Spiele nicht', () => {
+  for (const g of T.GAME_PRESET) {
+    const genres = T.knownGenres({ wiki: g[3] || g[0], title: g[0], year: g[1] });
+    assert.ok(genres?.length, `${g[0]}: kein Genre`);
+    for (const k of genres) assert.ok(T.GD_GENRES[k], `${g[0]}: Genre ${k}`);
+  }
+  assert.ok(T.knownGenres({ title: 'Hollow Knight', year: 2017 }));
+  assert.equal(T.knownGenres({ title: 'Hollow Knight', year: 2031 }), null, 'anderes Jahr → anderes Spiel');
 });
 
 test('Bildquellen: Wikipedia und Uploads erlaubt, fremde Links nur nach Freigabe', () => {

@@ -1,6 +1,6 @@
 /* ───────── Cover & Metadaten über Wikipedia / Wikidata ─────────
    Kein API-Key, kein Server: beide APIs erlauben Abfragen direkt aus dem Browser (CORS).
-   Wikipedia liefert Cover (Infobox-Bild), Titel und Jahr, Wikidata die Spielreihe (P179). */
+   Wikipedia liefert Cover (Infobox-Bild), Titel und Jahr, Wikidata Spielreihe (P179) und Genres (P136). */
 const WIKI_API = 'https://en.wikipedia.org/w/api.php';
 const WIKIDATA_SPARQL = 'https://query.wikidata.org/sparql';
 const WIKI_PAGE_PROPS = {
@@ -119,31 +119,136 @@ const Wiki = {
     return bestScore >= 3 || (!year && bestScore >= 1) ? best : null;
   },
 
-  /* Spielreihe(n) + frühestes Erscheinungsjahr über Wikidata → Map(qid → {series: [], year}) */
+  /* Spielreihe(n), frühestes Erscheinungsjahr und Genres (englische Namen) über Wikidata
+     → Map(qid → {series: [], year, genres: []}). UNION statt OPTIONAL: sonst vervielfachen sich die Zeilen. */
   async details(qids) {
     const ids = [...new Set(qids.filter(q => /^Q\d+$/.test(q)))];
-    const out = new Map(ids.map(q => [q, { series: [], year: null }]));
-    if (!ids.length) return out;
-    const query = `SELECT ?item ?seriesLabel ?date WHERE {
-      VALUES ?item { ${ids.map(q => 'wd:' + q).join(' ')} }
-      OPTIONAL { ?item wdt:P179 ?series. }
-      OPTIONAL { ?item wdt:P577 ?date. }
-      SERVICE wikibase:label { bd:serviceParam wikibase:language "en,mul,de". }
-    }`;
-    const res = await fetch(WIKIDATA_SPARQL + '?format=json&query=' + encodeURIComponent(query));
-    if (!res.ok) throw new Error('Wikidata antwortet nicht (' + res.status + ')');
-    const json = await res.json();
-    for (const b of json.results?.bindings || []) {
-      const d = out.get(b.item.value.split('/').pop());
-      if (!d) continue;
-      const label = b.seriesLabel?.value;
-      if (label && !/^Q\d+$/.test(label) && !d.series.includes(label)) d.series.push(label);
-      const y = parseYear(b.date?.value);
-      if (y && (!d.year || y < d.year)) d.year = y;
+    const out = new Map(ids.map(q => [q, { series: [], year: null, genres: [] }]));
+    for (let i = 0; i < ids.length; i += 50) {
+      const query = `SELECT ?item ?seriesLabel ?date ?genreLabel WHERE {
+        VALUES ?item { ${ids.slice(i, i + 50).map(q => 'wd:' + q).join(' ')} }
+        { ?item wdt:P179 ?series. } UNION { ?item wdt:P577 ?date. } UNION { ?item wdt:P136 ?genre. }
+        SERVICE wikibase:label { bd:serviceParam wikibase:language "en,mul,de". }
+      }`;
+      const res = await fetch(WIKIDATA_SPARQL + '?format=json&query=' + encodeURIComponent(query));
+      if (!res.ok) throw new Error('Wikidata antwortet nicht (' + res.status + ')');
+      const json = await res.json();
+      for (const b of json.results?.bindings || []) {
+        const d = out.get(b.item.value.split('/').pop());
+        if (!d) continue;
+        const label = b.seriesLabel?.value;
+        if (label && !/^Q\d+$/.test(label) && !d.series.includes(label)) d.series.push(label);
+        const y = parseYear(b.date?.value);
+        if (y && (!d.year || y < d.year)) d.year = y;
+        const genre = b.genreLabel?.value;
+        if (genre && !/^Q\d+$/.test(genre) && !d.genres.includes(genre)) d.genres.push(genre);
+      }
     }
     return out;
   },
 };
+
+/* ───────── Genres ─────────
+   Tierly nutzt dieselben Genre-Kürzel wie Gamedle (Namen in GD_GENRES). */
+const genreName = k => GD_GENRES[k] || k;
+
+/* Wikidata-Genres (englisch, sehr fein) → unsere groben Genres */
+const GENRE_RULES = [
+  ['mmo', /massively multiplayer online role-playing/],
+  ['arpg', /action role-playing/],
+  ['rpg', /^(?!.*(massively|action role-playing)).*role-playing/],
+  ['aa', /action-adventure/],
+  ['adv', /(^|[^-])adventure game|point-and-click|visual novel|interactive fiction/],
+  ['fps', /first-person shooter/],
+  ['tps', /third-person shooter/],
+  ['shm', /shoot ?['’]?em up|bullet hell|scrolling shooter/],
+  ['hor', /horror/],
+  ['surv', /^survival (video )?game/],
+  ['str', /strateg|\b4x\b|tower defen[cs]e|real-time tactics|turn-based tactics/],
+  ['sim', /simulat|city-building/],
+  ['spo', /\bsports?\b|football|soccer|basketball|golf|tennis|hockey|baseball|skateboard|snowboard/],
+  ['rac', /racing/],
+  ['fig', /fighting game|platform fighter/],
+  ['plat', /platform (game|video game)|platformer|puzzle-platform/],
+  ['puz', /puzzle/],
+  ['sbx', /sandbox/],
+  ['br', /battle royale/],
+  ['rog', /rogue-?li(ke|te)/],
+  ['mv', /metroidvania/],
+  ['par', /party (video )?game/],
+  ['stl', /stealth/],
+  ['hns', /hack and slash|hack ['’]n['’] slash|beat ['’]?em up/],
+  ['sou', /souls-?like/],
+  ['moba', /multiplayer online battle arena|\bmoba\b/],
+  ['card', /card game|deck-?building/],
+];
+function genreKeys(labels) {
+  const out = new Set();
+  for (const l of labels) for (const [k, re] of GENRE_RULES) if (re.test(String(l).toLowerCase())) out.add(k);
+  return [...out].slice(0, 4);
+}
+
+/* Kuratierte Genres ohne Netz: Gamedle-Daten (geprüft gegen Wikipedia) + Vorlagen-Liste.
+   Über den Wikipedia-Artikel, sonst über den Titel (bei bekanntem Jahr nur, wenn es passt). */
+let knownGenreIndex = null;
+function knownGenres(it) {
+  if (!knownGenreIndex) {
+    const byWiki = new Map(), byTitle = new Map();
+    for (const g of GD) {
+      byWiki.set(g.wiki, g.genres);
+      for (const t of [g.title, ...g.aliases]) byTitle.set(norm(t), { genres: g.genres, year: g.year });
+    }
+    for (const p of GAME_PRESET) {
+      const genres = p[4] ? p[4].split(',') : byWiki.get(presetWikiTitle(p));
+      if (!genres) continue;
+      byWiki.set(presetWikiTitle(p), genres);
+      if (!byTitle.has(norm(p[0]))) byTitle.set(norm(p[0]), { genres, year: p[1] });
+    }
+    knownGenreIndex = { byWiki, byTitle };
+  }
+  const { byWiki, byTitle } = knownGenreIndex;
+  if (it.wiki && byWiki.has(it.wiki)) return [...byWiki.get(it.wiki)];
+  const t = byTitle.get(norm(it.title));
+  return t && (!it.year || it.year === t.year) ? [...t.genres] : null;
+}
+
+/* Genres für Spiele ohne Genre: erst kuratiert, dann über Wikidata. onProgress(done, total) */
+async function fetchMissingGenres(items, onProgress = () => {}) {
+  const patches = [], need = [];
+  for (const it of items) {
+    const g = knownGenres(it);
+    if (g) patches.push({ id: it.id, genres: g }); else need.push(it);
+  }
+  const total = items.length;
+  let done = patches.length;
+  onProgress(done, total);
+  // Wikidata-ID über den Wikipedia-Artikel, ohne Artikel wie bei den Covern über die Suche
+  const qidOf = new Map();
+  const withWiki = need.filter(it => it.wiki);
+  if (withWiki.length) {
+    const found = await Wiki.byTitles(withWiki.map(it => it.wiki));
+    for (const it of withWiki) if (found.get(it.wiki)?.qid) qidOf.set(it.id, found.get(it.wiki).qid);
+  }
+  const queue = need.filter(it => !qidOf.has(it.id) && !it.wiki);
+  const worker = async () => {
+    while (queue.length) {
+      const it = queue.shift();
+      try {
+        const m = await Wiki.match(it.title, it.year);
+        if (m?.qid) qidOf.set(it.id, m.qid);
+      } catch (e) { console.warn(e); }
+      onProgress(++done, total);
+    }
+  };
+  await Promise.all([worker(), worker(), worker()]);
+  const det = await Wiki.details([...qidOf.values()]);
+  for (const [id, q] of qidOf) {
+    const g = genreKeys(det.get(q)?.genres || []);
+    if (g.length) patches.push({ id, genres: g });
+  }
+  onProgress(total, total);
+  return patches;
+}
 
 /* Wählt aus den Wikidata-Reihen die passendste – bevorzugt Namen, die es im Raum schon gibt */
 function pickSeries(labels, title, existing) {
@@ -167,6 +272,7 @@ async function enrichResults(list) {
     const d = det.get(r.qid);
     r.franchise = d ? pickSeries(d.series, r.title, existing) : '';
     r.year = r.year || d?.year || null;
+    r.genres = knownGenres(r) || genreKeys(d?.genres || []);
   }
   return list;
 }

@@ -371,6 +371,16 @@ input.zoom-range { width: 92px; padding: 0; border: 0; background: transparent; 
   user-select: none;
 }
 .tier-label.long { font-size: 13px; font-weight: 700; }
+/* Stufe ohne Wertung (z. B. „Nicht gespielt“): gestreift und beschriftet */
+.tier.unrated .tier-label, .tier-badge.unrated {
+  background-image: repeating-linear-gradient(135deg, rgb(255 255 255 / .2) 0 6px, transparent 6px 12px);
+}
+.tier.unrated .tier-label { align-content: center; gap: 5px; }
+.tier-flag {
+  font-size: 9.5px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase;
+  line-height: 1.15; opacity: .75;
+}
+@container (max-width: 400px) { .tier-flag { display: none; } }
 .tier-items {
   display: flex; flex-wrap: wrap; align-content: flex-start; gap: var(--gap);
   padding: var(--gap); min-width: 0;
@@ -491,10 +501,15 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
   font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 999px;
   background: var(--bg-elev-2); color: var(--muted);
 }
-.pool-controls { display: flex; gap: 8px; }
-.search { flex: 1; display: flex; }
+/* Schmale Liste: Genre & Sortierung rutschen unter die Suche */
+.pool-controls { display: flex; flex-wrap: wrap; gap: 8px; }
+.search { flex: 1 1 170px; display: flex; }
 .search input { width: 100%; padding: 8px 12px; }
 .pool-controls select { padding: 8px 10px; }
+.pool-filters { display: flex; gap: 8px; flex: 1 1 190px; min-width: 0; }
+.pool-filters:has(#poolGenre[hidden]) { flex: 0 0 auto; }
+#poolGenre { flex: 1 1 auto; min-width: 0; }
+#poolSort { flex: none; }
 .chips { display: flex; gap: 6px; flex-wrap: wrap; }
 .chips:empty { display: none; }
 .chip {
@@ -503,6 +518,19 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
 }
 .chip:hover { color: var(--text); border-color: var(--border-strong); }
 .chip[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+.chip:disabled { opacity: .45; cursor: not-allowed; }
+
+/* Genre-Auswahl beim Hinzufügen/Bearbeiten (aufklappbar) */
+.genre-box { border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.genre-box summary {
+  display: flex; align-items: baseline; gap: 10px; padding: 9px 12px; cursor: pointer; list-style: none;
+  font-size: 13px; font-weight: 600; color: var(--muted);
+}
+.genre-box summary::-webkit-details-marker { display: none; }
+.genre-box summary::after { content: '▾'; margin-left: auto; }
+.genre-box[open] summary::after { content: '▴'; }
+.genre-box summary .muted { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; color: var(--text); }
+.genre-picks { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 12px 12px; }
 .pool-body {
   flex: 1; overflow-y: auto; min-height: 0;
   display: flex; flex-wrap: wrap; align-content: flex-start; gap: var(--gap);
@@ -544,8 +572,20 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
 .help code { background: var(--bg-elev-2); padding: 1px 5px; border-radius: 5px; font-size: 12.5px; }
 
 .tier-edit-row {
-  display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 8px; align-items: center;
+  display: grid; grid-template-columns: 40px minmax(0, 1fr) auto auto; gap: 8px; align-items: center;
   padding: 6px; border-radius: 12px; background: var(--bg-elev-2);
+}
+.tier-skip {
+  display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;
+  font-size: 12.5px; font-weight: 600; color: var(--muted); white-space: nowrap;
+}
+.tier-skip input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); cursor: pointer; }
+.tier-skip:has(input:checked) { color: var(--text); }
+.tier-skip:has(input:disabled) { opacity: .5; cursor: not-allowed; }
+/* Handy: „Nicht werten“ unter den Namen, damit der Name lesbar bleibt */
+@media (max-width: 480px) {
+  .tier-edit-row { grid-template-columns: 40px minmax(0, 1fr) auto; row-gap: 4px; }
+  .tier-skip { grid-column: 2; grid-row: 2; padding-left: 2px; }
 }
 .tier-edit-row input[type="color"] {
   width: 40px; height: 38px; padding: 3px; border-radius: 9px; cursor: pointer;
@@ -1221,11 +1261,14 @@ button.gd-hint:hover { border-color: var(--accent); }
           <div class="search">
             <input id="poolSearch" type="search" placeholder="Suchen …" aria-label="Spiele durchsuchen">
           </div>
-          <select id="poolSort" aria-label="Sortierung">
-            <option value="year">Jahr</option>
-            <option value="title">A–Z</option>
-            <option value="franchise">Franchise</option>
-          </select>
+          <div class="pool-filters">
+            <select id="poolGenre" aria-label="Nach Genre filtern" hidden></select>
+            <select id="poolSort" aria-label="Sortierung">
+              <option value="year">Jahr</option>
+              <option value="title">A–Z</option>
+              <option value="franchise">Franchise</option>
+            </select>
+          </div>
         </div>
         <div class="chips" id="poolChips"></div>
       </div>
@@ -1250,13 +1293,15 @@ button.gd-hint:hover { border-color: var(--accent); }
 <script>
 'use strict';
 /* ───────── Vorlagen: Spiele & Tier-Sets ─────────
-   Format: [Titel, Erscheinungsjahr, Franchise, englischer Wikipedia-Artikel (nur wenn abweichend)]
-   Über den Artikel werden die Cover beim Hinzufügen live von Wikipedia geladen. */
+   Format: [Titel, Erscheinungsjahr, Franchise, englischer Wikipedia-Artikel (nur wenn abweichend),
+            Genres (nur für Spiele, die nicht in den Gamedle-Daten stehen)]
+   Über den Artikel werden die Cover beim Hinzufügen live von Wikipedia geladen,
+   die Genres kommen aus den Gamedle-Daten (siehe knownGenres). */
 const GAME_PRESET = [
   // 1980er
   ['Pac-Man', 1980, 'Pac-Man'],
   ['Donkey Kong', 1981, 'Donkey Kong', 'Donkey Kong (1981 video game)'],
-  ['Tetris', 1984, 'Tetris'],
+  ['Tetris', 1984, 'Tetris', '', 'puz'],
   ['Super Mario Bros.', 1985, 'Super Mario'],
   ['The Legend of Zelda', 1986, 'The Legend of Zelda', 'The Legend of Zelda (video game)'],
   ['Metroid', 1986, 'Metroid', 'Metroid (video game)'],
@@ -1548,7 +1593,7 @@ function icon(name, cls = '') {
 /* ───────── Version ─────────
    PROTOCOL steigt, wenn sich das Netzwerkprotokoll inkompatibel ändert –
    ältere Dateien werden dann beim Beitritt mit einem Hinweis abgewiesen. */
-const APP_VERSION = '3.1';
+const APP_VERSION = '3.2';
 const PROTOCOL = 3; // 3: Änderungen werden einzeln (als „ops“) verteilt statt als ganzer Raum
 
 /* ───────── Speicher ───────── */
@@ -1706,7 +1751,8 @@ function franchiseList(state) {
       const years = f.games.map(g => g.year).filter(Boolean);
       // Mosaik aus bis zu 4 Covern der Reihe, chronologisch
       const imgs = [...f.games].sort((a, b) => (a.year || 9999) - (b.year || 9999)).map(g => g.img).filter(Boolean).slice(0, 4);
-      return { ...f, imgs, count: f.games.length, year: years.length ? Math.min(...years) : null, yearTo: years.length ? Math.max(...years) : null };
+      const genres = [...new Set(f.games.flatMap(g => g.genres || []))]; // für den Genre-Filter: alle Genres der Reihe
+      return { ...f, imgs, genres, count: f.games.length, year: years.length ? Math.min(...years) : null, yearTo: years.length ? Math.max(...years) : null };
     });
 }
 
@@ -1719,6 +1765,8 @@ function sanitizeItem(raw) {
   const title = str(raw.title, 90);
   if (!title) return null;
   const y = parseInt(raw.year, 10);
+  // Genres als Kürzel (z. B. "aa", "rpg" – Namen in GD_GENRES), höchstens 4
+  const genres = [...new Set((Array.isArray(raw.genres) ? raw.genres : []).filter(g => typeof g === 'string' && /^[a-z]{2,4}$/.test(g)))].slice(0, 4);
   return {
     id: str(raw.id, 24) || uid(),
     title,
@@ -1726,6 +1774,7 @@ function sanitizeItem(raw) {
     franchise: str(raw.franchise, 60),
     img: safeImg(raw.img),
     wiki: str(raw.wiki, 200), // Wikipedia-Artikel, aus dem das Cover stammt
+    ...(genres.length ? { genres } : {}),
   };
 }
 
@@ -1882,8 +1931,10 @@ function applyAction(state, a, actor) {
         id: str(t.id, 12) || uid(6),
         name: str(t.name, 24) || '?',
         color: /^#[0-9a-f]{6}$/i.test(t.color) ? t.color : '#888888',
+        ...(t.unrated ? { unrated: true } : {}), // „Nicht werten“: zählt nicht für Gruppenergebnis & Statistik
       }));
       if (!tiers.length) return false;
+      if (tiers.every(t => t.unrated)) tiers.forEach(t => delete t.unrated); // mindestens eine Stufe muss werten
       const keep = new Set(tiers.map(t => t.id));
       for (const pid in state.rankings) {
         for (const b of BOARDS) {
@@ -2023,12 +2074,22 @@ function personalView(state, board, pid) {
   return { rows, pool: items.filter(it => !placed.has(it.id)) };
 }
 
+/* Stufen, die in die Wertung eingehen. „Nicht werten“ (z. B. „Nicht gespielt“) zählt weder
+   fürs Gruppenergebnis noch für die Statistik – die Indizes (ti) beziehen sich auf diese Liste. */
+function ratedTiers(state) {
+  const list = state.tiers.filter(t => !t.unrated);
+  return list.length ? list : state.tiers;
+}
+
 /* Gruppenergebnis: Durchschnitt aller Platzierungen (Tier-Index + Position innerhalb des Tiers). */
 function groupView(state, board, opts = {}) {
   const items = boardItems(state, board);
   const byId = new Map(items.map(it => [it.id, it]));
-  const tierIdx = new Map(state.tiers.map((t, i) => [t.id, i]));
+  const rated = ratedTiers(state);
+  const tierIdx = new Map(rated.map((t, i) => [t.id, i]));
+  const unrated = new Set(state.tiers.filter(t => !tierIdx.has(t.id)).map(t => t.id));
   const votes = new Map();
+  const skipped = new Map(); // Platzierungen in Stufen ohne Wertung: id → [{pid, tid}]
   let lists = 0;
 
   for (const [pid, r] of Object.entries(state.rankings)) {
@@ -2037,39 +2098,52 @@ function groupView(state, board, opts = {}) {
     let any = false;
     for (const [tid, ids] of Object.entries(rk)) {
       const ti = tierIdx.get(tid);
-      if (ti == null) continue;
+      if (ti == null && !unrated.has(tid)) continue;
       ids.forEach((id, pos) => {
         if (!byId.has(id)) return;
         any = true;
-        if (!votes.has(id)) votes.set(id, []);
-        votes.get(id).push({ pid, ti, pos: ids.length > 1 ? pos / (ids.length - 1) : 0.5 });
+        const map = ti == null ? skipped : votes;
+        if (!map.has(id)) map.set(id, []);
+        map.get(id).push(ti == null ? { pid, tid } : { pid, ti, pos: ids.length > 1 ? pos / (ids.length - 1) : 0.5 });
       });
     }
     if (any) lists++;
   }
 
   const rows = state.tiers.map(t => ({ tier: t, items: [] }));
+  const rowOf = new Map(rows.map(r => [r.tier.id, r]));
   const pool = [], few = [];
   const median = arr => { const s = [...arr].sort((a, b) => a - b), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
   for (const it of items) {
     const v = votes.get(it.id);
-    if (!v) { pool.push(it); continue; }
+    if (!v) {
+      // Nur in Stufen ohne Wertung gelandet → in der, die die meisten gewählt haben
+      const sk = skipped.get(it.id);
+      if (!sk) { pool.push(it); continue; }
+      const n = new Map();
+      for (const x of sk) n.set(x.tid, (n.get(x.tid) || 0) + 1);
+      const tid = [...n].sort((a, b) => b[1] - a[1])[0][0];
+      rowOf.get(tid).items.push({ ...it, _votes: sk, _unrated: true });
+      continue;
+    }
     if (v.length < (opts.minVotes || 1)) { few.push({ ...it, _votes: v }); continue; }
     const tis = v.map(x => x.ti);
     const mean = tis.reduce((s, x) => s + x, 0) / v.length;
     const center = opts.method === 'median' ? median(tis) : mean;
     const fine = v.reduce((s, x) => s + x.ti + x.pos * 0.98, 0) / v.length;
     const spread = Math.max(...tis) - Math.min(...tis);
-    rows[clamp(roundBetter(center), 0, rows.length - 1)].items.push({ ...it, _score: fine, _mean: mean, _center: center, _spread: spread, _votes: v });
+    rowOf.get(rated[clamp(roundBetter(center), 0, rated.length - 1)].id).items.push({ ...it, _score: fine, _mean: mean, _center: center, _spread: spread, _votes: v });
   }
-  rows.forEach(r => r.items.sort((a, b) => a._center - b._center || a._score - b._score || b._votes.length - a._votes.length));
-  return { rows, pool, few, votes, lists };
+  const byRank = (a, b) => a._center - b._center || a._score - b._score || b._votes.length - a._votes.length;
+  const byCount = (a, b) => b._votes.length - a._votes.length || a.title.localeCompare(b.title, 'de');
+  rows.forEach(r => r.items.sort(r.items[0]?._unrated ? byCount : byRank));
+  return { rows, pool, few, votes, skipped, lists };
 }
 
 /* ───────── Statistik ───────── */
 function statsFor(state, board) {
   const { votes } = groupView(state, board);
-  const n = Math.max(1, state.tiers.length - 1);
+  const n = Math.max(1, ratedTiers(state).length - 1);
   const items = new Map(boardItems(state, board).map(it => [it.id, it]));
   const players = Object.values(state.players).filter(p => [...votes.values()].some(v => v.some(x => x.pid === p.id)));
   const tierOf = (pid, id) => votes.get(id)?.find(x => x.pid === pid)?.ti;
@@ -2133,7 +2207,8 @@ function statsFor(state, board) {
 
 /* Franchise-Vorschlag aus den eigenen Spiele-Rankings: Schnitt der Stufen je Reihe */
 function franchiseSuggestion(state, pid) {
-  const tierIdx = new Map(state.tiers.map((t, i) => [t.id, i]));
+  const rated = ratedTiers(state); // Spiele in „Nicht werten“-Stufen fließen nicht ein
+  const tierIdx = new Map(rated.map((t, i) => [t.id, i]));
   const myGames = new Map();
   for (const [tid, ids] of Object.entries(state.rankings[pid]?.games || {})) ids.forEach(id => myGames.set(id, tierIdx.get(tid)));
   const placed = new Set(Object.values(state.rankings[pid]?.franchises || {}).flat());
@@ -2145,13 +2220,13 @@ function franchiseSuggestion(state, pid) {
     list.push({ id: f.id, avg: tis.reduce((s, x) => s + x, 0) / tis.length });
   }
   list.sort((a, b) => a.avg - b.avg);
-  for (const { id, avg } of list) (rows[state.tiers[clamp(roundBetter(avg), 0, state.tiers.length - 1)].id] ||= []).push(id);
+  for (const { id, avg } of list) (rows[rated[clamp(roundBetter(avg), 0, rated.length - 1)].id] ||= []).push(id);
   return { rows, count: list.length };
 }
 
 /* ───────── Cover & Metadaten über Wikipedia / Wikidata ─────────
    Kein API-Key, kein Server: beide APIs erlauben Abfragen direkt aus dem Browser (CORS).
-   Wikipedia liefert Cover (Infobox-Bild), Titel und Jahr, Wikidata die Spielreihe (P179). */
+   Wikipedia liefert Cover (Infobox-Bild), Titel und Jahr, Wikidata Spielreihe (P179) und Genres (P136). */
 const WIKI_API = 'https://en.wikipedia.org/w/api.php';
 const WIKIDATA_SPARQL = 'https://query.wikidata.org/sparql';
 const WIKI_PAGE_PROPS = {
@@ -2270,31 +2345,136 @@ const Wiki = {
     return bestScore >= 3 || (!year && bestScore >= 1) ? best : null;
   },
 
-  /* Spielreihe(n) + frühestes Erscheinungsjahr über Wikidata → Map(qid → {series: [], year}) */
+  /* Spielreihe(n), frühestes Erscheinungsjahr und Genres (englische Namen) über Wikidata
+     → Map(qid → {series: [], year, genres: []}). UNION statt OPTIONAL: sonst vervielfachen sich die Zeilen. */
   async details(qids) {
     const ids = [...new Set(qids.filter(q => /^Q\d+$/.test(q)))];
-    const out = new Map(ids.map(q => [q, { series: [], year: null }]));
-    if (!ids.length) return out;
-    const query = `SELECT ?item ?seriesLabel ?date WHERE {
-      VALUES ?item { ${ids.map(q => 'wd:' + q).join(' ')} }
-      OPTIONAL { ?item wdt:P179 ?series. }
-      OPTIONAL { ?item wdt:P577 ?date. }
-      SERVICE wikibase:label { bd:serviceParam wikibase:language "en,mul,de". }
-    }`;
-    const res = await fetch(WIKIDATA_SPARQL + '?format=json&query=' + encodeURIComponent(query));
-    if (!res.ok) throw new Error('Wikidata antwortet nicht (' + res.status + ')');
-    const json = await res.json();
-    for (const b of json.results?.bindings || []) {
-      const d = out.get(b.item.value.split('/').pop());
-      if (!d) continue;
-      const label = b.seriesLabel?.value;
-      if (label && !/^Q\d+$/.test(label) && !d.series.includes(label)) d.series.push(label);
-      const y = parseYear(b.date?.value);
-      if (y && (!d.year || y < d.year)) d.year = y;
+    const out = new Map(ids.map(q => [q, { series: [], year: null, genres: [] }]));
+    for (let i = 0; i < ids.length; i += 50) {
+      const query = `SELECT ?item ?seriesLabel ?date ?genreLabel WHERE {
+        VALUES ?item { ${ids.slice(i, i + 50).map(q => 'wd:' + q).join(' ')} }
+        { ?item wdt:P179 ?series. } UNION { ?item wdt:P577 ?date. } UNION { ?item wdt:P136 ?genre. }
+        SERVICE wikibase:label { bd:serviceParam wikibase:language "en,mul,de". }
+      }`;
+      const res = await fetch(WIKIDATA_SPARQL + '?format=json&query=' + encodeURIComponent(query));
+      if (!res.ok) throw new Error('Wikidata antwortet nicht (' + res.status + ')');
+      const json = await res.json();
+      for (const b of json.results?.bindings || []) {
+        const d = out.get(b.item.value.split('/').pop());
+        if (!d) continue;
+        const label = b.seriesLabel?.value;
+        if (label && !/^Q\d+$/.test(label) && !d.series.includes(label)) d.series.push(label);
+        const y = parseYear(b.date?.value);
+        if (y && (!d.year || y < d.year)) d.year = y;
+        const genre = b.genreLabel?.value;
+        if (genre && !/^Q\d+$/.test(genre) && !d.genres.includes(genre)) d.genres.push(genre);
+      }
     }
     return out;
   },
 };
+
+/* ───────── Genres ─────────
+   Tierly nutzt dieselben Genre-Kürzel wie Gamedle (Namen in GD_GENRES). */
+const genreName = k => GD_GENRES[k] || k;
+
+/* Wikidata-Genres (englisch, sehr fein) → unsere groben Genres */
+const GENRE_RULES = [
+  ['mmo', /massively multiplayer online role-playing/],
+  ['arpg', /action role-playing/],
+  ['rpg', /^(?!.*(massively|action role-playing)).*role-playing/],
+  ['aa', /action-adventure/],
+  ['adv', /(^|[^-])adventure game|point-and-click|visual novel|interactive fiction/],
+  ['fps', /first-person shooter/],
+  ['tps', /third-person shooter/],
+  ['shm', /shoot ?['’]?em up|bullet hell|scrolling shooter/],
+  ['hor', /horror/],
+  ['surv', /^survival (video )?game/],
+  ['str', /strateg|\b4x\b|tower defen[cs]e|real-time tactics|turn-based tactics/],
+  ['sim', /simulat|city-building/],
+  ['spo', /\bsports?\b|football|soccer|basketball|golf|tennis|hockey|baseball|skateboard|snowboard/],
+  ['rac', /racing/],
+  ['fig', /fighting game|platform fighter/],
+  ['plat', /platform (game|video game)|platformer|puzzle-platform/],
+  ['puz', /puzzle/],
+  ['sbx', /sandbox/],
+  ['br', /battle royale/],
+  ['rog', /rogue-?li(ke|te)/],
+  ['mv', /metroidvania/],
+  ['par', /party (video )?game/],
+  ['stl', /stealth/],
+  ['hns', /hack and slash|hack ['’]n['’] slash|beat ['’]?em up/],
+  ['sou', /souls-?like/],
+  ['moba', /multiplayer online battle arena|\bmoba\b/],
+  ['card', /card game|deck-?building/],
+];
+function genreKeys(labels) {
+  const out = new Set();
+  for (const l of labels) for (const [k, re] of GENRE_RULES) if (re.test(String(l).toLowerCase())) out.add(k);
+  return [...out].slice(0, 4);
+}
+
+/* Kuratierte Genres ohne Netz: Gamedle-Daten (geprüft gegen Wikipedia) + Vorlagen-Liste.
+   Über den Wikipedia-Artikel, sonst über den Titel (bei bekanntem Jahr nur, wenn es passt). */
+let knownGenreIndex = null;
+function knownGenres(it) {
+  if (!knownGenreIndex) {
+    const byWiki = new Map(), byTitle = new Map();
+    for (const g of GD) {
+      byWiki.set(g.wiki, g.genres);
+      for (const t of [g.title, ...g.aliases]) byTitle.set(norm(t), { genres: g.genres, year: g.year });
+    }
+    for (const p of GAME_PRESET) {
+      const genres = p[4] ? p[4].split(',') : byWiki.get(presetWikiTitle(p));
+      if (!genres) continue;
+      byWiki.set(presetWikiTitle(p), genres);
+      if (!byTitle.has(norm(p[0]))) byTitle.set(norm(p[0]), { genres, year: p[1] });
+    }
+    knownGenreIndex = { byWiki, byTitle };
+  }
+  const { byWiki, byTitle } = knownGenreIndex;
+  if (it.wiki && byWiki.has(it.wiki)) return [...byWiki.get(it.wiki)];
+  const t = byTitle.get(norm(it.title));
+  return t && (!it.year || it.year === t.year) ? [...t.genres] : null;
+}
+
+/* Genres für Spiele ohne Genre: erst kuratiert, dann über Wikidata. onProgress(done, total) */
+async function fetchMissingGenres(items, onProgress = () => {}) {
+  const patches = [], need = [];
+  for (const it of items) {
+    const g = knownGenres(it);
+    if (g) patches.push({ id: it.id, genres: g }); else need.push(it);
+  }
+  const total = items.length;
+  let done = patches.length;
+  onProgress(done, total);
+  // Wikidata-ID über den Wikipedia-Artikel, ohne Artikel wie bei den Covern über die Suche
+  const qidOf = new Map();
+  const withWiki = need.filter(it => it.wiki);
+  if (withWiki.length) {
+    const found = await Wiki.byTitles(withWiki.map(it => it.wiki));
+    for (const it of withWiki) if (found.get(it.wiki)?.qid) qidOf.set(it.id, found.get(it.wiki).qid);
+  }
+  const queue = need.filter(it => !qidOf.has(it.id) && !it.wiki);
+  const worker = async () => {
+    while (queue.length) {
+      const it = queue.shift();
+      try {
+        const m = await Wiki.match(it.title, it.year);
+        if (m?.qid) qidOf.set(it.id, m.qid);
+      } catch (e) { console.warn(e); }
+      onProgress(++done, total);
+    }
+  };
+  await Promise.all([worker(), worker(), worker()]);
+  const det = await Wiki.details([...qidOf.values()]);
+  for (const [id, q] of qidOf) {
+    const g = genreKeys(det.get(q)?.genres || []);
+    if (g.length) patches.push({ id, genres: g });
+  }
+  onProgress(total, total);
+  return patches;
+}
 
 /* Wählt aus den Wikidata-Reihen die passendste – bevorzugt Namen, die es im Raum schon gibt */
 function pickSeries(labels, title, existing) {
@@ -2318,6 +2498,7 @@ async function enrichResults(list) {
     const d = det.get(r.qid);
     r.franchise = d ? pickSeries(d.series, r.title, existing) : '';
     r.year = r.year || d?.year || null;
+    r.genres = knownGenres(r) || genreKeys(d?.genres || []);
   }
   return list;
 }
@@ -2903,7 +3084,7 @@ const App = {
   view: 'me',            // 'me' | 'group' | Spieler-ID
   sel: [],               // Tap-to-place-Auswahl (mehrere möglich, in Auswahl-Reihenfolge)
   multi: false,          // Mehrfachauswahl per Antippen (für Touch)
-  filter: { q: '', decade: null, sort: 'year' },
+  filter: { q: '', decade: null, genre: null, sort: 'year' },
   renderQueued: false,
   renderPending: false,
   persistTimer: null,
@@ -3381,8 +3562,10 @@ const App = {
       const o = this.groupOpts;
       const setOpt = patch => { this.groupOpts = { ...o, ...patch }; Store.set('groupOpts', this.groupOpts); this.render(); };
       const maxVotes = Math.max(1, lists);
+      const skip = s.tiers.filter(t => t.unrated).map(t => `„${t.name}“`);
       el.append(icon('users'),
-        h('span', { style: { flex: 1 } }, `Gruppenergebnis aus ${lists} ${lists === 1 ? 'Liste' : 'Listen'}`, few.length ? ` · ${few.length} mit zu wenigen Stimmen in der Liste` : ''),
+        h('span', { style: { flex: 1 } }, `Gruppenergebnis aus ${lists} ${lists === 1 ? 'Liste' : 'Listen'}`, few.length ? ` · ${few.length} mit zu wenigen Stimmen in der Liste` : '',
+          skip.length ? ` · ${skip.join(', ')} ${skip.length === 1 ? 'zählt' : 'zählen'} nicht` : ''),
         h('div.seg.mini', ['mean', 'median'].map(m => h('button', { 'aria-selected': String(o.method === m), title: m === 'mean' ? 'Durchschnitt aller Stufen' : 'Mittlere Wertung – robust gegen Ausreißer', onclick: () => setOpt({ method: m }) }, m === 'mean' ? 'Ø' : 'Median'))),
         h('select.mini', { 'aria-label': 'Mindestens so viele Stimmen', title: 'Spiele mit weniger Stimmen erscheinen in der Liste statt im Ergebnis', onchange: e => setOpt({ minVotes: +e.target.value }) },
           Array.from({ length: maxVotes }, (_, i) => h('option', { value: i + 1, selected: (o.minVotes || 1) === i + 1 }, `ab ${i + 1} ${i ? 'Stimmen' : 'Stimme'}`))));
@@ -3448,11 +3631,14 @@ const App = {
     const group = this.view === 'group';
     const old = new Map([...board.children].filter(el => el.classList.contains('tier')).map(el => [el.dataset.tier, el]));
     board.replaceChildren(...rows.map(({ tier, items }) => {
-      const sig = [tier.name, tier.color, readonly, group, ...items.map(it => tileKey(it, { readonly, group }))].join('¦');
+      const sig = [tier.name, tier.color, tier.unrated, readonly, group, ...items.map(it => tileKey(it, { readonly, group }))].join('¦');
       const prev = old.get(tier.id);
       if (prev && prev._sig === sig) { items.forEach(it => TileCache.touch(it, { readonly, group })); return prev; }
-      const row = h('div.tier', { 'data-tier': tier.id },
-        h('div.tier-label' + (tier.name.length > 3 ? '.long' : ''), { style: { background: tier.color } }, tier.name),
+      const row = h('div.tier' + (tier.unrated ? '.unrated' : ''), { 'data-tier': tier.id },
+        h('div.tier-label' + (tier.name.length > 3 ? '.long' : ''), {
+          style: { backgroundColor: tier.color }, // nur die Farbe – die Streifen für „ohne Wertung“ kommen aus dem CSS
+          title: tier.unrated ? 'Ohne Wertung: zählt nicht fürs Gruppenergebnis und die Statistik' : null,
+        }, tier.name, tier.unrated ? h('span.tier-flag', 'ohne Wertung') : null),
         h('div.tier-items', { 'data-tier': tier.id }, items.map(it => TileCache.get(it, { readonly, group }))));
       row._sig = sig;
       return row;
@@ -3469,6 +3655,7 @@ const App = {
       $('#poolTitle').textContent = 'Verdeckt';
       $('#poolCount').textContent = '–';
       $('#poolChips').replaceChildren();
+      $('#poolGenre').hidden = true;
       $('#poolBody').replaceChildren(h('div.pool-empty', 'Hier gibt es erst nach dem Aufdecken etwas zu sehen.',
         h('div', h('button.btn.sm', { onclick: () => this.setView('me') }, 'Zurück zu meiner Liste'))));
       return;
@@ -3495,12 +3682,14 @@ const App = {
       onclick: () => { this.filter.decade = val; this.renderPool(); },
     }, label);
     $('#poolChips').replaceChildren(...(decades.length > 1 ? [chip(null, 'Alle'), ...decades.map(d => chip(d, `${String(d).slice(2)}er`))] : []));
+    this.renderGenreFilter(all, pool, readonly);
 
     // Filtern & sortieren
     const q = norm(this.filter.q);
     let list = pool.filter(it =>
       (!q || norm(it.title).includes(q) || norm(it.franchise).includes(q)) &&
-      (!this.filter.decade || (it.year >= this.filter.decade && it.year < this.filter.decade + 10)));
+      (!this.filter.decade || (it.year >= this.filter.decade && it.year < this.filter.decade + 10)) &&
+      (!this.filter.genre || it.genres?.includes(this.filter.genre)));
     const byTitle = (a, b) => a.title.localeCompare(b.title, 'de');
     const sorters = {
       year: (a, b) => (a.year || 9999) - (b.year || 9999) || byTitle(a, b),
@@ -3534,6 +3723,27 @@ const App = {
     }
   },
 
+  /* Genre-Filter: alle Genres des Boards (bleiben stehen, auch wenn alle platziert sind),
+     Zahl = noch unplatziert. Fehlen Genres, lassen sie sich hier direkt nachladen. */
+  renderGenreFilter(all, pool, readonly) {
+    const sel = $('#poolGenre');
+    const count = new Map();
+    for (const it of all) for (const g of it.genres || []) count.set(g, 0);
+    for (const it of pool) for (const g of it.genres || []) count.set(g, count.get(g) + 1);
+    if (!count.has(this.filter.genre)) this.filter.genre = null;
+    const missing = this.board === 'games' && !readonly && this.canEditConfig() ? all.filter(it => !it.genres?.length).length : 0;
+    const genres = [...count].sort(([a], [b]) => genreName(a).localeCompare(genreName(b), 'de'));
+    sel.hidden = !genres.length && !missing;
+    const sig = [this.filter.genre, missing, ...genres.flat()].join('|');
+    if (sel._sig === sig) return;
+    sel._sig = sig;
+    sel.replaceChildren(
+      h('option', { value: '' }, 'Alle Genres'),
+      ...genres.map(([k, n]) => h('option', { value: k }, `${genreName(k)} (${n})`)),
+      ...(missing ? [h('option', { value: '__load' }, `+ Genres laden (${missing} ohne)`)] : []));
+    sel.value = this.filter.genre || '';
+  },
+
   /* ── Statische Event-Verdrahtung ── */
   wireApp() {
     $$('.tab').forEach(t => t.addEventListener('click', () => {
@@ -3552,6 +3762,15 @@ const App = {
     };
     $('#menuBtn').onclick = e => { e.stopPropagation(); toggleMenu(); };
     $('#poolSearch').addEventListener('input', e => { this.filter.q = e.target.value; this.renderPool(); });
+    $('#poolGenre').addEventListener('change', e => {
+      if (e.target.value === '__load') {
+        e.target.value = this.filter.genre || '';
+        loadMissingGenres();
+        return;
+      }
+      this.filter.genre = e.target.value || null;
+      this.renderPool();
+    });
     $('#poolSort').addEventListener('change', e => {
       this.filter.sort = e.target.value;
       Store.set('ui', { board: this.board, sort: this.filter.sort });
@@ -4482,8 +4701,9 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && Reveal.run
 function statsPanel(board) {
   const s = App.state;
   const st = statsFor(s, board);
+  const rated = ratedTiers(s); // ti zählt nur Stufen mit Wertung
   const tierBadge = ti => {
-    const t = s.tiers[clamp(Math.round(ti), 0, s.tiers.length - 1)];
+    const t = rated[clamp(Math.round(ti), 0, rated.length - 1)];
     return h('span.tier-badge', { style: { background: t.color } }, t.name);
   };
   const smallTile = it => h('div.stat-tile', makeTile(it, { readonly: true }));
@@ -4825,34 +5045,39 @@ function itemModal(id) {
   const board = App.board;
   const item = boardItems(s, board).find(x => x.id === id);
   if (!item) return;
-  const { votes } = groupView(s, board);
+  const { votes, skipped } = groupView(s, board);
   const v = votes.get(id) || [];
-  const tierOf = ti => s.tiers[ti];
+  const sk = skipped.get(id) || [];
+  const rated = ratedTiers(s);
+  const tierOf = ti => rated[ti];
   const isFr = board === 'franchises';
 
   const meta = isFr
     ? `${item.count} Spiele · ${item.year}${item.yearTo !== item.year ? '–' + item.yearTo : ''}`
     : [item.year, item.franchise].filter(Boolean).join(' · ');
+  const genres = (item.genres || []).map(genreName).join(', ');
 
   const body = [
-    h('div.item-hero', makeTile(item, {}), h('div', h('h3', item.title), h('div.muted', meta))),
+    h('div.item-hero', makeTile(item, {}), h('div', h('h3', item.title), h('div.muted', meta), genres ? h('div.muted', genres) : null)),
   ];
 
   if (v.length) {
     const mean = v.reduce((a, x) => a + x.ti, 0) / v.length;
-    const avgTier = tierOf(clamp(Math.round(mean), 0, s.tiers.length - 1));
+    const avgTier = tierOf(clamp(Math.round(mean), 0, rated.length - 1));
     const spread = Math.max(...v.map(x => x.ti)) - Math.min(...v.map(x => x.ti));
     body.push(h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' } },
       h('span.muted', 'Gruppe:'), h('span.tier-badge', { style: { background: avgTier.color } }, avgTier.name),
       h('span.muted', `aus ${v.length} ${v.length === 1 ? 'Wertung' : 'Wertungen'}`),
       spread >= 3 ? h('span.pill', 'Umstritten') : spread === 0 && v.length > 1 ? h('span.pill.ok', 'Einig') : null));
+  } else if (sk.length) {
+    body.push(h('p.help', 'Bisher nur in Stufen ohne Wertung – zählt nicht fürs Gruppenergebnis.'));
   }
 
   const rows = App.sortedPlayers().map(p => {
     const vote = v.find(x => x.pid === p.id);
-    const t = vote && tierOf(vote.ti);
+    const t = vote ? tierOf(vote.ti) : s.tiers.find(x => x.id === sk.find(y => y.pid === p.id)?.tid);
     return h('div.vote-row', avatar(p, board), h('span.name', p.name),
-      t ? h('span.tier-badge', { style: { background: t.color } }, t.name) : h('span.muted', '–'));
+      t ? h('span.tier-badge' + (t.unrated ? '.unrated' : ''), { style: { backgroundColor: t.color }, title: t.unrated ? 'Zählt nicht in der Wertung' : null }, t.name) : h('span.muted', '–'));
   });
   body.push(h('div.vote-list', rows));
 
@@ -4900,6 +5125,46 @@ async function coversFor(ids, onProgress) {
   }
 }
 
+/* Genres für Spiele ohne Genre nachtragen (kuratiert, sonst Wikidata) */
+async function genresFor(ids, onProgress) {
+  const items = ids.map(id => App.state.items[id]).filter(it => it && !it.genres?.length);
+  if (!items.length) return 0;
+  try {
+    const patches = await fetchMissingGenres(items, onProgress);
+    if (patches.length) App.dispatch({ type: 'items/patch', patches });
+    return patches.length;
+  } catch (e) {
+    console.warn(e);
+    toast('Genres konnten nicht geladen werden – bist du online?');
+    return 0;
+  }
+}
+
+/* Aus dem Genre-Filter heraus: alle fehlenden Genres der Bibliothek laden */
+async function loadMissingGenres() {
+  const ids = libItems().filter(it => !it.genres?.length).map(it => it.id);
+  const t = toast(`Lade Genres für ${ids.length} Spiele …`, 60000);
+  const n = await genresFor(ids);
+  t.remove();
+  toast(n ? `${n} Spiele mit Genre ergänzt${n < ids.length ? ` – ${ids.length - n} ohne Treffer (per „Bearbeiten“ von Hand setzen)` : ''}` : 'Keine Genres gefunden', 5000);
+}
+
+/* Genre-Auswahl (bis zu 4) – aufklappbar, damit die vielen Genres nicht das ganze Formular füllen */
+function genrePicker(initial = []) {
+  const sel = new Set(initial);
+  const summary = h('summary');
+  const chips = h('div.genre-picks');
+  const draw = () => {
+    summary.replaceChildren(h('span', 'Genres'), h('span.muted', sel.size ? [...sel].map(genreName).join(', ') : 'keine'));
+    chips.replaceChildren(...Object.keys(GD_GENRES).sort((a, b) => genreName(a).localeCompare(genreName(b), 'de')).map(k => h('button.chip', {
+      type: 'button', 'aria-pressed': String(sel.has(k)), disabled: !sel.has(k) && sel.size >= 4,
+      onclick: () => { if (!sel.delete(k)) sel.add(k); draw(); },
+    }, genreName(k))));
+  };
+  draw();
+  return { el: h('details.genre-box.full', summary, chips), value: () => [...sel] };
+}
+
 function warnUnsafeImg() {
   toast('Dieser Bild-Link wird nicht angezeigt: Im Raum sind nur Wikipedia-Bilder und Uploads erlaubt (Host-Einstellung). Lade das Bild stattdessen hoch.', 7000);
 }
@@ -4933,7 +5198,7 @@ function libraryModal(tab = null, query = '') {
         const btn = h('button.btn.sm' + (has ? '.added' : '.primary'), {
           disabled: has,
           onclick: () => {
-            if (App.dispatch({ type: 'items/add', items: [{ title: r.title, year: r.year, franchise: r.franchise, img: r.img, wiki: r.wiki }] })) {
+            if (App.dispatch({ type: 'items/add', items: [{ title: r.title, year: r.year, franchise: r.franchise, img: r.img, wiki: r.wiki, genres: r.genres }] })) {
               toast(`„${r.title}“ hinzugefügt`);
               refreshTabs();
               btn.replaceWith(row(r).lastChild);
@@ -4991,7 +5256,7 @@ function libraryModal(tab = null, query = '') {
     packs() {
       const known = new Set(libItems().map(it => norm(it.title)));
       return [
-        h('p.help', 'Bekannte Spiele aus mehreren Jahrzehnten – inklusive Cover und Franchise-Zuordnung. Bereits vorhandene Titel werden übersprungen.'),
+        h('p.help', 'Bekannte Spiele aus mehreren Jahrzehnten – inklusive Cover, Genre und Franchise-Zuordnung. Bereits vorhandene Titel werden übersprungen.'),
         ...PRESET_PACKS.map(p => {
           const games = GAME_PRESET.filter(([, y]) => p.filter(y));
           const fresh = games.filter(([t]) => !known.has(norm(t)));
@@ -5007,7 +5272,8 @@ function libraryModal(tab = null, query = '') {
                 type: 'items/add',
                 items: fresh.map(g => {
                   const info = found.get(presetWikiTitle(g));
-                  return { title: g[0], year: g[1], franchise: g[2], wiki: info?.wiki || '', img: info?.img || '' };
+                  const genres = knownGenres({ wiki: presetWikiTitle(g), title: g[0], year: g[1] });
+                  return { title: g[0], year: g[1], franchise: g[2], wiki: info?.wiki || '', img: info?.img || '', genres };
                 }),
               });
               toast(`${fresh.length} Spiele hinzugefügt`);
@@ -5033,13 +5299,15 @@ function libraryModal(tab = null, query = '') {
           refreshTabs();
           btn.disabled = true;
           const n = await coversFor(added, (d, t) => { btn.textContent = `Suche Cover … ${d}/${t}`; });
+          btn.textContent = 'Suche Genres …';
+          await genresFor(added); // nach den Covern: dann ist der Wikipedia-Artikel bekannt
           toast(`${added.length} Spiele importiert, ${n} mit Cover`);
           btn.disabled = false;
           btn.replaceChildren(icon('upload'), 'Importieren');
         },
       }, icon('upload'), 'Importieren');
       return [
-        h('p.help', 'Ganze Liste auf einmal: ein Spiel pro Zeile, optional ', h('code', 'Titel; Jahr; Franchise'), '. Cover werden danach automatisch gesucht.'),
+        h('p.help', 'Ganze Liste auf einmal: ein Spiel pro Zeile, optional ', h('code', 'Titel; Jahr; Franchise'), '. Cover und Genres werden danach automatisch gesucht.'),
         ta, h('div', btn),
       ];
     },
@@ -5061,15 +5329,25 @@ function libraryModal(tab = null, query = '') {
           draw();
         },
       }, icon('image'), `Fehlende Cover laden (${missing.length})`) : null;
+      const noGenre = libItems().filter(it => !it.genres?.length);
+      const genreBtn = noGenre.length ? h('button.btn.sm', {
+        onclick: async () => {
+          genreBtn.disabled = true;
+          genreBtn.textContent = 'Suche Genres …';
+          const n = await genresFor(noGenre.map(it => it.id), (d, t) => { genreBtn.textContent = `Suche Genres … ${d}/${t}`; });
+          toast(n ? `${n} Genres ergänzt${n < noGenre.length ? `, ${noGenre.length - n} ohne Treffer` : ''}` : 'Keine weiteren Genres gefunden');
+          draw();
+        },
+      }, icon('layers'), `Fehlende Genres laden (${noGenre.length})`) : null;
 
       const fill = () => {
         const nq = norm(q.value);
         const items = libItems()
-          .filter(it => !nq || norm(it.title).includes(nq) || norm(it.franchise).includes(nq))
+          .filter(it => !nq || norm(it.title).includes(nq) || norm(it.franchise).includes(nq) || (it.genres || []).some(g => norm(genreName(g)).includes(nq)))
           .sort((a, b) => (a.year || 9999) - (b.year || 9999) || a.title.localeCompare(b.title, 'de'));
         list.replaceChildren(...items.map(it => h('div.lib-item',
           makeTile(it, {}),
-          h('div.lib-meta', h('strong', it.title), h('span', [it.year, it.franchise].filter(Boolean).join(' · ') || '–')),
+          h('div.lib-meta', h('strong', it.title), h('span', [it.year, it.franchise, (it.genres || []).map(genreName).join(', ')].filter(Boolean).join(' · ') || '–')),
           h('div', { style: { display: 'flex' } },
             h('button.icon-btn.sm', { title: 'Bearbeiten', 'aria-label': 'Bearbeiten', onclick: () => editItemModal(it.id, fill) }, icon('edit')),
             h('button.icon-btn.sm', {
@@ -5085,7 +5363,7 @@ function libraryModal(tab = null, query = '') {
       q.addEventListener('input', fill);
       fill();
       return [
-        h('div.lib-toolbar', q, coverBtn), bar, list,
+        h('div.lib-toolbar', q, coverBtn, genreBtn), bar, list,
         App.state.order.length ? h('div', h('button.btn.sm.danger', {
           onclick: () => confirmDialog('Alle Spiele entfernen?', 'Die Bibliothek und sämtliche Platzierungen aller Spieler werden geleert.', 'Alles entfernen', true)
             .then(ok => { if (ok) { App.dispatch({ type: 'items/clear' }); refresh(); } }),
@@ -5104,6 +5382,7 @@ function libraryModal(tab = null, query = '') {
       const year = h('input', { type: 'number', placeholder: 'Jahr', min: 1950, max: 2100, inputmode: 'numeric' });
       const img = h('input', { type: 'url', placeholder: 'https://… (optional)', onchange: e => { if (safeUrl(e.target.value) && !imgAllowed(App.state, safeUrl(e.target.value))) warnUnsafeImg(); } });
       const upBtn = h('button.btn.sm', { type: 'button', onclick: () => pickImage(d => { upload = d; upBtn.replaceChildren(icon('check'), 'Bild gewählt'); }) }, icon('upload'), 'Bild hochladen');
+      let genres = genrePicker();
       const form = h('form.form-grid', {
         onsubmit: e => {
           e.preventDefault();
@@ -5111,18 +5390,22 @@ function libraryModal(tab = null, query = '') {
           const id = upload ? uid(10) : '';
           const ok = App.dispatch({
             type: 'items/add',
-            items: [{ title: name, year: year.value, franchise: fr.value, img: id ? 'asset:' + id : img.value }],
+            items: [{ title: name, year: year.value, franchise: fr.value, img: id ? 'asset:' + id : img.value, genres: genres.value() }],
             assets: id ? { [id]: upload } : undefined,
           });
           if (!ok) { toast(name ? `„${name}“ ist schon in der Liste.` : 'Bitte einen Titel eingeben.'); return; }
           toast(`„${name}“ hinzugefügt`);
           title.value = ''; year.value = ''; img.value = ''; upload = '';
+          const fresh = genrePicker();
+          genres.el.replaceWith(fresh.el);
+          genres = fresh;
           upBtn.replaceChildren(icon('upload'), 'Bild hochladen');
           title.focus();
           refreshTabs();
         },
       },
       field('Titel', title, 'full'), field('Franchise / Reihe', fr), field('Jahr', year),
+      genres.el,
       field('Cover-Link', img, 'full'), h('div.full', upBtn),
       h('datalist#frList', franchiseNames().map(n => h('option', { value: n }))),
       h('button.btn.primary.full', { type: 'submit' }, icon('plus'), 'Hinzufügen'));
@@ -5152,6 +5435,7 @@ function editItemModal(id, after) {
   const fr = h('input', { value: it.franchise, list: 'frListEdit', maxlength: 60, placeholder: 'optional' });
   const year = h('input', { type: 'number', value: it.year || '', min: 1950, max: 2100, inputmode: 'numeric' });
   const url = h('input', { type: 'url', value: /^https?:/.test(img) ? img : '', placeholder: 'https://…' });
+  const genres = genrePicker(it.genres || []);
   const preview = h('div');
   const picks = h('div.cover-picks');
 
@@ -5200,7 +5484,7 @@ function editItemModal(id, after) {
         picks,
         h('p.help', 'Tipp: Ein Bild aus der Zwischenablage kannst du hier einfach mit Strg+V einfügen.'))),
       h('div.form-grid',
-        field('Titel', title, 'full'), field('Franchise / Reihe', fr), field('Jahr', year), field('Cover-Link', url, 'full'),
+        field('Titel', title, 'full'), field('Franchise / Reihe', fr), field('Jahr', year), genres.el, field('Cover-Link', url, 'full'),
         h('datalist#frListEdit', franchiseNames().map(n => h('option', { value: n })))),
     ],
     foot: [
@@ -5209,7 +5493,7 @@ function editItemModal(id, after) {
       h('button.btn.primary', {
         onclick: () => {
           if (!title.value.trim()) { title.focus(); return; }
-          const patch = { title: title.value, franchise: fr.value, year: year.value, img, wiki };
+          const patch = { title: title.value, franchise: fr.value, year: year.value, img, wiki, genres: genres.value() };
           const asset = upload ? { id: uid(10), data: upload } : undefined;
           App.dispatch({ type: 'items/update', id, patch, asset });
           if (asset && App.state.items[id]?.img !== 'asset:' + asset.id) toast('Bild nicht gespeichert: Der Raum hat das Limit für eigene Bilder erreicht (120 Bilder bzw. 4 MB).', 6000);
@@ -5229,9 +5513,13 @@ function tiersModal() {
   const iconBtn = (ic, label, disabled, fn) => h('button.icon-btn.sm', { title: label, 'aria-label': label, disabled, onclick: fn }, icon(ic));
   const move = (i, j) => { [tiers[i], tiers[j]] = [tiers[j], tiers[i]]; draw(); };
 
+  const lastRated = t => !t.unrated && tiers.filter(x => !x.unrated).length <= 1;
   const draw = () => list.replaceChildren(...tiers.map((t, i) => h('div.tier-edit-row',
     h('input', { type: 'color', value: t.color, 'aria-label': 'Farbe', oninput: e => { t.color = e.target.value; } }),
     h('input', { value: t.name, maxlength: 24, 'aria-label': 'Name der Stufe', oninput: e => { t.name = e.target.value; } }),
+    h('label.tier-skip', { title: lastRated(t) ? 'Mindestens eine Stufe muss in die Wertung eingehen.' : 'Spiele in dieser Stufe zählen nicht fürs Gruppenergebnis und die Statistik – z. B. für „Nicht gespielt“.' },
+      h('input', { type: 'checkbox', checked: !!t.unrated, disabled: lastRated(t), onchange: e => { t.unrated = e.target.checked; draw(); } }),
+      h('span', 'Nicht werten')),
     h('div.row-actions',
       iconBtn('up', 'Nach oben', i === 0, () => move(i, i - 1)),
       iconBtn('down', 'Nach unten', i === tiers.length - 1, () => move(i, i + 1)),
@@ -5246,15 +5534,22 @@ function tiersModal() {
         onclick: () => { tiers = p.tiers.map(([name, color], i) => ({ id: tiers[i]?.id || uid(6), name, color })); draw(); },
       }, p.name)))),
       list,
-      h('div', h('button.btn.sm', {
-        disabled: tiers.length >= 20,
-        onclick: () => {
-          tiers.push({ id: uid(6), name: 'Neu', color: '#94a3b8' });
-          draw();
-          list.lastElementChild.querySelector('input:not([type=color])').select();
-        },
-      }, icon('plus'), 'Stufe hinzufügen')),
-      h('p.help', 'Die Stufen gelten für alle im Raum. Spiele in einer gelöschten Stufe wandern zurück in die Auswahl.'),
+      h('div.row', { style: { flexWrap: 'wrap' } },
+        h('button.btn.sm', {
+          disabled: tiers.length >= 20,
+          onclick: () => {
+            tiers.push({ id: uid(6), name: 'Neu', color: '#94a3b8' });
+            draw();
+            list.lastElementChild.querySelector('input:not([type=color])').select();
+          },
+        }, icon('plus'), 'Stufe hinzufügen'),
+        h('button.btn.sm', {
+          disabled: tiers.length >= 20,
+          title: 'Stufe für Spiele, die du nicht kennst – zählt nicht in der Wertung',
+          onclick: () => { tiers.push({ id: uid(6), name: 'Nicht gespielt', color: '#64748b', unrated: true }); draw(); },
+        }, icon('plus'), '„Nicht gespielt“')),
+      h('p.help', 'Die Stufen gelten für alle im Raum. Spiele in einer gelöschten Stufe wandern zurück in die Auswahl. ',
+        'Stufen mit „Nicht werten“ zählen nicht fürs Gruppenergebnis und die Statistik.'),
     ],
     foot: [
       h('button.btn.ghost', { onclick: () => m.close() }, 'Abbrechen'),
