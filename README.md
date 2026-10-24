@@ -60,6 +60,22 @@ Die Tierly-Pakete (`src/presets.js`) sind Filter über den Katalog – nach Jahr
 
 Plattformen meinen wie bei Gamedle die Plattformen *zum Start* – sie entscheiden über die Exklusiv-Pakete (Nintendo, PlayStation …).
 
+### Katalog-Spiele nach Gamedle holen
+
+Bekannte Tierly-Spiele bekommen die vollen Rätsel-Angaben und ziehen nach `gamedle-data.js` um:
+
+```bash
+node tools/promote-games.js 100
+```
+
+Das schreibt Entwürfe nach `tools/out/promote-draft.js` (Entwickler/Publisher aus der Infobox, Land aus Wikidata, Perspektive geschätzt) – jede Zeile prüfen und korrigieren, dann:
+
+```bash
+node tools/promote-games.js --apply tools/out/promote-draft.js
+```
+
+Danach wie bei neuen Spielen `node tools/verify-gamedle.js` und `node tools/gamedle-schedule.js` – die Spiele werden ans Ende des Spielplans gehängt, bestehende Tage bleiben gleich.
+
 ## Neue Spiele für Gamedle
 
 1. Entwürfe aus Wikipedia erzeugen lassen (mit `PRÜFEN` markierte Felder von Hand kontrollieren – vor allem die Plattform *bei Erstveröffentlichung* und die Perspektive):
@@ -123,7 +139,7 @@ Nach ein bis zwei Minuten ist die neue Version online.
 | `src/hub.js` | Übersicht & Navigation (`#/`, `#/gamedle`, `#/tierly`, Raum-Codes) |
 | `src/catalog.js` | Gemeinsamer Spielekatalog (Gamedle-Spiele + Tierly-Extras, Kurznamen) |
 | `src/presets.js` | Tierly-Pakete (Filter über den Katalog) und Stufen-Vorlagen |
-| `src/gamedle-data.js` | Kuratierte Spieldaten (≈200 Spiele, geprüft gegen Wikipedia) |
+| `src/gamedle-data.js` | Kuratierte Spieldaten (≈300 Spiele, geprüft gegen Wikipedia) |
 | `src/gamedle-content.js` | Emojis, Zitate (geprüft gegen Wikiquote) und Szenen-Bilder |
 | `src/gamedle-core.js` | Tagesrätsel, Vergleich, Suche, Teilen, Statistik |
 | `src/gamedle.js` | Gamedle-Oberfläche (Klassik, Zitat, Emoji, Cover, Szene, Endlos) |
@@ -135,5 +151,6 @@ Nach ein bis zwei Minuten ist die neue Version online.
 | `tests/` | Tests für Tierly- und Gamedle-Logik |
 | `tools/verify-gamedle.js` | Datenprüfung gegen Wikipedia |
 | `tools/catalog-candidates.js`, `catalog-review.html`, `catalog-apply.js` | Katalog erweitern: Vorschläge, Prüfseite, Übernahme |
+| `tools/promote-games.js` | Katalog-Spiele mit vollen Rätsel-Angaben nach Gamedle holen |
 
 PeerJS 1.5.4 (MIT-Lizenz) liegt unter `vendor/`. Cover- und Szenen-Bilder stammen aus der englischsprachigen Wikipedia bzw. Wikimedia Commons, die Rechte liegen bei den Publishern. Zitate sind kurze Auszüge aus den Spielen, belegt über Wikiquote.

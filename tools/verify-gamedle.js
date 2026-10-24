@@ -14,6 +14,10 @@ const { GD_GAMES, GD_QUOTES, GD_SCENES } = vm.runInNewContext(`${src('gamedle-da
 const ACCEPTED = new Set([
   'Silent Hill|Entwickler', 'Shadow of the Colossus|Entwickler', 'Persona 5|Entwickler', 'Sea of Thieves|Publisher',
   'Minecraft|kein Cover', 'Undertale|kein Cover', 'Fortnite|kein Cover',
+  // Aus dem Katalog übernommen: Urfassung (Tetris 1984 auf Electronika 60, SMB2 ≠ Doki Doki Panic),
+  // heutige Firmennamen, App-Stores statt „Mobile“ und Spiele ohne Cover-Bild
+  'Tetris|Jahr', 'Super Mario Bros. 2|Jahr', 'Battlefield 2|Entwickler', 'Geometry Dash|Entwickler', 'Candy Crush Saga|Plattform',
+  'RuneScape|kein Cover', 'Roblox|kein Cover', 'Geometry Dash|kein Cover',
 ]);
 
 (async () => {
