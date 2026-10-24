@@ -30,6 +30,30 @@ Gamedle-Daten gegen die Wikipedia-Infoboxen prüfen (braucht Internet):
 node tools/verify-gamedle.js
 ```
 
+## Neue Spiele für Gamedle
+
+1. Entwürfe aus Wikipedia erzeugen lassen (mit `PRÜFEN` markierte Felder von Hand kontrollieren – vor allem die Plattform *bei Erstveröffentlichung* und die Perspektive):
+
+   ```bash
+   node tools/add-games.js "Tunic" "Inside" "Titanfall 2"
+   ```
+
+2. Die Zeilen in `src/gamedle-data.js` einfügen und prüfen:
+
+   ```bash
+   node tools/verify-gamedle.js
+   ```
+
+3. Die neuen Spiele an den festen Rätsel-Spielplan anhängen (bestehende Tage bleiben unverändert):
+
+   ```bash
+   node tools/gamedle-schedule.js
+   ```
+
+Spiele nie löschen oder umbenennen (die ID entsteht aus dem Titel) – nur Daten korrigieren. Fehlt der Schritt 3, schlägt der Test fehl und nichts wird veröffentlicht.
+
+Das Vorschaubild für Link-Vorschauen (`assets/og.png`) erzeugt `tools/make-og.ps1`.
+
 ## Veröffentlichen (GitHub Pages)
 
 Bei jedem Push auf `main` testet und baut eine GitHub Action (`.github/workflows/pages.yml`) das Projekt und veröffentlicht erst dann – schlägt ein Test fehl, bleibt die alte Version online. Nach einer Änderung:
