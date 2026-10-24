@@ -158,6 +158,9 @@ test('Zusatz-Modi: Inhalte gehören zu bekannten Spielen und verraten den Titel 
     assert.ok(ids.has(id), `Emoji: unbekanntes Spiel ${id}`);
     assert.equal(e.split(' ').length, 5, `Emoji ${id}: genau fünf`);
     assert.ok(!/[\u{1F1E6}-\u{1F1FF}]/u.test(e), `Emoji ${id}: keine Flaggen (Windows zeigt nur Buchstaben)`);
+    // Emojis ab Unicode 13 (z. B. 🪖 🪨 🪙 🥷) zeigt Windows 10 als leere Kästchen
+    const newer = e.match(/[\u{1F6D6}-\u{1F6DF}\u{1F6FB}-\u{1F6FF}\u{1F7F0}\u{1F90C}\u{1F972}\u{1F977}-\u{1F979}\u{1F9A3}\u{1F9A4}\u{1F9AB}-\u{1F9AD}\u{1F9CC}\u{1FA74}-\u{1FA77}\u{1FA7B}-\u{1FA7F}\u{1FA83}-\u{1FA8F}\u{1FA96}-\u{1FAFF}]/u);
+    assert.ok(!newer, `Emoji ${id}: ${newer?.[0]} ist neuer als Unicode 12`);
   }
   for (const [id, s] of Object.entries(G.GD_SCENES)) {
     assert.ok(ids.has(id), `Szene: unbekanntes Spiel ${id}`);
