@@ -34,7 +34,8 @@ function h(tag, attrs, ...kids) {
   const [, name = 'div', rest = ''] = tag.match(/^([a-z0-9-]*)(.*)$/i);
   const el = document.createElement(name || 'div');
   rest.replace(/([.#])([\w-]+)/g, (_, t, v) => (t === '.' ? el.classList.add(v) : (el.id = v)));
-  if (attrs && (typeof attrs !== 'object' || attrs instanceof Node || Array.isArray(attrs))) { kids.unshift(attrs); attrs = null; }
+  // Erstes Argument ist Inhalt statt Attributen? (auch 0 – sonst ginge die Zahl verloren)
+  if (attrs != null && (typeof attrs !== 'object' || attrs instanceof Node || Array.isArray(attrs))) { kids.unshift(attrs); attrs = null; }
   for (const [k, v] of Object.entries(attrs || {})) {
     if (v == null || v === false) continue;
     if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
@@ -54,6 +55,7 @@ function h(tag, attrs, ...kids) {
 const ICONS = {
   plus: 'M12 5v14M5 12h14',
   minus: 'M5 12h14',
+  left: 'm15 18-6-6 6-6',
   lock: 'M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4',
   eye: 'M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
   chart: 'M3 3v18h18M7 15l4-4 3 3 5-6',

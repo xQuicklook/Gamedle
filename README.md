@@ -1,13 +1,16 @@
-# Tierly – Videospiele gemeinsam ranken
+# Gamedle – Spiele erraten & ranken
 
-Tier-Listen für Spiele und Franchises, gemeinsam mit Freunden – direkt von Browser zu Browser (WebRTC), ohne eigenen Server.
+Zwei Module in einer Seite, ohne Server und ohne Konto:
+
+- **Gamedle** – das tägliche Spiele-Rätsel (wie Loldle/Wordle): Klassik (Eigenschaften vergleichen), Cover (verpixeltes Cover) und Endlos zum Üben.
+- **Tierly** – Tier-Listen für Spiele und Franchises, gemeinsam mit Freunden direkt von Browser zu Browser (WebRTC).
 
 **Live:** https://xquicklook.github.io/Gamedle/
 
 ## Benutzen
 
-- **Als Datei:** `tierly.html` im Browser öffnen und an Freunde schicken. Sie öffnen dieselbe Datei und geben den Raum-Code ein.
-- **Als Link (empfohlen):** Über GitHub Pages (siehe unten). Dann reicht ein Link wie `https://…/#ABC123`.
+- **Als Link (empfohlen):** https://xquicklook.github.io/Gamedle/ – Tierly-Einladungen sehen aus wie `…/Gamedle/#ABC123`.
+- **Als Datei:** `gamedle.html` im Browser öffnen (enthält beide Module).
 
 ## Bauen & Testen
 
@@ -19,11 +22,15 @@ powershell -ExecutionPolicy Bypass -File build.ps1
 node --test "tests/*.test.js"
 ```
 
-`build.ps1` setzt `src/*` und `vendor/peerjs.min.js` zu einer einzigen Datei zusammen (`tierly.html` und `docs/index.html`).
+`build.ps1` setzt `src/*` und `vendor/peerjs.min.js` zu einer einzigen Datei zusammen (`gamedle.html` und `docs/index.html`).
 
-## Als Link veröffentlichen (GitHub Pages)
+Gamedle-Daten gegen die Wikipedia-Infoboxen prüfen (braucht Internet):
 
-Es wird nur eine statische Datei ausgeliefert – kein Server-Code. Der Raum lebt weiterhin im Browser des Hosts.
+```bash
+node tools/verify-gamedle.js
+```
+
+## Veröffentlichen (GitHub Pages)
 
 Bei jedem Push auf `main` testet und baut eine GitHub Action (`.github/workflows/pages.yml`) das Projekt und veröffentlicht erst dann – schlägt ein Test fehl, bleibt die alte Version online. Nach einer Änderung:
 
@@ -36,7 +43,7 @@ git add -A
 ```
 
 ```bash
-git commit -m "Tierly aktualisiert"
+git commit -m "Gamedle aktualisiert"
 ```
 
 ```bash
@@ -45,19 +52,20 @@ git push
 
 Nach ein bis zwei Minuten ist die neue Version online.
 
-Hinweis: Die Seite ist öffentlich erreichbar. Zugang zu einem Raum hat trotzdem nur, wer den Code kennt – und solange verdeckt gerankt wird, sehen Gäste nur ihre eigene Liste.
-
 ## Aufbau
 
 | Datei | Inhalt |
 | --- | --- |
-| `src/core.js` | Zustand, Aktionen (Reducer), Auswertung, Statistik |
-| `src/net.js` | P2P: Beitritt, Spieler-Schlüssel, Delta-Sync (ops), Verbindungsdiagnose |
-| `src/migration.js` | Automatische Raum-Übernahme, wenn der Host ausfällt |
-| `src/app.js` | App-Ablauf, Rendering, Tastatur |
+| `src/hub.js` | Übersicht & Navigation (`#/`, `#/gamedle`, `#/tierly`, Raum-Codes) |
+| `src/gamedle-data.js` | Kuratierte Spieldaten (≈200 Spiele, geprüft gegen Wikipedia) |
+| `src/gamedle-core.js` | Tagesrätsel, Vergleich, Suche, Teilen, Statistik |
+| `src/gamedle.js` | Gamedle-Oberfläche (Klassik, Cover, Endlos) |
+| `src/core.js` | Tierly: Zustand, Aktionen (Reducer), Auswertung, Statistik |
+| `src/net.js` | Tierly: P2P, Spieler-Schlüssel, Delta-Sync, Verbindungsdiagnose |
+| `src/migration.js` | Tierly: automatische Raum-Übernahme |
+| `src/app.js` | Tierly: App-Ablauf, Rendering, Tastatur |
 | `src/wiki.js` | Cover, Jahr und Reihe über Wikipedia/Wikidata |
-| `src/reveal.js` | Verdecktes Ranken & Aufdecken |
-| `src/undo.js` | Rückgängig/Wiederholen |
-| `tests/core.test.js` | Tests für die Kernlogik |
+| `tests/` | Tests für Tierly- und Gamedle-Logik |
+| `tools/verify-gamedle.js` | Datenprüfung gegen Wikipedia |
 
-PeerJS 1.5.4 (MIT-Lizenz) liegt unter `vendor/`.
+PeerJS 1.5.4 (MIT-Lizenz) liegt unter `vendor/`. Cover-Bilder stammen aus der englischsprachigen Wikipedia, die Rechte liegen bei den Publishern.

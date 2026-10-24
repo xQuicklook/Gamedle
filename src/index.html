@@ -3,17 +3,55 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Tierly – Game Tierlist</title>
-<meta name="description" content="Videospiele und Franchises gemeinsam mit Freunden ranken – Peer-to-Peer im Browser.">
+<title>Gamedle – Spiele-Rätsel & Tier-Listen</title>
+<meta name="description" content="Errate täglich ein Videospiel und ranke Spiele gemeinsam mit Freunden – direkt im Browser.">
 <style>
 /*@@CSS@@*/
 </style>
 </head>
 <body>
 
-<!-- ───────────── Startseite ───────────── -->
-<section id="landing" class="landing">
+<!-- ───────────── Übersicht ───────────── -->
+<section id="hub" class="hub">
+  <div class="hub-inner">
+    <div class="brand brand-lg"><span class="logo gd-logo" aria-hidden="true"></span>Gamedle</div>
+    <h1>Videospiele erraten und ranken.</h1>
+    <p class="muted">Jeden Tag ein neues Rätsel – und Tier-Listen mit deinen Freunden. Kostenlos, ohne Konto.</p>
+    <div class="hub-tiles">
+      <a class="hub-tile" href="#/gamedle">
+        <span class="hub-badge" id="hubBadge"></span>
+        <strong>Gamedle</strong>
+        <span>Errate das Spiel des Tages – an Genre, Entwickler, Jahr … oder am verpixelten Cover.</span>
+        <span class="hub-cta">Jetzt raten →</span>
+      </a>
+      <a class="hub-tile" href="#/tierly">
+        <strong>Tierly</strong>
+        <span>Ranke Spiele und Franchises gemeinsam mit Freunden – verdeckt, mit großem Aufdecken.</span>
+        <span class="hub-cta">Tier-Liste starten →</span>
+      </a>
+    </div>
+    <p class="landing-foot muted"><button class="linkish" id="hubInfo" type="button">Datenschutz & Quellen</button></p>
+  </div>
+</section>
+
+<!-- ───────────── Gamedle ───────────── -->
+<section id="gamedle" class="gd" hidden>
+  <header class="gd-top">
+    <a class="icon-btn" href="#/" aria-label="Zur Übersicht" id="gdBack"></a>
+    <div class="brand"><span class="logo gd-logo" aria-hidden="true"></span><span>Gamedle</span></div>
+    <nav class="tabs" role="tablist" aria-label="Modus" id="gdTabs"></nav>
+    <div class="gd-actions">
+      <button class="icon-btn" id="gdStatsBtn" aria-label="Statistik"></button>
+      <button class="icon-btn" id="gdHelpBtn" aria-label="Spielanleitung"></button>
+    </div>
+  </header>
+  <main class="gd-main" id="gdMain"></main>
+</section>
+
+<!-- ───────────── Tierly: Startseite ───────────── -->
+<section id="landing" class="landing" hidden>
   <div class="landing-card">
+    <a class="linkish back-link" href="#/">← Übersicht</a>
     <div class="brand brand-lg"><span class="logo" aria-hidden="true"></span>Tierly</div>
     <h1>Ranke Videospiele gemeinsam mit deinen Freunden.</h1>
     <p class="muted">Direkt von Browser zu Browser – kein Server, kein Account, keine Installation.</p>

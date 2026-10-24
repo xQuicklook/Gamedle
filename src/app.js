@@ -191,7 +191,7 @@ const App = {
     btn.disabled = false;
     btn.textContent = 'Beitreten';
     this.drawResume();
-    history.replaceState(null, '', location.pathname + location.search);
+    history.replaceState(null, '', location.pathname + location.search + '#/tierly');
   },
 
   enterApp() {
