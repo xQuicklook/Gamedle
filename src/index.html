@@ -11,7 +11,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Gamedle">
 <meta property="og:title" content="Gamedle – Errate das Spiel des Tages">
-<meta property="og:description" content="Jeden Tag ein neues Videospiel-Rätsel – an Genre, Entwickler, Jahr oder am verpixelten Cover. Plus Tier-Listen mit Freunden.">
+<meta property="og:description" content="Jeden Tag neue Videospiel-Rätsel – an Eigenschaften, Zitaten, Emojis, dem Cover oder einer Szene. Plus Tier-Listen mit Freunden.">
 <meta property="og:url" content="https://xquicklook.github.io/Gamedle/">
 <meta property="og:image" content="https://xquicklook.github.io/Gamedle/og.png">
 <meta property="og:image:width" content="1200">
@@ -34,13 +34,14 @@
       <a class="hub-tile" href="#/gamedle">
         <span class="hub-badge" id="hubBadge"></span>
         <strong>Gamedle</strong>
-        <span>Errate das Spiel des Tages – an Genre, Entwickler, Jahr … oder am verpixelten Cover.</span>
+        <span>Fünf tägliche Rätsel: Errate Spiele an ihren Eigenschaften, einem Zitat, Emojis, dem verpixelten Cover oder einer Szene.</span>
         <span class="hub-cta">Jetzt raten →</span>
       </a>
       <a class="hub-tile" href="#/tierly">
+        <span class="hub-badge" id="hubTierlyBadge"></span>
         <strong>Tierly</strong>
         <span>Ranke Spiele und Franchises gemeinsam mit Freunden – verdeckt, mit großem Aufdecken.</span>
-        <span class="hub-cta">Tier-Liste starten →</span>
+        <span class="hub-cta" id="hubTierlyCta">Tier-Liste starten →</span>
       </a>
     </div>
     <p class="landing-foot muted"><button class="linkish" id="hubInfo" type="button">Datenschutz & Quellen</button></p>
@@ -51,7 +52,7 @@
 <section id="gamedle" class="gd" hidden>
   <header class="gd-top">
     <a class="icon-btn" href="#/" aria-label="Zur Übersicht" id="gdBack"></a>
-    <div class="brand"><span class="logo gd-logo" aria-hidden="true"></span><span>Gamedle</span></div>
+    <a class="brand brand-link" href="#/" title="Zur Übersicht"><span class="logo gd-logo" aria-hidden="true"></span><span>Gamedle</span></a>
     <nav class="tabs" role="tablist" aria-label="Modus" id="gdTabs"></nav>
     <div class="gd-actions">
       <button class="icon-btn" id="gdStatsBtn" aria-label="Statistik"></button>
@@ -102,7 +103,7 @@
 <!-- ───────────── App ───────────── -->
 <div id="app" class="app" hidden>
   <header class="topbar">
-    <div class="brand"><span class="logo" aria-hidden="true"></span><span class="brand-text">Tierly</span></div>
+    <a class="brand brand-link" href="#/" title="Zur Übersicht – dein Raum bleibt dabei offen"><span class="logo" aria-hidden="true"></span><span class="brand-text">Tierly</span></a>
 
     <nav class="tabs" role="tablist" aria-label="Ranking-Typ">
       <button class="tab" role="tab" data-board="games">Spiele</button>
@@ -144,6 +145,8 @@
         <div class="pool-title">
           <strong id="poolTitle">Unplatziert</strong>
           <span class="count" id="poolCount">0</span>
+          <button class="btn sm ghost multi-btn" id="multiBtn" type="button" aria-pressed="false"
+                  title="Mehrere Spiele auswählen und zusammen einsortieren (am PC auch per Strg- oder Umschalt-Klick)"></button>
         </div>
         <div class="pool-controls">
           <div class="search">

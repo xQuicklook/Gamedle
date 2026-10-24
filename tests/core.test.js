@@ -11,7 +11,7 @@ const src = f => fs.readFileSync(path.join(__dirname, '..', 'src', f), 'utf8');
 const ctx = vm.createContext({ crypto: globalThis.crypto, TextEncoder, console, structuredClone });
 const T = vm.runInContext(`${src('presets.js')}\n${src('core.js')}\n;({
   initialState, applyAction, visibleState, isBlind, placedCount, groupView, keyHash, itemIndex, adoptRanking, PROTOCOL,
-  normalizeAction, opFor, statsFor, franchiseSuggestion, imgAllowed, FULL_SYNC_ACTIONS,
+  normalizeAction, opFor, statsFor, franchiseSuggestion, imgAllowed, FULL_SYNC_ACTIONS, placeMany,
 })`, ctx);
 const clone = o => JSON.parse(JSON.stringify(o));
 
@@ -36,6 +36,22 @@ test('gleichnamiges Spiel mit anderem Wikipedia-Artikel wird hinzugefügt und be
   const s = room();
   assert.equal(T.applyAction(s, { type: 'items/add', items: [{ id: 'doom16', title: 'Doom', year: 2016, wiki: 'Doom (2016 video game)' }] }, HOST), true);
   assert.equal(s.items.doom16.title, 'Doom (2016)');
+});
+
+test('Mehrfachauswahl: placeMany sortiert alle in Auswahl-Reihenfolge ein und nimmt sie woanders heraus', () => {
+  const s = room();
+  place(s, HOST, 'doom93', 0);
+  place(s, HOST, 'hk', 1);
+  const [s1, s2] = s.tiers.map(t => t.id);
+  // silk + doom93 vor hk in Stufe 2; doom93 verschwindet dabei aus Stufe 1
+  const rows = T.placeMany(s.rankings[HOST].games, ['silk', 'doom93'], s2, 0);
+  same(rows[s1], []);
+  same(rows[s2], ['silk', 'doom93', 'hk']);
+  assert.equal(T.applyAction(s, { type: 'ranking/set', board: 'games', rows, multi: true }, HOST), true);
+  same(s.rankings[HOST].games[s2], ['silk', 'doom93', 'hk']);
+  // Zurück in die Liste
+  const back = T.placeMany(s.rankings[HOST].games, ['silk', 'hk'], null);
+  same(back[s2], ['doom93']);
 });
 
 test('gleicher Artikel oder gleicher Titel ohne Artikel gilt als Duplikat', () => {

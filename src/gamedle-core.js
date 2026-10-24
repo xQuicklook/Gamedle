@@ -48,12 +48,22 @@ function gdHash(s) {
   return h >>> 0;
 }
 
-const gdPool = mode => (mode === 'cover' ? GD.filter(g => !GD_NO_COVER.has(g.title)) : GD);
+/* Tagesrätsel-Modi (jeder mit eigenem Spielplan); „endless“ ist Übung mit dem Klassik-Pool */
+const GD_DAILY_MODES = ['classic', 'quote', 'emoji', 'cover', 'scene'];
+
+/* Welche Spiele ein Modus kennt: Zitat, Emoji und Szene nur, wo es Inhalte gibt (gamedle-content.js) */
+function gdPool(mode) {
+  if (mode === 'cover') return GD.filter(g => !GD_NO_COVER.has(g.title));
+  if (mode === 'quote') return GD.filter(g => GD_QUOTES[g.id]);
+  if (mode === 'emoji') return GD.filter(g => GD_EMOJI_HINTS[g.id]);
+  if (mode === 'scene') return GD.filter(g => GD_SCENES[g.id]);
+  return GD;
+}
 
 /* Fester Spielplan (src/gamedle-schedule.js): Tag n bekommt den n-ten Eintrag.
    Neue Spiele werden nur angehängt – so ändern sich laufende Rätsel nie. */
 function gdDaily(mode, date) {
-  const order = GD_SCHEDULE[mode === 'cover' ? 'cover' : 'classic'];
+  const order = GD_SCHEDULE[GD_DAILY_MODES.includes(mode) ? mode : 'classic'];
   const n = gdDayNumber(date) - 1;
   return GD_BY_ID.get(order[((n % order.length) + order.length) % order.length]);
 }
@@ -126,13 +136,15 @@ function gdSearch(q, exclude = new Set(), limit = 8) {
 
 /* ── Teilen (Wordle-Stil) ── */
 const GD_EMOJI = { ok: '🟩', partial: '🟨', no: '🟥', up: '⬆️', down: '⬇️' };
+const GD_SHARE_LABEL = { classic: 'Klassik 🎮', quote: 'Zitat 💬', emoji: 'Emoji 😀', cover: 'Cover 🖼️', scene: 'Szene 🔍' };
 function gdShareText(mode, date, guesses, url, { answer = gdDaily(mode, date), hints = 0 } = {}) {
   const no = gdDayNumber(date);
   const n = guesses.length;
   const solved = `Gelöst mit ${n} ${n === 1 ? 'Versuch' : 'Versuchen'}${hints ? ` · 💡 ${hints} ${hints === 1 ? 'Tipp' : 'Tipps'}` : ''}`;
-  if (mode === 'cover') {
-    const marks = guesses.map((id, i) => (i === n - 1 ? '🟩' : '🟥')).join('');
-    return `Gamedle #${no} · Cover 🖼️\n${solved}\n${marks}\n${url}`;
+  if (mode !== 'classic') {
+    // Ohne Eigenschaften-Vergleich: nur Fehlversuche und Treffer (lange Serien gekürzt)
+    const marks = n > 12 ? `${'🟥'.repeat(10)} … +${n - 11} 🟩` : guesses.map((id, i) => (i === n - 1 ? '🟩' : '🟥')).join('');
+    return `Gamedle #${no} · ${GD_SHARE_LABEL[mode]}\n${solved}\n${marks}\n${url}`;
   }
   const rows = guesses.slice(-6).map(id => gdCompare(GD_BY_ID.get(id), answer).map(c => GD_EMOJI[c.state]).join(''));
   const more = n > 6 ? `… und ${n - 6} weitere Versuche davor\n` : '';

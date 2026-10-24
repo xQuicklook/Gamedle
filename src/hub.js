@@ -37,8 +37,13 @@ const Router = {
 
   renderHub() {
     const today = Store.get('gd.progress', {})[gdToday()] || {};
-    const solved = ['classic', 'cover'].filter(m => today[m]?.done).length;
-    $('#hubBadge').textContent = solved === 2 ? 'Heute alles gelöst ✓' : solved ? 'Heute 1 von 2 gelöst' : `#${gdDayNumber(gdToday())} wartet`;
+    const total = GD_DAILY_MODES.length;
+    const solved = GD_DAILY_MODES.filter(m => today[m]?.done).length;
+    $('#hubBadge').textContent = solved === total ? 'Heute alles gelöst ✓' : solved ? `Heute ${solved} von ${total} gelöst` : `#${gdDayNumber(gdToday())} wartet`;
+    // Ein offener Tierly-Raum läuft im Hintergrund weiter
+    const open = !!App.state;
+    $('#hubTierlyBadge').textContent = !open ? '' : Net.role === 'solo' ? 'Solo-Liste offen' : `Raum ${Net.code} offen`;
+    $('#hubTierlyCta').textContent = open ? 'Zurück zur Tier-Liste →' : 'Tier-Liste starten →';
   },
 };
 

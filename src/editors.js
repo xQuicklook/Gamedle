@@ -265,7 +265,7 @@ function libraryModal(tab = null, query = '') {
 
   const draw = () => {
     content.replaceChildren(...(App.canEditConfig()
-      ? sections[tab]()
+      ? sections[tab]().filter(k => k != null && k !== false) // sonst stünde „null“ als Text da
       : [h('p.help', 'Der Host hat das Bearbeiten gesperrt – du kannst die Spiele nur ranken.')]));
   };
   draw();

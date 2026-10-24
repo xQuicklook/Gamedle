@@ -7,9 +7,10 @@ const path = require('node:path');
 const vm = require('node:vm');
 
 const src = f => fs.readFileSync(path.join(__dirname, '..', 'src', f), 'utf8');
-const G = vm.runInNewContext(`${src('gamedle-data.js')}\n${src('gamedle-core.js')}\n${src('gamedle-schedule.js')}\n;({
-  GD, GD_BY_ID, GD_GENRES, GD_PLATFORMS, GD_PERSP, GD_MODES, GD_NO_COVER, GD_LAUNCH, GD_SCHEDULE,
-  gdToday, gdDayNumber, gdShiftDate, gdMsUntilNext, gdDaily, gdPool, gdCompare, gdSearch, gdShareText, gdRecordWin, gdCurrentStreak, gdHintLetter,
+const G = vm.runInNewContext(`${src('gamedle-data.js')}\n${src('gamedle-content.js')}\n${src('gamedle-core.js')}\n${src('gamedle-schedule.js')}\n;({
+  GD, GD_BY_ID, GD_GENRES, GD_PLATFORMS, GD_PERSP, GD_MODES, GD_NO_COVER, GD_LAUNCH, GD_SCHEDULE, GD_DAILY_MODES,
+  GD_QUOTES, GD_EMOJI_HINTS, GD_SCENES,
+  gdToday, gdDayNumber, gdShiftDate, gdMsUntilNext, gdDaily, gdPool, gdCompare, gdSearch, gdNorm, gdShareText, gdRecordWin, gdCurrentStreak, gdHintLetter,
 })`, { Intl, Date, Map, Set });
 
 test('Daten: eindeutige IDs und nur bekannte Kategorien', () => {
@@ -111,8 +112,19 @@ test('Spielplan ist festgeschrieben: bekannte Antworten bleiben, jedes Spiel gen
     assert.equal(G.gdDaily('classic', d).id, classic, `Klassik ${d}`);
     assert.equal(G.gdDaily('cover', d).id, cover, `Cover ${d}`);
   }
-  for (const mode of ['classic', 'cover']) {
+  const goldenExtra = [
+    ['2026-10-24', 'super-mario-64', 'diablo-ii', 'persona-4'],
+    ['2026-10-25', 'super-mario-bros', 'gran-turismo', 'super-mario-odyssey'],
+    ['2027-02-01', 'uncharted-drake-s-fortune', 'mega-man-2', 'kingdom-come-deliverance'],
+  ];
+  for (const [d, quote, emoji, scene] of goldenExtra) {
+    assert.equal(G.gdDaily('quote', d).id, quote, `Zitat ${d}`);
+    assert.equal(G.gdDaily('emoji', d).id, emoji, `Emoji ${d}`);
+    assert.equal(G.gdDaily('scene', d).id, scene, `Szene ${d}`);
+  }
+  for (const mode of G.GD_DAILY_MODES) {
     const plan = G.GD_SCHEDULE[mode];
+    assert.ok(plan, `${mode}: Plan fehlt – tools/gamedle-schedule.js ausführen`);
     assert.equal(new Set(plan).size, plan.length, `${mode}: keine Doppelten`);
     const pool = G.gdPool(mode).map(g => g.id);
     assert.equal(plan.length, pool.length, `${mode}: alle Spiele im Plan – nach neuen Spielen tools/gamedle-schedule.js ausführen`);
@@ -129,6 +141,41 @@ test('Firmen: Umbenennung zählt als richtig, Studio-Familie als teilweise', () 
   assert.equal(cells('grand-theft-auto-iii', 'grand-theft-auto-v').dev.state, 'ok', 'DMA Design = Rockstar North');
   assert.equal(cells('diablo', 'warcraft-iii-reign-of-chaos').dev.state, 'partial', 'Blizzard North ~ Blizzard Entertainment');
   assert.equal(cells('halo-3', 'gran-turismo').pub.state, 'no');
+});
+
+test('Zusatz-Modi: Inhalte gehören zu bekannten Spielen und verraten den Titel nicht', () => {
+  const ids = new Set(G.GD.map(g => g.id));
+  // Wörter aus Titel und Reihe, die im Zitat nichts zu suchen haben (kurze Füllwörter ausgenommen)
+  const giveaway = g => [...new Set([g.title, g.series, ...g.aliases].filter(Boolean).flatMap(t => G.gdNorm(t).split(' ')))]
+    .filter(w => w.length >= 4 && !['legend', 'world', 'game', 'with', 'from', 'that', 'this', 'part', 'remake', 'wild', 'among', 'hearts', 'dead', 'black', 'great', 'king', 'kingdom', 'fire', 'time', 'souls', 'lord', 'space', 'city', 'life', 'last'].includes(w));
+  for (const [id, q] of Object.entries(G.GD_QUOTES)) {
+    assert.ok(ids.has(id), `Zitat: unbekanntes Spiel ${id}`);
+    assert.ok(Array.isArray(q) && q[0]?.length >= 8 && q[0].length <= 220 && q[1], `Zitat ${id}: Text und Sprecher`);
+    const words = new Set(G.gdNorm(q[0]).split(' '));
+    for (const w of giveaway(G.GD_BY_ID.get(id))) assert.ok(!words.has(w), `Zitat ${id} verrät „${w}“`);
+  }
+  for (const [id, e] of Object.entries(G.GD_EMOJI_HINTS)) {
+    assert.ok(ids.has(id), `Emoji: unbekanntes Spiel ${id}`);
+    assert.equal(e.split(' ').length, 5, `Emoji ${id}: genau fünf`);
+    assert.ok(!/[\u{1F1E6}-\u{1F1FF}]/u.test(e), `Emoji ${id}: keine Flaggen (Windows zeigt nur Buchstaben)`);
+  }
+  for (const [id, s] of Object.entries(G.GD_SCENES)) {
+    assert.ok(ids.has(id), `Szene: unbekanntes Spiel ${id}`);
+    assert.ok(/\.(png|jpe?g|gif|webp)$/i.test(s[0]), `Szene ${id}: Bilddatei`);
+    if (s.length > 1) assert.ok(s[1] >= 0 && s[1] <= 100 && s[2] >= 0 && s[2] <= 100, `Szene ${id}: Ausschnitt in Prozent`);
+  }
+  assert.ok(G.gdPool('quote').length >= 60, 'genug Zitate');
+  assert.ok(G.gdPool('emoji').length >= 190, 'Emojis für fast alle Spiele');
+  assert.ok(G.gdPool('scene').length >= 150, 'genug Szenen');
+});
+
+test('Teilen in den Zusatz-Modi: nur Fehlversuche und Treffer', () => {
+  const date = '2026-10-24';
+  const answer = G.gdDaily('emoji', date);
+  const other = G.GD.find(g => g.id !== answer.id);
+  const txt = G.gdShareText('emoji', date, [other.id, answer.id], 'https://example.org/#/gamedle/emoji');
+  assert.equal(txt.split('\n')[0], 'Gamedle #1 · Emoji 😀');
+  assert.equal(txt.split('\n')[2], '🟥🟩');
 });
 
 test('Tipp-Buchstabe überspringt Artikel', () => {

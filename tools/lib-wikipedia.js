@@ -1,19 +1,48 @@
 // Gemeinsame Helfer der Gamedle-Werkzeuge: Wikipedia-API und Infobox-Auswertung.
 const API = 'https://en.wikipedia.org/w/api.php';
-const UA = { 'User-Agent': 'Gamedle-data-tools/1.0 (private hobby project)' };
+// Wikimedia verlangt einen User-Agent mit Kontaktmöglichkeit – sonst gibt es schnell HTTP 429
+const UA = { 'User-Agent': 'Gamedle-data-tools/1.0 (https://github.com/xQuicklook/Gamedle; data curation)' };
 
 const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
 
-async function api(params, tries = 4) {
-  const res = await fetch(API + '?' + new URLSearchParams({ format: 'json', formatversion: '2', ...params }), { headers: UA });
+async function request(base, params, tries = 4) {
+  const res = await fetch(base + '?' + new URLSearchParams({ format: 'json', formatversion: '2', ...params }), { headers: UA, signal: AbortSignal.timeout(30000) });
   // Zu viele Anfragen in kurzer Zeit → kurz warten und erneut versuchen
   if (res.status === 429 && tries > 1) {
     await new Promise(r => setTimeout(r, (5 - tries) * 4000));
-    return api(params, tries - 1);
+    return request(base, params, tries - 1);
   }
   if (!res.ok) throw new Error('HTTP ' + res.status);
   return res.json();
 }
+const api = params => request(API, params);
+const quoteApi = params => request('https://en.wikiquote.org/w/api.php', params);
+
+/* Wikiquote-Seiten (Wikitext) laden → Map(Titel → Text) */
+async function fetchQuotePages(titles) {
+  const out = new Map();
+  for (let i = 0; i < titles.length; i += 20) {
+    const chunk = titles.slice(i, i + 20);
+    const data = await quoteApi({ action: 'query', titles: chunk.join('|'), redirects: '1', prop: 'revisions', rvprop: 'content', rvslots: 'main' });
+    const step = new Map([...(data.query.normalized || []), ...(data.query.redirects || [])].map(r => [r.from, r.to]));
+    for (const t of chunk) {
+      let cur = t;
+      for (let n = 0; n < 4 && step.has(cur); n++) cur = step.get(cur);
+      const p = data.query.pages.find(x => x.title === cur);
+      if (p?.revisions) out.set(t, p.revisions[0].slots.main.content);
+    }
+  }
+  return out;
+}
+
+/* Wikitext → reiner, vergleichbarer Text (für die Zitat-Prüfung) */
+const flatText = s => norm(String(s || '')
+  .replace(/<ref[\s\S]*?<\/ref>|<ref[^>]*\/>|<!--[\s\S]*?-->/g, ' ')
+  .replace(/\{\{(?:small caps|smallcaps|sc|small|nowrap|quote)\|([^{}]*)\}\}/gi, ' $1 ') // Text-Vorlagen auspacken
+  .replace(/\[\[(?:[^|\]]*\|)?([^\]]*)\]\]/g, '$1')
+  .replace(/\{\{[^{}]*\}\}/g, ' ')
+  .replace(/<[^>]+>/g, ' ').replace(/'{2,}/g, '')
+  .replace(/[’‘]/g, "'").replace(/[“”]/g, '"').replace(/…/g, '...'));
 
 /* Seiten samt Wikitext und Cover laden (20 pro Anfrage) → Map(angefragter Titel → Seite) */
 async function fetchPages(titles) {
@@ -67,4 +96,4 @@ const families = txt => FAMILY.filter(([, re]) => re.test(norm(txt))).map(([k]) 
 
 const years = txt => [...String(txt || '').matchAll(/\b(19[5-9]\d|20[0-4]\d)\b/g)].map(m => +m[1]);
 
-module.exports = { api, fetchPages, clean, infobox, families, years, norm };
+module.exports = { api, quoteApi, fetchPages, fetchQuotePages, flatText, clean, infobox, families, years, norm };

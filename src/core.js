@@ -61,6 +61,7 @@ const ICONS = {
   chart: 'M3 3v18h18M7 15l4-4 3 3 5-6',
   x: 'M18 6 6 18M6 6l12 12',
   check: 'M20 6 9 17l-5-5',
+  checks: 'M18 6 7 17l-5-5M22 10l-7.5 7.5L13 16',
   copy: 'M9 9h11v11H9zM5 15H4V4h11v1',
   users: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',
   more: 'M12 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2zM19 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2zM5 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2z',
@@ -100,7 +101,7 @@ function icon(name, cls = '') {
 /* ───────── Version ─────────
    PROTOCOL steigt, wenn sich das Netzwerkprotokoll inkompatibel ändert –
    ältere Dateien werden dann beim Beitritt mit einem Hinweis abgewiesen. */
-const APP_VERSION = '3.0';
+const APP_VERSION = '3.1';
 const PROTOCOL = 3; // 3: Änderungen werden einzeln (als „ops“) verteilt statt als ganzer Raum
 
 /* ───────── Speicher ───────── */
@@ -347,6 +348,19 @@ function cleanRows(state, raw, board) {
     rows[tid] = ids.filter(x => typeof x === 'string' && x.length <= 80 && !seen.has(x) && seen.add(x)).slice(0, 1000);
   }
   return rows;
+}
+
+/* Mehrfachauswahl: mehrere Einträge auf einmal einsortieren (in der Reihenfolge der Auswahl).
+   Liefert neue Reihen für „ranking/set“; tierId null = zurück in die Liste. */
+function placeMany(rows, ids, tierId, index) {
+  const move = new Set(ids);
+  const out = {};
+  for (const [tid, list] of Object.entries(rows || {})) out[tid] = list.filter(id => !move.has(id));
+  if (tierId) {
+    const list = out[tierId] ||= [];
+    list.splice(Number.isInteger(index) ? clamp(index, 0, list.length) : list.length, 0, ...ids);
+  }
+  return out;
 }
 
 /* Reducer: wendet eine Aktion auf den Zustand an (mutiert ihn).

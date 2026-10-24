@@ -10,7 +10,7 @@ $jsFiles = @(
   'presets.js', 'core.js', 'wiki.js', 'net.js', 'migration.js', 'diag.js', 'app.js', 'undo.js', 'dnd.js', 'layout.js',
   'rooms.js', 'reveal.js', 'stats.js', 'onboarding.js', 'modals.js', 'editors.js', 'export.js',
   # Gamedle + Übersicht (startet die Navigation, muss zuletzt kommen)
-  'gamedle-data.js', 'gamedle-core.js', 'gamedle-schedule.js', 'gamedle.js', 'hub.js'
+  'gamedle-data.js', 'gamedle-content.js', 'gamedle-core.js', 'gamedle-schedule.js', 'gamedle.js', 'hub.js'
 )
 $cssFiles = 'styles.css', 'gamedle.css'
 $js = "'use strict';`n" + (($jsFiles | ForEach-Object { [IO.File]::ReadAllText((Join-Path $src $_), $utf8) }) -join "`n")

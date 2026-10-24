@@ -11,7 +11,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Gamedle">
 <meta property="og:title" content="Gamedle – Errate das Spiel des Tages">
-<meta property="og:description" content="Jeden Tag ein neues Videospiel-Rätsel – an Genre, Entwickler, Jahr oder am verpixelten Cover. Plus Tier-Listen mit Freunden.">
+<meta property="og:description" content="Jeden Tag neue Videospiel-Rätsel – an Eigenschaften, Zitaten, Emojis, dem Cover oder einer Szene. Plus Tier-Listen mit Freunden.">
 <meta property="og:url" content="https://xquicklook.github.io/Gamedle/">
 <meta property="og:image" content="https://xquicklook.github.io/Gamedle/og.png">
 <meta property="og:image:width" content="1200">
@@ -161,6 +161,7 @@ textarea { resize: vertical; width: 100%; }
 .landing {
   min-height: 100dvh;
   display: grid; place-items: center; align-content: center; gap: 18px;
+  grid-template-columns: minmax(0, 1fr); /* sonst wird die Karte auf schmalen Handys breiter als der Bildschirm */
   padding: 32px 16px;
   background:
     radial-gradient(900px 500px at 15% -10%, rgba(124,108,255,.18), transparent 60%),
@@ -461,6 +462,22 @@ input.zoom-range { width: 92px; padding: 0; border: 0; background: transparent; 
   background: var(--accent-soft);
 }
 body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
+/* Mehrfachauswahl: gestapelter Ghost mit Anzahl */
+.tile.ghost.stack { box-shadow: 5px 5px 0 -1px var(--bg-elev-2), 5px 5px 0 0 var(--border-strong), 10px 10px 0 -1px var(--bg-elev-2), var(--shadow); }
+.ghost-count {
+  position: absolute; top: 5px; left: 5px; z-index: 3;
+  min-width: 24px; height: 24px; padding: 0 7px; border-radius: 12px;
+  display: grid; place-items: center;
+  background: var(--accent); color: #fff; font-size: 13px; font-weight: 800; box-shadow: var(--shadow-sm);
+}
+.multi-btn { margin-left: auto; gap: 6px; }
+.multi-btn .svg { width: 16px; height: 16px; }
+.multi-btn[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); }
+
+/* Logo führt zur Übersicht */
+.brand-link { color: inherit; text-decoration: none; border-radius: 10px; transition: opacity .15s; }
+.brand-link:hover { opacity: .8; }
+.brand-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
 /* ───────── Pool ───────── */
 .pool {
@@ -839,6 +856,7 @@ kbd {
 /* ───────── Übersicht ───────── */
 .hub {
   min-height: 100dvh; display: grid; place-items: center; padding: 40px 16px;
+  grid-template-columns: minmax(0, 1fr);
   background:
     radial-gradient(900px 500px at 10% -10%, rgba(124,108,255,.2), transparent 60%),
     radial-gradient(700px 500px at 110% 110%, rgba(74,222,128,.12), transparent 60%),
@@ -916,7 +934,37 @@ button.gd-hint:hover { border-color: var(--accent); }
 .gd-hint-locked { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); }
 .gd-hint-locked .svg { width: 13px; height: 13px; }
 .gd-hint-box { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-radius: 12px; background: var(--accent-soft); font-size: 14px; }
-.gd-blur { width: 54px; height: 72px; object-fit: cover; border-radius: 6px; filter: blur(7px) saturate(1.2); }
+/* Winzige Leinwand, groß und weich angezeigt */
+.gd-blur { width: 54px; height: 72px; border-radius: 6px; filter: blur(3px) saturate(1.2); }
+
+/* Zitat */
+.gd-quote {
+  position: relative; width: min(680px, 100%); margin: 0 auto; padding: 30px 30px 24px;
+  border-radius: 20px; background: var(--bg-elev); border: 1px solid var(--border); box-shadow: var(--shadow-sm);
+  text-align: center;
+}
+.gd-quote blockquote { margin: 0; font-size: clamp(18px, 2.8vw, 25px); font-weight: 700; line-height: 1.35; font-style: italic; letter-spacing: -.01em; }
+.gd-quote-mark { position: absolute; top: -10px; left: 18px; font: 800 72px/1 Georgia, serif; color: var(--accent); opacity: .55; }
+
+/* Emoji */
+.gd-emoji { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+.gd-emoji-slot {
+  width: 68px; height: 68px; border-radius: 18px; display: grid; place-items: center;
+  font-size: 36px; line-height: 1; background: var(--bg-elev); border: 1px dashed var(--border-strong);
+  color: var(--muted); font-weight: 800; font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
+}
+.gd-emoji-slot:not(.on) { font-size: 24px; }
+.gd-emoji-slot.on { border-style: solid; border-color: var(--border); background: var(--bg-elev-2); box-shadow: var(--shadow-sm); }
+.gd-emoji-slot.new { animation: gdEmojiIn .45s cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes gdEmojiIn { from { transform: scale(.3) rotate(-20deg); opacity: 0; } }
+
+/* Szene */
+.gd-scene-stage {
+  position: relative; width: min(680px, 100%, 88vh); margin: 0 auto; aspect-ratio: 16 / 9; /* auch auf flachen Bildschirmen bleibt die Suche sichtbar */
+  display: grid; place-items: center; border-radius: 16px; overflow: hidden;
+  background: var(--bg-elev-2); border: 1px solid var(--border); box-shadow: var(--shadow-sm);
+}
+.gd-scene-canvas { width: 100%; height: 100%; display: block; }
 
 /* Tabelle der Versuche */
 .gd-table-wrap { display: flex; flex-direction: column; gap: 8px; }
@@ -961,7 +1009,9 @@ button.gd-hint:hover { border-color: var(--accent); }
 .gd-cb .gd-result { border-color: #2563eb; box-shadow: 0 0 0 4px rgba(37,99,235,.15), var(--shadow-sm); }
 .gd-cb .gd-result-kicker { color: #3b82f6; }
 .gd-empty { text-align: center; margin: 10px 0; }
-.gd-yesterday { text-align: center; font-size: 13.5px; margin: 0; }
+.gd-yesterday { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13.5px; color: var(--muted); margin: 0; }
+.gd-yesterday img { width: 22px; height: 30px; object-fit: cover; border-radius: 4px; }
+.gd-yesterday strong { color: var(--text); }
 
 /* Cover-Modus */
 .gd-cover-stage {
@@ -1012,10 +1062,22 @@ button.gd-hint:hover { border-color: var(--accent); }
 .gd-report { font-size: 12.5px; color: var(--muted); text-decoration: underline; text-underline-offset: 2px; align-self: flex-start; }
 .gd-report:hover { color: var(--accent); }
 
-@media (max-width: 820px) {
+.gd-top .tabs { overflow-x: auto; scrollbar-width: none; }
+.gd-top .tabs::-webkit-scrollbar { display: none; }
+.gd-top .tab { white-space: nowrap; }
+
+@media (max-width: 980px) {
   .gd-top { padding: 8px 12px; flex-wrap: wrap; }
   .gd-top .tabs { order: 3; width: 100%; margin: 0; }
-  .gd-top .tab { flex: 1; }
+  .gd-top .tab { flex: 1 0 auto; padding: 7px 10px; }
+}
+@media (max-width: 440px) {
+  .gd-top .tabs { gap: 1px; padding: 3px; }
+  .gd-top .tab { padding: 6px 6px; font-size: 12.5px; }
+}
+@media (max-width: 820px) {
+  .gd-emoji-slot { width: 54px; height: 54px; font-size: 29px; border-radius: 14px; }
+  .gd-quote { padding: 26px 18px 20px; }
   .gd-main { padding: 16px 12px 48px; }
   .gd-row { grid-template-columns: 120px repeat(9, 76px); min-width: 0; width: max-content; }
   .gd-cell { font-size: 11.5px; min-height: 58px; }
@@ -1041,13 +1103,14 @@ button.gd-hint:hover { border-color: var(--accent); }
       <a class="hub-tile" href="#/gamedle">
         <span class="hub-badge" id="hubBadge"></span>
         <strong>Gamedle</strong>
-        <span>Errate das Spiel des Tages – an Genre, Entwickler, Jahr … oder am verpixelten Cover.</span>
+        <span>Fünf tägliche Rätsel: Errate Spiele an ihren Eigenschaften, einem Zitat, Emojis, dem verpixelten Cover oder einer Szene.</span>
         <span class="hub-cta">Jetzt raten →</span>
       </a>
       <a class="hub-tile" href="#/tierly">
+        <span class="hub-badge" id="hubTierlyBadge"></span>
         <strong>Tierly</strong>
         <span>Ranke Spiele und Franchises gemeinsam mit Freunden – verdeckt, mit großem Aufdecken.</span>
-        <span class="hub-cta">Tier-Liste starten →</span>
+        <span class="hub-cta" id="hubTierlyCta">Tier-Liste starten →</span>
       </a>
     </div>
     <p class="landing-foot muted"><button class="linkish" id="hubInfo" type="button">Datenschutz & Quellen</button></p>
@@ -1058,7 +1121,7 @@ button.gd-hint:hover { border-color: var(--accent); }
 <section id="gamedle" class="gd" hidden>
   <header class="gd-top">
     <a class="icon-btn" href="#/" aria-label="Zur Übersicht" id="gdBack"></a>
-    <div class="brand"><span class="logo gd-logo" aria-hidden="true"></span><span>Gamedle</span></div>
+    <a class="brand brand-link" href="#/" title="Zur Übersicht"><span class="logo gd-logo" aria-hidden="true"></span><span>Gamedle</span></a>
     <nav class="tabs" role="tablist" aria-label="Modus" id="gdTabs"></nav>
     <div class="gd-actions">
       <button class="icon-btn" id="gdStatsBtn" aria-label="Statistik"></button>
@@ -1109,7 +1172,7 @@ button.gd-hint:hover { border-color: var(--accent); }
 <!-- ───────────── App ───────────── -->
 <div id="app" class="app" hidden>
   <header class="topbar">
-    <div class="brand"><span class="logo" aria-hidden="true"></span><span class="brand-text">Tierly</span></div>
+    <a class="brand brand-link" href="#/" title="Zur Übersicht – dein Raum bleibt dabei offen"><span class="logo" aria-hidden="true"></span><span class="brand-text">Tierly</span></a>
 
     <nav class="tabs" role="tablist" aria-label="Ranking-Typ">
       <button class="tab" role="tab" data-board="games">Spiele</button>
@@ -1151,6 +1214,8 @@ button.gd-hint:hover { border-color: var(--accent); }
         <div class="pool-title">
           <strong id="poolTitle">Unplatziert</strong>
           <span class="count" id="poolCount">0</span>
+          <button class="btn sm ghost multi-btn" id="multiBtn" type="button" aria-pressed="false"
+                  title="Mehrere Spiele auswählen und zusammen einsortieren (am PC auch per Strg- oder Umschalt-Klick)"></button>
         </div>
         <div class="pool-controls">
           <div class="search">
@@ -1443,6 +1508,7 @@ const ICONS = {
   chart: 'M3 3v18h18M7 15l4-4 3 3 5-6',
   x: 'M18 6 6 18M6 6l12 12',
   check: 'M20 6 9 17l-5-5',
+  checks: 'M18 6 7 17l-5-5M22 10l-7.5 7.5L13 16',
   copy: 'M9 9h11v11H9zM5 15H4V4h11v1',
   users: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',
   more: 'M12 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2zM19 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2zM5 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2z',
@@ -1482,7 +1548,7 @@ function icon(name, cls = '') {
 /* ───────── Version ─────────
    PROTOCOL steigt, wenn sich das Netzwerkprotokoll inkompatibel ändert –
    ältere Dateien werden dann beim Beitritt mit einem Hinweis abgewiesen. */
-const APP_VERSION = '3.0';
+const APP_VERSION = '3.1';
 const PROTOCOL = 3; // 3: Änderungen werden einzeln (als „ops“) verteilt statt als ganzer Raum
 
 /* ───────── Speicher ───────── */
@@ -1729,6 +1795,19 @@ function cleanRows(state, raw, board) {
     rows[tid] = ids.filter(x => typeof x === 'string' && x.length <= 80 && !seen.has(x) && seen.add(x)).slice(0, 1000);
   }
   return rows;
+}
+
+/* Mehrfachauswahl: mehrere Einträge auf einmal einsortieren (in der Reihenfolge der Auswahl).
+   Liefert neue Reihen für „ranking/set“; tierId null = zurück in die Liste. */
+function placeMany(rows, ids, tierId, index) {
+  const move = new Set(ids);
+  const out = {};
+  for (const [tid, list] of Object.entries(rows || {})) out[tid] = list.filter(id => !move.has(id));
+  if (tierId) {
+    const list = out[tierId] ||= [];
+    list.splice(Number.isInteger(index) ? clamp(index, 0, list.length) : list.length, 0, ...ids);
+  }
+  return out;
 }
 
 /* Reducer: wendet eine Aktion auf den Zustand an (mutiert ihn).
@@ -2822,7 +2901,8 @@ const App = {
   state: null,
   board: 'games',
   view: 'me',            // 'me' | 'group' | Spieler-ID
-  selected: null,        // Tap-to-place Auswahl
+  sel: [],               // Tap-to-place-Auswahl (mehrere möglich, in Auswahl-Reihenfolge)
+  multi: false,          // Mehrfachauswahl per Antippen (für Touch)
   filter: { q: '', decade: null, sort: 'year' },
   renderQueued: false,
   renderPending: false,
@@ -3000,7 +3080,8 @@ const App = {
     $('#board').replaceChildren();
     $('#poolBody')._sig = null;
     this.state = null;
-    this.selected = null;
+    this.sel = [];
+    this.multi = false;
     this.view = 'me';
     closeAllModals();
     $('#app').hidden = true;
@@ -3159,7 +3240,7 @@ const App = {
     if (!this.state || $('#app').hidden) return;
     this.renderPending = false;
     if (!['me', 'group', 'stats'].includes(this.view) && !this.state.players[this.view]) this.view = 'me';
-    document.body.classList.toggle('selecting', !!this.selected);
+    document.body.classList.toggle('selecting', this.sel.length > 0);
     this.renderTopbar();
     this.renderToolbar();
     this.renderHint();
@@ -3211,7 +3292,7 @@ const App = {
     seg.replaceChildren(
       btn('me', 'Meine Liste'),
       btn('group', locked ? lock() : icon('users'), 'Gruppe'),
-      Net.role === 'solo' ? null : btn('stats', locked ? lock() : icon('chart'), 'Statistik'),
+      ...(Net.role === 'solo' ? [] : [btn('stats', locked ? lock() : icon('chart'), 'Statistik')]),
       ...others.map(p => btn(p.id, h('span.mini-dot', { style: { background: p.color } }), p.name, lock())),
     );
     seg.hidden = Net.role === 'solo' && !others.length;
@@ -3227,15 +3308,43 @@ const App = {
   },
 
   updateSelection(withHint = true) {
-    document.body.classList.toggle('selecting', !!this.selected);
+    document.body.classList.toggle('selecting', this.sel.length > 0);
     $$('#app .tile.selected').forEach(t => t.classList.remove('selected'));
-    if (this.selected) $$(`#app .tile[data-id="${CSS.escape(this.selected)}"]`).forEach(t => t.classList.add('selected'));
+    for (const id of this.sel) $$(`#app .tile[data-id="${CSS.escape(id)}"]`).forEach(t => t.classList.add('selected'));
+    $('#multiBtn').setAttribute('aria-pressed', String(this.multi));
     if (withHint) this.renderHint();
+  },
+
+  toggleSelect(id) {
+    this.sel = this.sel.includes(id) ? this.sel.filter(x => x !== id) : [...this.sel, id];
+    this.updateSelection();
+  },
+
+  clearSelection() {
+    this.sel = [];
+    this.multi = false;
+    this.updateSelection();
+  },
+
+  /* Ausgewählte Spiele gemeinsam einsortieren (tierId null = zurück in die Liste) */
+  placeSelection(tierId, index) {
+    const known = new Set(boardItems(this.state, this.board).map(it => it.id));
+    const ids = this.sel.filter(id => known.has(id));
+    this.sel = [];
+    if (ids.length === 1) this.dispatch({ type: 'place', board: this.board, itemId: ids[0], tierId, index });
+    else if (ids.length > 1) {
+      const rows = placeMany(this.state.rankings[this.me.id]?.[this.board], ids, tierId, index);
+      if (this.dispatch({ type: 'ranking/set', board: this.board, rows, multi: true })) {
+        toast(`${ids.length} ${this.board === 'games' ? 'Spiele' : 'Franchises'} ${tierId ? 'einsortiert' : 'zurück in die Liste'}`, 4000,
+          { label: 'Rückgängig', onClick: () => Undo.undoLast() });
+      }
+    }
+    this.render();
   },
 
   setView(view) {
     this.view = view;
-    this.selected = null;
+    this.sel = [];
     this.render();
     $('#boardWrap').scrollTop = 0;
   },
@@ -3255,10 +3364,16 @@ const App = {
           : `Host nicht erreichbar – ${next.name} übernimmt den Raum in ${Migration.secondsLeft()} s automatisch.`;
       el.append(icon('wifi'), h('span', { style: { flex: 1 } }, text),
         h('button.btn.sm', { onclick: () => confirmDialog('Raum jetzt übernehmen?', 'Du wirst neuer Host mit dem zuletzt bekannten Stand. Die anderen verbinden sich automatisch mit dir.', 'Übernehmen').then(ok => ok && this.takeOver()) }, 'Jetzt übernehmen'));
-    } else if (this.selected && this.view === 'me') {
-      const it = boardItems(s, this.board).find(x => x.id === this.selected);
-      el.append(h('span', { style: { flex: 1 } }, h('strong', `„${it?.title || ''}“`), ' ausgewählt – tippe auf eine Stufe oder ein Spiel, um es dort einzusortieren.'),
-        h('button.btn.sm', { onclick: () => { this.selected = null; this.render(); } }, 'Abbrechen'));
+    } else if ((this.sel.length || this.multi) && this.view === 'me') {
+      const n = this.sel.length;
+      const it = n === 1 && boardItems(s, this.board).find(x => x.id === this.sel[0]);
+      const touch = matchMedia('(pointer: coarse)').matches;
+      el.append(icon('checks'), h('span', { style: { flex: 1 } },
+        !n ? 'Mehrfachauswahl: Tippe alle Spiele an, die zusammen in eine Stufe sollen.'
+          : it && !this.multi ? [h('strong', `„${it.title}“`), ' ausgewählt – tippe auf eine Stufe oder ein Spiel, um es dort einzusortieren.',
+            touch ? '' : ' Mit Strg- oder Umschalt-Klick wählst du weitere aus.']
+            : [h('strong', `${n} ausgewählt`), ` – tippe auf eine Stufe (z. B. ihren Namen), um ${n === 1 ? 'es' : 'alle'} dort einzusortieren.`]),
+        h('button.btn.sm', { onclick: () => this.clearSelection() }, 'Abbrechen'));
     } else if (this.view !== 'me' && this.hidden()) {
       // Sperrbildschirm erklärt sich selbst
     } else if (this.view === 'group') {
@@ -3348,6 +3463,7 @@ const App = {
   renderPool() {
     const s = this.state;
     const readonly = this.view !== 'me';
+    $('#multiBtn').hidden = readonly;
     if (readonly && this.hidden()) {
       $('#poolBody')._sig = null;
       $('#poolTitle').textContent = 'Verdeckt';
@@ -3422,7 +3538,7 @@ const App = {
   wireApp() {
     $$('.tab').forEach(t => t.addEventListener('click', () => {
       this.board = t.dataset.board;
-      this.selected = null;
+      this.sel = [];
       Store.set('ui', { board: this.board, sort: this.filter.sort });
       this.render();
     }));
@@ -3448,17 +3564,23 @@ const App = {
       if (e.target.closest('button')) return;
       const tile = e.target.closest('.tile');
       if (tile && tile.classList.contains('readonly')) { itemModal(tile.dataset.id); return; }
-      if (!this.selected || this.view !== 'me' || tile) return;
+      if (!this.sel.length || this.view !== 'me' || tile) return;
       const tier = e.target.closest('.tier');
-      if (tier) { this.dispatch({ type: 'place', board: this.board, itemId: this.selected, tierId: tier.dataset.tier }); this.selected = null; this.render(); return; }
-      if (e.target.closest('#poolBody')) { this.dispatch({ type: 'place', board: this.board, itemId: this.selected, tierId: null }); this.selected = null; this.render(); }
+      if (tier) this.placeSelection(tier.dataset.tier);
+      else if (e.target.closest('#poolBody')) this.placeSelection(null);
     });
+    $('#multiBtn').append(icon('checks'), h('span', 'Mehrere'));
+    $('#multiBtn').onclick = () => {
+      this.multi = !this.multi;
+      if (!this.multi) this.sel = [];
+      this.updateSelection();
+    };
 
     document.addEventListener('keydown', e => {
       if (e.key !== 'Escape') return;
       if (closeTopModal()) return;
       if (!$('#menu').hidden) { $('#menu').hidden = true; return; }
-      if (this.selected) { this.selected = null; this.render(); }
+      if (this.sel.length || this.multi) this.clearSelection();
     });
     // Strg+Z / Strg+Umschalt+Z (bzw. Strg+Y) – nicht, während man in einem Feld tippt
     document.addEventListener('keydown', e => {
@@ -3503,9 +3625,11 @@ const App = {
       e.preventDefault();
       siblings[siblings.indexOf(tile) + (e.key === 'ArrowRight' ? 1 : -1)]?.focus();
       return;
-    } else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tapTile(id, tile); return; }
+    } else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tapTile(id, tile, e.shiftKey); return; }
     if (!target) return;
     e.preventDefault();
+    // Teil einer Mehrfachauswahl? Dann wandern alle ausgewählten mit (Zahlen & Entf)
+    if (this.sel.length > 1 && this.sel.includes(id) && !e.key.startsWith('Arrow')) { this.placeSelection(target.tierId); return; }
     // Aus der Liste platziert → gleich die nächste Kachel der Liste fokussieren (schnelles Durchranken)
     this.focusId = cur < 0 && target.tierId ? neighbour?.dataset.id || id : id;
     this.dispatch({ type: 'place', board: this.board, itemId: id, tierId: target.tierId, index: target.index });
@@ -3564,7 +3688,7 @@ const TileCache = {
     this.used.add(k);
     let el = this.map.get(k);
     if (!el) { el = makeTile(it, opts); this.map.set(k, el); }
-    el.classList.toggle('selected', App.selected === it.id);
+    el.classList.toggle('selected', App.sel.includes(it.id));
     return el;
   },
   touch(it, opts) { this.used.add(tileKey(it, opts)); },
@@ -3594,7 +3718,7 @@ function makeTile(item, { readonly = false, group = false } = {}) {
   if (srcs.length) el.classList.add('has-img');
   if (isFr) el.classList.add('fr');
   if (readonly) el.classList.add('readonly');
-  if (App.selected === item.id) el.classList.add('selected');
+  if (App.sel.includes(item.id)) el.classList.add('selected');
   if (group && item._votes) {
     el.append(h('div.tile-votes', item._votes.slice(0, 6).map(v => h('i', { style: { background: App.state.players[v.pid]?.color || '#888' } }))));
   }
@@ -3679,7 +3803,7 @@ const Undo = {
   capture(a) {
     if (this.replaying || !UNDO_LABELS[a?.type]) return null;
     const actions = this.inverse(a);
-    return actions ? { label: UNDO_LABELS[a.type], actions } : null;
+    return actions ? { label: UNDO_LABELS[a.multi ? 'place' : a.type], actions } : null;
   },
 
   push(entry) {
@@ -3742,7 +3866,8 @@ function dragDown(e) {
   const tile = e.target.closest('.tile');
   if (!tile || tile.classList.contains('readonly') || !tile.closest('#board, #poolBody') || App.view !== 'me') return;
   const touch = e.pointerType !== 'mouse';
-  const s = Drag.start = { x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, id: tile.dataset.id, tile, pid: e.pointerId, touch, timer: 0 };
+  const additive = e.ctrlKey || e.metaKey || e.shiftKey; // Strg/Umschalt-Klick: zur Auswahl hinzufügen
+  const s = Drag.start = { x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, id: tile.dataset.id, tile, pid: e.pointerId, touch, additive, timer: 0 };
   if (touch) s.timer = setTimeout(() => { if (Drag.start === s) dragBegin(s.lx, s.ly); }, 240);
   else e.preventDefault(); // keine Textauswahl
 }
@@ -3767,7 +3892,7 @@ function dragUp(e) {
   const s = Drag.start;
   if (!s || e.pointerId !== s.pid) return;
   dragReset();
-  tapTile(s.id, s.tile);
+  tapTile(s.id, s.tile, s.additive);
 }
 
 function dragCancel(e) {
@@ -3784,19 +3909,22 @@ function dragBegin(x, y) {
   const s = Drag.start;
   dragReset();
   if (!s || !s.tile.isConnected) return;
+  // Gehört die Kachel zu einer Mehrfachauswahl, wandert die ganze Auswahl mit
+  const ids = App.sel.length > 1 && App.sel.includes(s.id) ? [...App.sel] : [s.id];
   const r = s.tile.getBoundingClientRect();
   const ghost = s.tile.cloneNode(true);
   ghost.classList.add('ghost');
   ghost.classList.remove('selected');
+  if (ids.length > 1) { ghost.classList.add('stack'); ghost.append(h('span.ghost-count', ids.length)); }
   Object.assign(ghost.style, { width: r.width + 'px', height: r.height + 'px', left: r.left + 'px', top: r.top + 'px' });
   document.body.append(ghost);
-  s.tile.classList.add('dragging-src');
+  for (const id of ids) $$(`#board .tile[data-id="${CSS.escape(id)}"], #poolBody .tile[data-id="${CSS.escape(id)}"]`).forEach(t => t.classList.add('dragging-src'));
   document.body.classList.add('is-dragging');
   if (s.touch && navigator.vibrate) navigator.vibrate(12);
-  if (App.selected) { App.selected = null; $$('.tile.selected').forEach(t => t.classList.remove('selected')); document.body.classList.remove('selecting'); }
+  if (ids.length === 1 && App.sel.length) { App.sel = []; App.updateSelection(false); }
 
   Drag.active = {
-    id: s.id, src: s.tile, pid: s.pid, ghost,
+    id: s.id, ids, src: s.tile, pid: s.pid, ghost,
     offX: x - r.left, offY: y - r.top, x, y,
     placeholder: h('div.tile-placeholder'),
     target: null,
@@ -3818,7 +3946,7 @@ function dragTo(x, y) {
 
   if (tier) {
     const box = tier.querySelector('.tier-items');
-    const tiles = [...box.children].filter(c => c.classList.contains('tile') && c !== d.src);
+    const tiles = [...box.children].filter(c => c.classList.contains('tile') && !d.ids.includes(c.dataset.id));
     const before = tiles.find(t => {
       const r = t.getBoundingClientRect();
       return y < r.top || (y <= r.bottom && x < r.left + r.width / 2);
@@ -3865,34 +3993,37 @@ function dragFinish(target) {
   cancelAnimationFrame(Drag.scrollRaf);
   d.ghost.remove();
   d.placeholder.remove();
-  d.src.classList.remove('dragging-src');
+  $$('.dragging-src').forEach(t => t.classList.remove('dragging-src'));
   document.body.classList.remove('is-dragging');
   $$('.drop-hover').forEach(n => n.classList.remove('drop-hover'));
   Drag.active = null;
   Drag.lastDrop = Date.now();
 
   if (target) {
-    const fromPool = !!d.src.closest('#poolBody');
+    const placed = new Set(Object.values(App.state.rankings[App.me.id]?.[App.board] || {}).flat());
+    const fromPool = d.ids.every(id => !placed.has(id));
     if (!(target.tierId === null && fromPool)) {
-      App.dispatch({ type: 'place', board: App.board, itemId: d.id, tierId: target.tierId, index: target.index });
+      if (d.ids.length > 1) { App.sel = d.ids; App.placeSelection(target.tierId, target.index); }
+      else App.dispatch({ type: 'place', board: App.board, itemId: d.id, tierId: target.tierId, index: target.index });
       return;
     }
   }
   if (App.renderPending) App.render();
 }
 
-/* Tap-to-place: erst auswählen, dann Ziel antippen */
-function tapTile(id, tile) {
+/* Tap-to-place: erst auswählen, dann Ziel antippen. additive (Strg/Umschalt-Klick oder
+   Mehrfachauswahl-Modus) nimmt die Kachel zur Auswahl hinzu bzw. wieder heraus. */
+function tapTile(id, tile, additive = false) {
   Drag.lastDrop = Date.now(); // das click-Event dieser Geste nicht als Ziel-Tap werten
   const inTier = tile.closest('.tier');
-  if (App.selected && App.selected !== id && inTier) {
+  if (additive || App.multi) {
+    App.toggleSelect(id);
+  } else if (App.sel.length && !App.sel.includes(id) && inTier) {
     const box = inTier.querySelector('.tier-items');
-    const ids = [...box.querySelectorAll('.tile')].map(t => t.dataset.id).filter(x => x !== App.selected);
-    const itemId = App.selected;
-    App.selected = null;
-    App.dispatch({ type: 'place', board: App.board, itemId, tierId: inTier.dataset.tier, index: ids.indexOf(id) });
+    const ids = [...box.querySelectorAll('.tile')].map(t => t.dataset.id).filter(x => !App.sel.includes(x));
+    App.placeSelection(inTier.dataset.tier, ids.indexOf(id));
   } else {
-    App.selected = App.selected === id ? null : id;
+    App.sel = App.sel.length === 1 && App.sel[0] === id ? [] : [id];
     App.updateSelection(); // kein Neuaufbau, damit das folgende click-Event die Kachel trifft
   }
 }
@@ -4286,8 +4417,13 @@ function playReveal(board) {
   finishReveal(false);
   App.board = board;
   App.view = 'group';
-  App.selected = null;
+  App.sel = [];
   $('#menu').hidden = true;
+  // Gerade in Gamedle oder auf der Übersicht? Dann nur Bescheid geben statt die Seite zu überdecken
+  if ($('#app').hidden) {
+    toast('Tierly: Die Listen wurden aufgedeckt!', 10000, { label: 'Ansehen', onClick: () => { location.hash = '#/tierly'; } });
+    return;
+  }
   if (matchMedia('(prefers-reduced-motion: reduce)').matches || Drag.active) {
     App.render();
     toast('Aufgedeckt!');
@@ -4429,7 +4565,7 @@ function showTips() {
       h('div.tips-ico', icon(st.icon)),
       h('h3', st.title),
       h('p', st.text),
-      st.keys ? h('div.keys', st.keys.map(([k, d]) => [h('kbd', k), h('span', d)])) : null,
+      ...(st.keys ? [h('div.keys', st.keys.map(([k, d]) => [h('kbd', k), h('span', d)]))] : []),
       h('div.tips-dots', steps.map((_, j) => h('i' + (j === i ? '.on' : '')))),
     );
     back.hidden = i === 0;
@@ -4522,7 +4658,7 @@ function toggleMenu() {
     item('users', Net.role === 'solo' ? 'Freunde einladen' : 'Raum & Spieler', () => roomModal()),
     item('image', 'Als Bild speichern', () => exportPng()),
     item('download', 'Exportieren (JSON)', () => exportJson()),
-    isHost ? item('upload', 'Importieren (JSON)', () => importJson()) : null,
+    ...(isHost ? [item('upload', 'Importieren (JSON)', () => importJson())] : []),
     item('library', 'Gespeicherte Räume', () => roomsModal()),
     h('div.menu-row',
       h('button', { role: 'menuitem', disabled: !Undo.undoStack.length, title: 'Strg + Z', onclick: () => { menu.hidden = true; Undo.undoLast(); } }, icon('rotate'), 'Rückgängig'),
@@ -4665,7 +4801,7 @@ function roomModal() {
             open
               ? h('button.btn.sm', { onclick: () => { m.close(); newRound(b); } }, icon('rotate'), 'Neue Runde')
               : h('button.btn.sm.primary', { onclick: () => { m.close(); revealNow(b); } }, icon('eye'), 'Aufdecken'));
-        })) : null,
+        })) : '',
         h('label.switch-row',
           h('span', h('strong', 'Nur ich bearbeite Spiele & Stufen'), h('br'), h('span.help', 'Freunde können dann nur noch ranken.')),
           h('span.switch', cb, h('span'))),
@@ -4999,7 +5135,7 @@ function libraryModal(tab = null, query = '') {
 
   const draw = () => {
     content.replaceChildren(...(App.canEditConfig()
-      ? sections[tab]()
+      ? sections[tab]().filter(k => k != null && k !== false) // sonst stünde „null“ als Text da
       : [h('p.help', 'Der Host hat das Bearbeiten gesperrt – du kannst die Spiele nur ranken.')]));
   };
   draw();
@@ -5582,6 +5718,500 @@ const GD_GAMES = [
   ['Ghost of Yōtei', 2025, 'aa', 'ps', 'Sucker Punch Productions', 'Sony Interactive Entertainment', 'Ghost', 'third', 'e', 'USA', '', 'Ghost of Yotei'],
 ];
 
+/* ───────── Gamedle: Inhalte der Zusatz-Modi ─────────
+   Emoji, Zitat und Szene. Schlüssel ist die Spiel-ID aus gamedle-data.js.
+   Nur Emojis bis Unicode-Emoji 12 (sonst zeigt Windows 10 leere Kästchen) und keine Flaggen. */
+
+/* Emoji: fünf Emojis je Spiel – vom vagen zum deutlichen Hinweis (durch Leerzeichen getrennt) */
+const GD_EMOJI_HINTS = {
+  'pac-man': '🕹️ 🍒 👻 🟡 😋',
+  'donkey-kong': '🕹️ 👷 🛢️ 👸 🦍',
+  'super-mario-bros': '🧱 🐢 🏰 👸 🍄',
+  'the-legend-of-zelda': '🕳️ 👴 🗡️ 🔺 🧝',
+  'metroid': '🕹️ 🔫 👾 🧬 👩‍🚀',
+  'final-fantasy': '⚔️ 4️⃣ 🔮 🧙 🕰️',
+  'mega-man-2': '🔫 🧔 🐲 2️⃣ 🤖',
+  'super-mario-bros-3': '🎭 🗺️ 🍃 🦝 🍄',
+  'prince-of-persia': '⌛ 🧱 🗡️ 👸 🤴',
+  'super-mario-world': '🏝️ 🍓 🦸 🦖 🍄',
+  'the-secret-of-monkey-island': '🍺 🦜 👻 🏝️ 🐒',
+  'sonic-the-hedgehog': '🌴 💍 💨 🔵 🦔',
+  'street-fighter-ii': '🌍 🥋 🔥 👊 2️⃣',
+  'the-legend-of-zelda-a-link-to-the-past': '🌗 🐷 🗡️ 🔺 🧝',
+  'mortal-kombat': '🩸 🥋 🦂 ❄️ 💀',
+  'super-mario-kart': '🏁 🎈 🍌 🐢 🍄',
+  'doom': '🌑 🔑 🔫 👹 💀',
+  'super-metroid': '🐣 🦖 🪐 🧬 👩‍🚀',
+  'donkey-kong-country': '🌴 🛢️ 🐊 🐒 🦍',
+  'chrono-trigger': '⏳ 🦖 🐸 🤖 ⚔️',
+  'command-conquer': '🎖️ 📺 🚜 💚 ☢️',
+  'warcraft-ii-tides-of-darkness': '🏰 ⛏️ ⛵ 🐉 👹',
+  'super-mario-64': '🖼️ 🐧 ⭐ 🏰 🍄',
+  'mario-kart-64': '🏁 🍌 🔵 🏜️ 6️⃣4️⃣',
+  'pokemon-red-blue': '🎒 🧢 🔴 🔵 ⚡',
+  'resident-evil': '🏚️ 🐕 🥪 🔑 🧟',
+  'tomb-raider': '🏛️ 🦇 🦖 🔫 👩',
+  'crash-bandicoot': '🌴 📦 🍎 🌀 🦊',
+  'diablo': '⛪ 🕳️ 💀 🔥 😈',
+  'quake': '🌀 ⚡ 🔫 🧟 🎸',
+  'final-fantasy-vii': '🏙️ ⚡ 🌸 ☄️ 🗡️',
+  'goldeneye-007': '🛰️ 🔫 🕶️ 🍸 🕴️',
+  'age-of-empires': '🗿 🏛️ 🐘 🏹 ⚔️',
+  'gran-turismo': '🚗 🔧 📜 🏁 🏎️',
+  'star-fox-64': '🚀 🐸 🐰 🐦 🦊',
+  'tekken-3': '👊 🦵 🐼 🐻 3️⃣',
+  'the-legend-of-zelda-ocarina-of-time': '⏳ 🐴 🧚 🎵 🧝',
+  'half-life': '🔬 🚃 👽 🦀 👓',
+  'metal-gear-solid': '❄️ 📦 🤖 ❗ 🐍',
+  'starcraft': '🌌 💎 🐛 👽 🎖️',
+  'banjo-kazooie': '🧩 🎵 🧙‍♀️ 🐦 🐻',
+  'spyro-the-dragon': '💎 🐑 🔥 🟣 🐉',
+  'baldur-s-gate': '🎲 🔩 🏰 🗡️ 🐹',
+  'silent-hill': '🌫️ 📻 🔦 🏫 👧',
+  'age-of-empires-ii': '🏰 🐴 🏹 🙏 👑',
+  'tony-hawk-s-pro-skater': '🎸 📼 🏆 🤘 🛹',
+  'pokemon-gold-silver': '🕰️ 🔔 🥇 🥈 🧢',
+  'super-smash-bros': '🧸 ✋ 🥊 ⚡ 🍄',
+  'shenmue': '🌸 🚜 🐱 🐉 🥋',
+  'crash-team-racing': '🏎️ 📦 🍎 🏁 🦊',
+  'counter-strike': '💾 🏜️ 💣 👮 🔫',
+  'deus-ex': '🗽 🕵️ 🧬 🤖 🕶️',
+  'the-sims': '🛋️ 🍳 🔥 🏠 💎',
+  'diablo-ii': '🏜️ 🐪 💎 🧙 😈',
+  'the-legend-of-zelda-majora-s-mask': '😱 ⏰ 🌕 🎭 🧝',
+  'halo-combat-evolved': '🌌 👽 🦠 💍 🎖️',
+  'grand-theft-auto-iii': '🌃 🚕 🔫 🤐 3️⃣',
+  'metal-gear-solid-2-sons-of-liberty': '🚢 🌊 ⚡ 📦 🐍',
+  'super-smash-bros-melee': '🏆 ✋ 🎲 🥊 🟪',
+  'max-payne': '❄️ 🌃 💊 ⏱️ 🔫',
+  'gothic': '⛏️ 🔮 🚧 🏰 ⚔️',
+  'luigi-s-mansion': '🏚️ 👻 🔦 🌀 💚',
+  'final-fantasy-x': '🌊 ⚽ 🐋 🙏 ⚔️',
+  'silent-hill-2': '🌫️ 📻 💌 🔪 🔺',
+  'warcraft-iii-reign-of-chaos': '🌳 🧝 👹 ❄️ 👑',
+  'metroid-prime': '☄️ 👀 🔫 🧬 👩‍🚀',
+  'kingdom-hearts': '🗝️ 💓 🐭 🦆 🐕',
+  'the-elder-scrolls-iii-morrowind': '🌋 🍄 🦟 📜 🧝',
+  'grand-theft-auto-vice-city': '🌴 🕶️ 📼 🚤 💵',
+  'the-legend-of-zelda-the-wind-waker': '🌊 ⛵ 🌬️ 🎨 🧝',
+  'gothic-ii': '🏙️ 👁️ ⚔️ 🐉 2️⃣',
+  'super-mario-sunshine': '☀️ 🏝️ 💦 🎒 🍄',
+  'star-wars-knights-of-the-old-republic': '🌌 🛸 🤖 🎭 ⚔️',
+  'prince-of-persia-the-sands-of-time': '🏜️ ⏪ 🧗 🗡️ 🤴',
+  'call-of-duty': '🎖️ 🪂 🏰 ❄️ 🔫',
+  'half-life-2': '🏙️ 🚤 🧲 🦀 👓',
+  'world-of-warcraft': '🌐 🧝 👹 🐉 🍗',
+  'grand-theft-auto-san-andreas': '🚲 🍗 💪 🌴 🛩️',
+  'halo-2': '🌍 🗡️ 👽 2️⃣ 🎖️',
+  'metal-gear-solid-3-snake-eater': '🌳 🐊 🍖 📦 🐍',
+  'resident-evil-4': '🌾 👨‍🌾 🔔 👧 🧟',
+  'shadow-of-the-colossus': '🐎 ☀️ 🗡️ 👧 🗿',
+  'need-for-speed-most-wanted': '🚓 📋 🖤 🏎️ 💰',
+  'the-elder-scrolls-iv-oblivion': '🔥 🌀 👑 🐴 🧀',
+  'wii-sports': '🙋 🎾 ⚾ 🥊 🎳',
+  'gears-of-war': '⚙️ 🧱 💀 🎵 🔫',
+  'pro-evolution-soccer-6': '⚽ 🏟️ 🎮 6️⃣ 🏆',
+  'bioshock': '🌊 🏙️ 💉 👧 🤿',
+  'call-of-duty-4-modern-warfare': '🎖️ 🚁 🍃 ☢️ 🔫',
+  'super-mario-galaxy': '🌌 🌀 🪐 ⭐ 🍄',
+  'portal': '🧪 📦 🤖 🌀 🍰',
+  'mass-effect': '🌌 🚀 🛰️ 🤖 🦑',
+  'assassin-s-creed': '🧬 🕌 🦅 🗡️ 🏯',
+  'uncharted-drake-s-fortune': '🗺️ 🏛️ 🧟 💰 🧗',
+  'halo-3': '🌍 🤝 💍 3️⃣ 🎖️',
+  'crysis': '🌴 💻 🦾 👽 ❄️',
+  'fallout-3': '☢️ 🏛️ 🎯 👨 🍶',
+  'left-4-dead': '🏥 🚁 🔫 🧟 4️⃣',
+  'grand-theft-auto-iv': '🗽 📱 🚕 🎳 🧔',
+  'mario-kart-wii': '🏁 🍌 🏍️ 🎡 🍄',
+  'persona-4': '🌫️ 🏘️ 📺 🐻 🎭',
+  'assassin-s-creed-ii': '🎭 🛶 🏛️ 🦅 🗡️',
+  'uncharted-2-among-thieves': '🗺️ 🏔️ 🚂 🧗 🔫',
+  'batman-arkham-asylum': '🏝️ 🏥 🃏 🦹 🦇',
+  'demon-s-souls': '🌫️ 🏰 🗿 💀 ⚔️',
+  'league-of-legends': '🗺️ 🏰 🐉 🧙 🎮',
+  'mass-effect-2': '🌌 🚀 🔧 🤝 💀',
+  'red-dead-redemption': '🌵 🚂 🐴 👨‍👦 🤠',
+  'starcraft-ii-wings-of-liberty': '🌌 🐛 👽 👸 2️⃣',
+  'fallout-new-vegas': '☢️ 🌵 🎲 🎰 🤠',
+  'halo-reach': '🌍 🔥 💀 6️⃣ 🎖️',
+  'limbo': '🖤 🌲 ⚙️ 🕷️ 👦',
+  'the-elder-scrolls-v-skyrim': '🏔️ 🗣️ 🦵 🏹 🐉',
+  'dark-souls': '💀 🔔 🗡️ 🔥 ☀️',
+  'portal-2': '🧪 🌀 🍋 🥔 🌙',
+  'minecraft': '🧱 ⛏️ 🐑 🧟 💥',
+  'batman-arkham-city': '🏙️ 🧊 🐱 🃏 🦇',
+  'the-witcher-2-assassins-of-kings': '👑 🗡️ 🐉 2️⃣ 🐺',
+  'terraria': '🌳 ⛏️ 🧟 🗡️ 👁️',
+  'journey': '🏜️ ✨ 🎶 🧣 ⛰️',
+  'counter-strike-global-offensive': '💣 🔫 📦 💰 🎨',
+  'borderlands-2': '🔫 🎲 💥 🎭 🤖',
+  'diablo-iii': '☄️ ⛪ 👼 💀 😈',
+  'far-cry-3': '🏝️ 🐅 🍄 🔥 🌀',
+  'dishonored': '🐀 🐋 ⚡ 🗡️ 🎭',
+  'the-last-of-us': '🧟 🍄 🦒 🎸 👧',
+  'grand-theft-auto-v': '🌴 🎬 💰 🚁 3️⃣',
+  'bioshock-infinite': '☁️ 🏙️ 🎶 👩 🦅',
+  'assassin-s-creed-iv-black-flag': '🏝️ 🐋 ⛵ 🦅 🗡️',
+  'mario-kart-8': '🏁 🍌 🔄 🎱 🍄',
+  'bloodborne': '🌕 🩸 🐺 🎩 🗡️',
+  'the-witcher-3-wild-hunt': '🐴 🃏 🛁 👧 🐺',
+  'metal-gear-solid-v-the-phantom-pain': '🐴 🐕 🎈 🦾 🐍',
+  'undertale': '🌼 🐐 🍝 ❤️ 💀',
+  'rocket-league': '🏟️ 💥 🚀 ⚽ 🚗',
+  'fallout-4': '☢️ 🏙️ 🧊 🤖 👶',
+  'splatoon': '🎨 🖌️ 🔫 🐙 🦑',
+  'overwatch': '🎯 🌍 🤖 ⏱️ 🦍',
+  'dark-souls-iii': '🔥 👑 💀 🗡️ 3️⃣',
+  'doom-2016': '🔴 🤖 🎸 🔫 👹',
+  'uncharted-4-a-thief-s-end': '🗺️ 🏝️ 🚙 👬 💰',
+  'stardew-valley': '🏚️ 🌾 🐔 🎣 🍓',
+  'persona-5': '🗼 🎩 🃏 🐱 🎭',
+  'the-legend-of-zelda-breath-of-the-wild': '🗻 🍎 🐴 🪂 🧝',
+  'super-mario-odyssey': '🌍 🗽 🦖 🎩 🍄',
+  'hollow-knight': '🌑 🕳️ 🐛 🗡️ 🐞',
+  'horizon-zero-dawn': '🌲 🏹 🤖 👩‍🦰 🦖',
+  'fortnite': '⛈️ 🚌 🔨 💃 🪂',
+  'cuphead': '🎞️ 🎺 🎲 😈 ☕',
+  'resident-evil-7-biohazard': '🐊 🏚️ 🍽️ 👪 🧟',
+  'god-of-war-2018': '❄️ 🐍 🏹 👦 🪓',
+  'red-dead-redemption-2': '🏕️ 📓 🐴 🤧 🤠',
+  'celeste': '🧠 💨 👩‍🦰 🍓 🏔️',
+  'super-smash-bros-ultimate': '♾️ 🗺️ 👻 🥊 🍄',
+  'kingdom-come-deliverance': '📜 🍶 💾 🐴 ⚔️',
+  'among-us': '🚀 🔧 🗳️ 🔪 🤔',
+  'sea-of-thieves': '🌊 🦈 🦜 💰 ⛵',
+  'monster-hunter-world': '🌳 🍖 🐱 ⚔️ 🐉',
+  'marvel-s-spider-man': '🏙️ 🎒 🦹 🕸️ 🕷️',
+  'forza-horizon-4': '🍂 ❄️ 🌸 ☀️ 🏎️',
+  'sekiro-shadows-die-twice': '🏯 🌸 🐒 ⚔️ 🦾',
+  'resident-evil-2-remake': '🏙️ 👮 🚓 🎩 🧟',
+  'disco-elysium': '🍺 🎲 👔 🧠 🕺',
+  'death-stranding': '🌧️ 🌉 🥾 📦 👶',
+  'apex-legends': '🏆 🤖 🔫 🦸 🪂',
+  'outer-wilds': '🔭 🍡 🌀 ☀️ 🚀',
+  'pokemon-sword-shield': '💂 🏟️ 🗡️ 🛡️ 🧢',
+  'animal-crossing-new-horizons': '🏝️ 🍑 🐟 🔔 🦝',
+  'hades': '🏛️ 🔥 🐶 💀 👑',
+  'the-last-of-us-part-ii': '🌧️ 🍄 😤 🎸 2️⃣',
+  'doom-eternal': '🌍 🗡️ 🎸 🔫 👹',
+  'cyberpunk-2077': '🌃 🦾 🕶️ 🎸 🤖',
+  'ghost-of-tsushima': '🍂 🌬️ 🦊 🏯 🗡️',
+  'half-life-alyx': '🥽 🏙️ 🧤 🦀 👩',
+  'it-takes-two': '💔 📖 🔨 🐘 👫',
+  'resident-evil-village': '🏰 🍷 🐺 🧸 🧛',
+  'elden-ring': '🌳 💍 🐴 ⚔️ 🐉',
+  'god-of-war-ragnarok': '❄️ 🐻 🔨 🐺 🪓',
+  'horizon-forbidden-west': '🌊 🌉 🏹 👩‍🦰 🦖',
+  'fifa-23': '⚽ 🏟️ 💳 👩 2️⃣3️⃣',
+  'the-legend-of-zelda-tears-of-the-kingdom': '☁️ 🏝️ 🛠️ 🦾 🧝',
+  'baldur-s-gate-3': '🎲 🧠 🧛 🐻 🦑',
+  'hogwarts-legacy': '🏰 🦉 🧹 ⚡ 🧙',
+  'resident-evil-4-remake': '🌾 🔔 👧 🧟 ✨',
+  'super-mario-bros-wonder': '🌸 🔊 🎶 🐘 🍄',
+  'final-fantasy-vii-rebirth': '🏙️ 🎢 🃏 🌸 🗡️',
+  'balatro': '🎰 ✖️ 💰 ♠️ 🃏',
+  'astro-bot': '🎮 🛸 🌌 👾 🤖',
+  'helldivers-2': '🌌 🗳️ 🐛 🤖 🦅',
+  'metaphor-refantazio': '📖 🦋 🎭 🗳️ 👑',
+  'black-myth-wukong': '☁️ 🍑 🏯 🥋 🐒',
+  'hades-ii': '🌙 ⏳ 💀 🔥 🧙‍♀️',
+  'clair-obscur-expedition-33': '🗼 🧭 🔢 🖌️ 🎨',
+  'kingdom-come-deliverance-ii': '🏙️ 🍶 🐴 ⚔️ 2️⃣',
+  'hollow-knight-silksong': '🔔 🧗 🧵 👸 🐞',
+  'mario-kart-world': '🏁 🌍 🍌 🐄 2️⃣4️⃣',
+  'death-stranding-2-on-the-beach': '🦘 🌋 🥾 📦 2️⃣',
+  'ghost-of-yotei': '❄️ 🎵 🐺 🗡️ 🗻',
+};
+
+/* Zitat: [Text in Originalsprache, wer es sagt, Wikiquote-Seite als Beleg].
+   tools/verify-gamedle.js prüft, dass jedes Zitat wörtlich auf seiner Wikiquote-Seite steht. */
+const GD_QUOTES = {
+  'the-legend-of-zelda': ["It's dangerous to go alone! Take this!", 'Ein alter Mann in einer Höhle', 'The Legend of Zelda (video game)'],
+  'super-mario-bros': ['But our princess is in another castle!', 'Toad', 'Mario (franchise)'],
+  'the-secret-of-monkey-island': ['You fight like a dairy farmer.', 'Ein Pirat beim Beleidigungsfechten', 'Monkey Island'],
+  'the-legend-of-zelda-a-link-to-the-past': ["Take some Rupees, but don't tell anyone I gave them to you. Keep it between us, OK?", 'Ein Dieb', 'The Legend of Zelda: A Link to the Past'],
+  'mortal-kombat': ['Get over here!', 'Scorpion', 'Mortal Kombat (1992 video game)'],
+  'super-metroid': ['The galaxy is at peace…', 'Die Erzählstimme', 'Super Metroid'],
+  'chrono-trigger': ['Nothing can beat science!', 'Lucca', 'Chrono Trigger'],
+  'command-conquer': ['Here you see Tiberium. Some say it is the root of all that we fight for, but the wise man will judge for himself.', 'Kane', 'Command & Conquer'],
+  'super-mario-64': ['So long-a, King-a Bowser!', 'Mario', 'Super Mario 64'],
+  'pokemon-red-blue': ['I am the most powerful trainer in the world!', 'Dein Rivale', 'Pokémon Red and Blue'],
+  'crash-bandicoot': ['We are closer than ever before! Quickly! Into the Vortex!', 'Dr. Neo Cortex', 'Crash Bandicoot (video game)'],
+  'diablo': ['Ahh... fresh meat!', 'The Butcher', 'Diablo'],
+  'final-fantasy-vii': ["Alright everybody, let's mosey!", 'Cloud Strife', 'Final Fantasy VII'],
+  'the-legend-of-zelda-ocarina-of-time': ['Hey! Listen!', 'Navi', 'The Legend of Zelda: Ocarina of Time'],
+  'half-life': ["Hey, catch me later. I'll buy you a beer!", 'Barney Calhoun', 'Half-Life'],
+  'starcraft': ['Mother of God... Kerrigan, what have they done to you?', 'Jim Raynor', 'StarCraft'],
+  'banjo-kazooie': ['Dingpot, Dingpot, by the bench, who is the nicest looking wench?', 'Gruntilda', 'Banjo-Kazooie (video game)'],
+  'baldur-s-gate': ["You're perceptive for an old man. You know why I'm here. Hand over your ward and no one will be hurt.", 'Sarevok', "Baldur's Gate series"],
+  'silent-hill': ['Have you seen a little girl? Short, black hair? Just turned seven last month?', 'Harry Mason', 'Silent Hill'],
+  'pokemon-gold-silver': ['Losing feels insignificant if you look up at the big sky!', 'Wanderer Benjamin (Route 42)', 'Pokémon Gold and Silver'],
+  'shenmue': ['For the last time... Where is the mirror?', 'Lan Di', 'Shenmue'],
+  'deus-ex': ['What a shame.', 'JC Denton', 'Deus Ex'],
+  'diablo-ii': ['Not your fault? Tell me, Marius, how was it "not your fault"?', 'Tyrael', 'Diablo II'],
+  'the-legend-of-zelda-majora-s-mask': ["You've met with a terrible fate, haven't you?", 'Der Maskenhändler', "The Legend of Zelda: Majora's Mask"],
+  'halo-combat-evolved': ['Men...keep your eyes down range, fingers on your triggers, and we all go home in one piece.', 'Sergeant Johnson', 'Halo: Combat Evolved'],
+  'grand-theft-auto-iii': ["You did good back there kid, real good. C'mon let's introduce you to the Don.", 'Toni Cipriani', 'Grand Theft Auto III'],
+  'metal-gear-solid-2-sons-of-liberty': ["A virtual grunt of the digital age. That's just great.", 'Solid Snake', 'Metal Gear Solid 2: Sons of Liberty'],
+  'max-payne': ['They were all dead. The final gunshot was an exclamation mark to everything that had led to this point.', 'Die Hauptfigur als Erzähler', 'Max Payne'],
+  'luigi-s-mansion': ["I'm getting too old for this ghost-catching tomfoolery.", 'Professor E. Gadd', "Luigi's Mansion"],
+  'final-fantasy-x': ['Listen to my story. This may be our last chance.', 'Tidus', 'Final Fantasy X'],
+  'silent-hill-2': ['In my restless dreams, I see that town.', 'Mary (in ihrem Brief an James)', 'Silent Hill'],
+  'warcraft-iii-reign-of-chaos': ['Frostmourne hungers.', 'Arthas', 'Warcraft'],
+  'kingdom-hearts': ['My friends are my power!', 'Sora', 'Kingdom Hearts'],
+  'the-elder-scrolls-iii-morrowind': ["Wake up. We're here.", 'Jiub', 'The Elder Scrolls III: Morrowind'],
+  'grand-theft-auto-vice-city': ["You have my personal assurance that I'm going to get your money back and the drugs.", 'Tommy Vercetti', 'Grand Theft Auto: Vice City'],
+  'the-legend-of-zelda-the-wind-waker': ['Are you the one who was speaking through my stone without my permission?', 'Tetra', 'The Legend of Zelda: The Wind Waker'],
+  'star-wars-knights-of-the-old-republic': ['Death is such a small impediment.', 'Revan', 'Star Wars: Knights of the Old Republic'],
+  'prince-of-persia-the-sands-of-time': ['Most people think time is like a river that flows swift and sure in one direction. But I have seen the face of time, and I can tell you: they are wrong.', 'Der Prinz', 'Prince of Persia: The Sands of Time'],
+  'call-of-duty': ["Goodness me, Americans! Made quite a racket didn't you?", 'Captain Price', 'Call of Duty (video game)'],
+  'half-life-2': ['Rise and shine, Mr. Freeman', 'G-Man', 'Half-Life'],
+  'world-of-warcraft': ['You are not prepared!', 'Illidan Sturmgrimm', 'Warcraft'],
+  'grand-theft-auto-san-andreas': ['Ah shit, here we go again.', 'Carl „CJ“ Johnson', 'Grand Theft Auto: San Andreas'],
+  'halo-2': ['Sir, finishing this fight.', 'Master Chief', 'Halo 2'],
+  'metal-gear-solid-3-snake-eater': ['I hereby award you the title of Big Boss. You are a true patriot.', 'Präsident Lyndon B. Johnson', 'Metal Gear Solid 3: Snake Eater'],
+  'resident-evil-4': ["Where's everyone going? Bingo?", 'Leon S. Kennedy', 'Resident Evil 4'],
+  'shadow-of-the-colossus': ['Souls that are once lost cannot be reclaimed. Is that not the law of mortals?', 'Dormin', 'Shadow of the Colossus'],
+  'the-elder-scrolls-iv-oblivion': ['Stop right there, criminal scum!', 'Eine Stadtwache', 'The Elder Scrolls IV: Oblivion'],
+  'gears-of-war': ['I used to have nightmares about those things when I was a kid.', 'Anthony Carmine', 'Gears of War'],
+  'bioshock': ['Would you kindly?', 'Atlas', 'BioShock'],
+  'portal': ['The cake is a lie', 'Eine Wandkritzelei', 'Portal (game)'],
+  'mass-effect': ["I may be drunk, krogan, but you're ugly. And tomorrow I'll be sober.", 'General Septimus', 'Mass Effect'],
+  'assassin-s-creed': ['Nothing is true, everything is permitted.', "Altaïr Ibn-La'Ahad", "Assassin's Creed (video game series)"],
+  'uncharted-drake-s-fortune': ['I had everything under control until they blew up the boat.', 'Nathan Drake', "Uncharted: Drake's Fortune"],
+  'halo-3': ['Wake me... when you need me.', 'Master Chief', 'Halo 3'],
+  'fallout-3': ['Hey! Look at that! A human! With hair!', 'Snowflake, ein Ghul-Friseur', 'Fallout 3'],
+  'left-4-dead': ["Look on the bright side, if you don't make it out, I'll still be incredibly handsome.", 'Francis', 'Left 4 Dead'],
+  'grand-theft-auto-iv': ['War is where the young and stupid are tricked by the old and bitter into killing each other.', 'Niko Bellic', 'Grand Theft Auto IV'],
+  'assassin-s-creed-ii': ['Requiescat in pace.', 'Ezio Auditore da Firenze', "Assassin's Creed II"],
+  'uncharted-2-among-thieves': ['Oh, is that an ancient Tibetan ritual dagger in your pocket?', 'Chloe Frazer', 'Uncharted 2: Among Thieves'],
+  'batman-arkham-asylum': ["Not so tight, boys. You'll crease the suit.", 'Joker', 'Batman: Arkham Asylum'],
+  'demon-s-souls': ['Soul of the lost, withdrawn from its vessel.', 'Das Mädchen in Schwarz', "Demon's Souls"],
+  'league-of-legends': ["It's not how much time you have. It's how you use it.", 'Ekko', 'League of Legends'],
+  'mass-effect-2': ["I'm Commander Shepard and this is my favorite store on the Citadel.", 'Commander Shepard', 'Mass Effect 2'],
+  'red-dead-redemption': ["We all need to look for answers somewhere. Some in big ol' books, and others in big bottles of whiskey.", 'Bonnie MacFarlane', 'Red Dead Redemption'],
+  'fallout-new-vegas': ['Truth is, the game was rigged from the start.', 'Benny', 'Fallout: New Vegas'],
+  'halo-reach': ['So... All we need is orbit-capable transport, and the single most expensive piece of equipment made by man?', 'Carter-A259', 'Halo: Reach'],
+  'the-elder-scrolls-v-skyrim': ["Hey, you. You're finally awake.", 'Ralof', 'The Elder Scrolls V: Skyrim'],
+  'dark-souls': ['Praise the Sun!', 'Solaire von Astora', 'Dark Souls'],
+  'portal-2': ["When life gives you lemons, don't make lemonade.", 'Cave Johnson', 'Portal 2'],
+  'minecraft': ['I like this player. It played well. It did not give up.', 'Das Gedicht am Ende', 'Minecraft (game)'],
+  'batman-arkham-city': ['This place is dangerous... I like it!', 'Catwoman', 'Batman: Arkham City'],
+  'the-witcher-2-assassins-of-kings': ["I'd give a leg for a heavy crossbow right now.", 'König Foltest', 'The Witcher 2: Assassins of Kings'],
+  'terraria': ['Check out my dirt blocks; they are extra dirty.', 'Der Händler', 'Terraria'],
+  'diablo-iii': ['All I am guilty of, Imperius, is bringing justice, while you hide, cowering, behind your throne!', 'Tyrael', 'Diablo III'],
+  'far-cry-3': ['Did I ever tell you what the definition of insanity is?', 'Vaas Montenegro', 'Far Cry 3'],
+  'the-last-of-us': ['Endure and survive.', 'Joel', 'The Last of Us'],
+  'grand-theft-auto-v': ["You forget a thousand things every day, pal. Make sure this is one of 'em.", 'Michael De Santa', 'Grand Theft Auto V'],
+  'bioshock-infinite': ['Bring us the girl and wipe away the debt.', 'Der Auftrag an Booker DeWitt', 'BioShock Infinite'],
+  'assassin-s-creed-iv-black-flag': ['In a world without gold, we might have been heroes!', 'Edward „Blackbeard“ Thatch', "Assassin's Creed IV: Black Flag"],
+  'bloodborne': ['A hunter is a hunter, even in a dream.', 'Micolash, Gastgeber des Albtraums', 'Bloodborne'],
+  'the-witcher-3-wild-hunt': ['Lambert, Lambert — what a prick.', 'Geralt von Riva', 'The Witcher 3: Wild Hunt'],
+  'metal-gear-solid-v-the-phantom-pain': ['Such a lust for revenge! Who?', 'Skull Face', 'Metal Gear Solid V: The Phantom Pain'],
+  'undertale': ['Welcome to your new home, innocent one.', 'Toriel', 'Undertale'],
+  'fallout-4': ['Civilian! A mandatory curfew is in effect! Return to your home immediately!', 'Ein Mister Gutsy', 'Fallout 4'],
+  'overwatch': ["It's high noon.", 'McCree', 'Overwatch'],
+  'dark-souls-iii': ['I, Siegward of the Knights of Catarina, have come to uphold my promise!', 'Siegward von Catarina', 'Dark Souls III'],
+  'uncharted-4-a-thief-s-end': ['You know what I love about a party with a bunch of crooks? Nobody cares if you smoke indoors.', 'Victor „Sully“ Sullivan', "Uncharted 4: A Thief's End"],
+  'persona-5': ["It's almost scary how good I am!", 'Morgana', 'Persona 5'],
+  'the-legend-of-zelda-breath-of-the-wild': ['But courage need not be remembered... For it is never forgotten.', 'Prinzessin Zelda', 'The Legend of Zelda: Breath of the Wild'],
+  'hollow-knight': ["Ho there, traveller. I'm afraid there's only me left to offer welcome.", 'Der alte Käfer (Elderbug)', 'Hollow Knight'],
+  'horizon-zero-dawn': ["There's so much to discover before the world ends.", 'Sylens', 'Horizon Zero Dawn'],
+  'god-of-war-2018': ['Do not be sorry. Be better.', 'Kratos', 'God of War (2018 video game)'],
+  'red-dead-redemption-2': ["We're all doomed, Reverend.", 'Arthur Morgan', 'Red Dead Redemption 2'],
+  'disco-elysium': ["I'm 43 years old -- and I plan to live to see 70.", 'Kim Kitsuragi', 'Disco Elysium'],
+  'the-last-of-us-part-ii': ['I told her they just ran some tests.', 'Joel', 'The Last of Us Part II'],
+  'cyberpunk-2077': ['We got a city to burn.', 'Johnny Silverhand', 'Cyberpunk 2077'],
+  'ghost-of-tsushima': ['Honor died on the beach.', 'Jin Sakai', 'Ghost of Tsushima'],
+  'elden-ring': ['I command thee, KNEEL! I am the lord of all that is Golden!', 'Godrick der Gepfropfte', 'Elden Ring'],
+  'god-of-war-ragnarok': ['Fate only binds you if you let it. Do what is necessary, not because it is written.', 'Kratos', 'God of War Ragnarök'],
+  'baldur-s-gate-3': ['One skull, two tenants, and no solution in sight.', 'Raphael', "Baldur's Gate 3"],
+  'black-myth-wukong': ["Isn't all life a one-way trip? Once you embark on the journey, there's no turning back.", 'Der alte Affe', 'Black Myth: Wukong'],
+  'helldivers-2': ['How about a nice cup of Liber-tea?', 'Ein Helldiver', 'Helldivers 2'],
+};
+
+/* Szene: Bild aus dem Wikipedia-Artikel (Dateiname auf en.wikipedia.org bzw. Commons), optional der
+   Mittelpunkt des Ausschnitts in Prozent [x, y] – Standard ist die Bildmitte. Von Hand gesichtet:
+   echte Spielszenen, kein Titel/Logo im Bild. */
+const GD_SCENES = {
+  'donkey-kong': ['Donkey Kong Gameplay.png'],
+  'super-mario-bros': ['NES Super Mario Bros.png'],
+  'the-legend-of-zelda': ['Legend of Zelda NES.PNG'],
+  'metroid': ['NES Metroid.png'],
+  'final-fantasy': ['Final Fantasy I Lich Battle.png'],
+  'mega-man-2': ['MegaMan2 Platforms Screenshot.png'],
+  'super-mario-bros-3': ['Super Mario Bros 3 Gameplay.png'],
+  'prince-of-persia': ['Prince of Persia SNES.jpg'],
+  'super-mario-world': ['Super Mario World.png'],
+  'the-secret-of-monkey-island': ['The Secret of Monkey Island SCUMM Bar.jpg'],
+  'sonic-the-hedgehog': ['MD Sonic the Hedgehog.png'],
+  'street-fighter-ii': ['Street Fighter II (arcade) screenshot.png'],
+  'the-legend-of-zelda-a-link-to-the-past': ['Legend of Zelda a Link to the Past Screen02.png', 50, 25],
+  'mortal-kombat': ['MK character select.png', 20, 80],
+  'super-mario-kart': ['Super Mario Kart screen shot.jpg'],
+  'doom': ['Doom ingame 1.png'],
+  'super-metroid': ['Super Metroid Grapple Beam.png'],
+  'donkey-kong-country': ['Donkey Kong Country Shot 2.png'],
+  'chrono-trigger': ['ChronoTriggerInside.PNG'],
+  'warcraft-ii-tides-of-darkness': ['WC2 Tides UI 01.png'],
+  'super-mario-64': ['Mario64 - Dire Dire Docks.png'],
+  'mario-kart-64': ['Mario-Kart-64.jpg'],
+  'pokemon-red-blue': ['Kanto-Full-Map.jpg'],
+  'resident-evil': ['Resident Evil original version.png'],
+  'tomb-raider': ['Tomb Raider Tomb of Qualopec.png'],
+  'crash-bandicoot': ['Crash Bandicoot Design Evolution.jpg'],
+  'diablo': ['Diabloscreen.jpg'],
+  'quake': ['Quake gameplay.png'],
+  'final-fantasy-vii': ['FFVIIbattleexample.png'],
+  'goldeneye-007': ['Goldeneyeemulated4lw.jpg'],
+  'age-of-empires': ['AgeOfEmpiresScreenshot.jpg'],
+  'gran-turismo': ['Gran Turismo Screenshot.jpg'],
+  'star-fox-64': ['N64starfox2.jpg'],
+  'tekken-3': ['Tekken 3 gameplay.png'],
+  'the-legend-of-zelda-ocarina-of-time': ['OcarinaOfTimeBattle.JPG'],
+  'half-life': ['Halflife ingame.jpg'],
+  'metal-gear-solid': ['MGS screen psx.jpg'],
+  'starcraft': ['Zerg colony (StarCraft).png'],
+  'banjo-kazooie': ['Banjo-Kazooie-gameplay.jpg'],
+  'spyro-the-dragon': ['Spyro ingame psx.jpg'],
+  'baldur-s-gate': ['Duchal palace sarevok speaks BGI.png', 45, 15],
+  'silent-hill': ['SH1 rifle.jpg'],
+  'age-of-empires-ii': ['Age ii feudal age celts.jpg'],
+  'tony-hawk-s-pro-skater': ['TonyHawk1screeny.jpg'],
+  'super-smash-bros': ['Mk stockmatch.jpg'],
+  'shenmue': ['Shenmue Saturn.png'],
+  'crash-team-racing': ['CrashTeamRacingGameplay.jpg'],
+  'counter-strike': ['Counter-Strike screenshot.png'],
+  'deus-ex': ['How to pass obstacles in Deus Ex.jpg'],
+  'the-sims': ['SimsSS.jpg'],
+  'diablo-ii': ['Diablo II characters.jpg'],
+  'the-legend-of-zelda-majora-s-mask': ['Majoras Mask screenshot.png'],
+  'halo-combat-evolved': ['Halo - Combat Evolved (screencap).jpg'],
+  'grand-theft-auto-iii': ['Gta3-pc-walking.jpeg'],
+  'metal-gear-solid-2-sons-of-liberty': ['MetalGearSolid2-Substance screenshot2.jpg'],
+  'super-smash-bros-melee': ['SpecialMelee.jpg'],
+  'max-payne': ['Max Payne - PC.jpg'],
+  'luigi-s-mansion': ['Poltergust 3000.jpg'],
+  'final-fantasy-x': ['FFXbattleexample.png'],
+  'silent-hill-2': ['Silent Hill 2 gameplay.jpg'],
+  'warcraft-iii-reign-of-chaos': ['Warcraft III - Arthas - The Culling.jpg', 50, 35],
+  'metroid-prime': ['M screen017.jpg'],
+  'kingdom-hearts': ['Kingdom Hearts Battle Screenshot.png'],
+  'the-elder-scrolls-iii-morrowind': ['Morrowind1.jpg'],
+  'grand-theft-auto-vice-city': ['Grand Theft Auto Vice City motorcycle gameplay.jpg'],
+  'the-legend-of-zelda-the-wind-waker': ['The Legend of Zelda The Wind Waker screenshot.jpg'],
+  'super-mario-sunshine': ['Hover Nozzle.jpg'],
+  'prince-of-persia-the-sands-of-time': ['Prince of Persia SoT screenshot.jpg'],
+  'half-life-2': ['HalfLife2 City17 TrainStationSquare.jpg'],
+  'grand-theft-auto-san-andreas': ['Gta-sa-screen1.jpg'],
+  'halo-2': ['Halo 2 (screenshot).jpg'],
+  'metal-gear-solid-3-snake-eater': ['MgsCamoExample.jpg'],
+  'resident-evil-4': ['Resident Evil 4 Ganado village.png'],
+  'shadow-of-the-colossus': ['Shadow of the Colossus (2005) - Valus fight.jpg'],
+  'need-for-speed-most-wanted': ['Need for Speed Most Wanted (2005 game - screenshot).jpg'],
+  'the-elder-scrolls-iv-oblivion': ['ElderScrollsOblivionScreenshot11.jpg'],
+  'gears-of-war': ['Gears of War television ad, "Mad World".jpg'],
+  'bioshock': ['Bioshock enemies.jpg'],
+  'call-of-duty-4-modern-warfare': ['Call Of Duty 4 MP Screenshot.jpg'],
+  'super-mario-galaxy': ['Super Mario Galaxy gameplay 1.jpg'],
+  'mass-effect': ['Mass Effect Combat.png'],
+  'uncharted-drake-s-fortune': ['Uncharted drake fortress.jpg'],
+  'halo-3': ['Halo3-gameplay.png'],
+  'crysis': ['Crysis lighting.jpg'],
+  'fallout-3': ['Fallout 3 V.A.T.S. Screen.PNG'],
+  'left-4-dead': ['Left 4 Dead screenshot.jpg'],
+  'grand-theft-auto-iv': ['Grand Theft Auto IV gameplay.jpg'],
+  'mario-kart-wii': ['Mario Kart Wii screenshot.jpg'],
+  'persona-4': ['P4G screenshot.jpg'],
+  'assassin-s-creed-ii': ["Assassin's Creed II gondola screen.jpg"],
+  'uncharted-2-among-thieves': ['Uncharted-2-hotel-climb-screenshot.jpg'],
+  'batman-arkham-asylum': ['Batman arkham-detectiveMode.png'],
+  'demon-s-souls': ['Demon Souls Screenshot.jpg'],
+  'league-of-legends': ['League of Legends Screenshot 2018.png'],
+  'mass-effect-2': ['Mass Effect 2 Combat.jpg'],
+  'red-dead-redemption': ['RedDeadRedemptionGameplay.jpg'],
+  'starcraft-ii-wings-of-liberty': ['Baneling attack (StarCraft).jpg'],
+  'fallout-new-vegas': ['Fallout NV gameplay.jpg'],
+  'halo-reach': ['Halo reach-lnos.png'],
+  'limbo': ['LimboGame1.jpg'],
+  'the-elder-scrolls-v-skyrim': ['Skyrim combat.jpg'],
+  'dark-souls': ['Darksoulsbattle.jpg'],
+  'minecraft': ['Screenshot from the Minecraft Nether.png'],
+  'batman-arkham-city': ['Batman - Arkham City screenshot.JPG'],
+  'the-witcher-2-assassins-of-kings': ['Witcher 2 screenshot.png'],
+  'terraria': ['Terraria screenshot.png'],
+  'journey': ['Journey-PS3-Screenshot.jpg'],
+  'counter-strike-global-offensive': ['Counter-Strike Global Offensive gameplay screenshot.jpeg'],
+  'borderlands-2': ['Borderlands 2 gameplay screenshot.jpg'],
+  'far-cry-3': ['Far Cry 3 gameplay screenshot.jpg'],
+  'the-last-of-us': ['The Last of Us visuals.jpg'],
+  'grand-theft-auto-v': ['Grand Theft Auto V Los Santos.jpg'],
+  'bioshock-infinite': ['Bioshock-infinite-columbia.jpg'],
+  'mario-kart-8': ['MK8 Mario Circuit.jpg'],
+  'bloodborne': ['Bloodborne Alpha PlayStation 4 gameplay screenshot.png'],
+  'the-witcher-3-wild-hunt': ['Witcher3Gameplay.png'],
+  'metal-gear-solid-v-the-phantom-pain': ['Metal Gear Solid V Phantom Pain screenshot.jpg'],
+  'undertale': ['Undertale Combat Example.png'],
+  'rocket-league': ['Rocket League, DHF Stadium.jpg'],
+  'fallout-4': ['Fallout 4 V.A.T.S. Screen.jpg'],
+  'splatoon': ['Splatoon Wii U gameplay screenshot.jpg'],
+  'overwatch': ['Overwatch screenshot.png'],
+  'dark-souls-iii': ['Dark Souls III gameplay screenshot.jpg'],
+  'doom-2016': ['Screenshot for Doom 2016.jpg'],
+  'uncharted-4-a-thief-s-end': ['Uncharted 4 open world visuals.jpg'],
+  'stardew-valley': ['Stardew valley screenshot.png'],
+  'persona-5': ['Persona 5 Palace Combat.jpg'],
+  'the-legend-of-zelda-breath-of-the-wild': ['Breath of the Wild paraglide.jpg'],
+  'super-mario-odyssey': ['Super Mario Odyssey, Seaside Kingdom.png'],
+  'hollow-knight': ['Hollow Knight PC gameplay screenshot.jpg'],
+  'horizon-zero-dawn': ['Horizon Zero Dawn screenshot.jpg'],
+  'cuphead': ['Cuphead gameplay, Captain Brineybeard.png'],
+  'resident-evil-7-biohazard': ['Resident Evil 7 gameplay.png'],
+  'god-of-war-2018': ['God of War (2018) Leviathan Axe gameplay.gif'],
+  'red-dead-redemption-2': ['Red Dead Redemption 2 open world.jpg'],
+  'celeste': ['Celeste screenshot 02.png'],
+  'super-smash-bros-ultimate': ['Super Smash Bros. Ultimate gameplay.jpg'],
+  'kingdom-come-deliverance': ['Kingdom Come gameplay screenshot.jpg'],
+  'among-us': ['AmongUsWhiteKillBlue.png'],
+  'sea-of-thieves': ['Sea of Thieves gameplay screenshot.jpg'],
+  'monster-hunter-world': ['Monster Hunter World gameplay screenshot.jpg'],
+  'forza-horizon-4': ['Forza Horizon 4 Gameplay.jpg'],
+  'sekiro-shadows-die-twice': ['Sekiro - Shadows Die Twice pre-release gameplay screenshot.png'],
+  'resident-evil-2-remake': ['Resident Evil 2 Remake gameplay.png'],
+  'disco-elysium': ['Disco Elysium interface.jpg'],
+  'death-stranding': ['Death Stranding pre-release gameplay screenshot.png'],
+  'apex-legends': ['Apex Legends gameplay screenshot.jpg'],
+  'outer-wilds': ['Outer Wilds screenshot nomai.png'],
+  'pokemon-sword-shield': ['On route 1 in Pokémon Sword and Shield.jpg'],
+  'animal-crossing-new-horizons': ['Animal Crossing New Horizons Gameplay.jpg'],
+  'hades': ['Hades video game screenshot.jpg'],
+  'the-last-of-us-part-ii': ['The Last of Us Part II stealth gameplay.gif'],
+  'doom-eternal': ['Doom Eternal gameplay screenshot.jpg'],
+  'cyberpunk-2077': ['Cyberpunk 2077 gameplay.png'],
+  'ghost-of-tsushima': ['Ghost of Tsushima art direction.jpg'],
+  'half-life-alyx': ['Half-Life Alyx VR.jpg'],
+  'it-takes-two': ['It Takes Two gamepaly scerenshot.jpg'],
+  'resident-evil-village': ['Resident Evil Village screenshot.jpg'],
+  'elden-ring': ['Elden Ring gameplay.png'],
+  'god-of-war-ragnarok': ['God of War Ragnarok Gameplay.png'],
+  'horizon-forbidden-west': ['Horizon Forbidden West screenshot.jpg'],
+  'the-legend-of-zelda-tears-of-the-kingdom': ['Tears of the kingdom contraptions.jpg'],
+  'baldur-s-gate-3': ["Baldur's Gate 3 first combat encounter.jpg"],
+  'hogwarts-legacy': ['Potion station.png'],
+  'super-mario-bros-wonder': ['SMB wonder screenshot.png'],
+  'balatro': ['Balatro big blind.png'],
+  'astro-bot': ['Astro Bot Ensemble.png'],
+  'helldivers-2': ['Helldivers 2 gameplay screenshot.jpg'],
+  'metaphor-refantazio': ['MF crowd screencap.jpg'],
+  'hades-ii': ['Hades II gameplay.png'],
+  'clair-obscur-expedition-33': ['Clair Obscur gameplay screenshot.png'],
+  'kingdom-come-deliverance-ii': ['KCD2 gameplay screenshot.jpg'],
+  'hollow-knight-silksong': ['SilksongScreenshot.jpg'],
+  'mario-kart-world': ['Mario Kart World Knockout Tour.jpeg'],
+  'ghost-of-yotei': ['Ghost of Yotei gameplay screenshot.jpg'],
+};
+
 /* ───────── Gamedle: Spiellogik (ohne Oberfläche, testbar) ─────────
    Das Tagesspiel ergibt sich allein aus dem Datum (deutsche Zeit) – alle bekommen
    dasselbe Rätsel, ganz ohne Server. */
@@ -5632,12 +6262,22 @@ function gdHash(s) {
   return h >>> 0;
 }
 
-const gdPool = mode => (mode === 'cover' ? GD.filter(g => !GD_NO_COVER.has(g.title)) : GD);
+/* Tagesrätsel-Modi (jeder mit eigenem Spielplan); „endless“ ist Übung mit dem Klassik-Pool */
+const GD_DAILY_MODES = ['classic', 'quote', 'emoji', 'cover', 'scene'];
+
+/* Welche Spiele ein Modus kennt: Zitat, Emoji und Szene nur, wo es Inhalte gibt (gamedle-content.js) */
+function gdPool(mode) {
+  if (mode === 'cover') return GD.filter(g => !GD_NO_COVER.has(g.title));
+  if (mode === 'quote') return GD.filter(g => GD_QUOTES[g.id]);
+  if (mode === 'emoji') return GD.filter(g => GD_EMOJI_HINTS[g.id]);
+  if (mode === 'scene') return GD.filter(g => GD_SCENES[g.id]);
+  return GD;
+}
 
 /* Fester Spielplan (src/gamedle-schedule.js): Tag n bekommt den n-ten Eintrag.
    Neue Spiele werden nur angehängt – so ändern sich laufende Rätsel nie. */
 function gdDaily(mode, date) {
-  const order = GD_SCHEDULE[mode === 'cover' ? 'cover' : 'classic'];
+  const order = GD_SCHEDULE[GD_DAILY_MODES.includes(mode) ? mode : 'classic'];
   const n = gdDayNumber(date) - 1;
   return GD_BY_ID.get(order[((n % order.length) + order.length) % order.length]);
 }
@@ -5710,13 +6350,15 @@ function gdSearch(q, exclude = new Set(), limit = 8) {
 
 /* ── Teilen (Wordle-Stil) ── */
 const GD_EMOJI = { ok: '🟩', partial: '🟨', no: '🟥', up: '⬆️', down: '⬇️' };
+const GD_SHARE_LABEL = { classic: 'Klassik 🎮', quote: 'Zitat 💬', emoji: 'Emoji 😀', cover: 'Cover 🖼️', scene: 'Szene 🔍' };
 function gdShareText(mode, date, guesses, url, { answer = gdDaily(mode, date), hints = 0 } = {}) {
   const no = gdDayNumber(date);
   const n = guesses.length;
   const solved = `Gelöst mit ${n} ${n === 1 ? 'Versuch' : 'Versuchen'}${hints ? ` · 💡 ${hints} ${hints === 1 ? 'Tipp' : 'Tipps'}` : ''}`;
-  if (mode === 'cover') {
-    const marks = guesses.map((id, i) => (i === n - 1 ? '🟩' : '🟥')).join('');
-    return `Gamedle #${no} · Cover 🖼️\n${solved}\n${marks}\n${url}`;
+  if (mode !== 'classic') {
+    // Ohne Eigenschaften-Vergleich: nur Fehlversuche und Treffer (lange Serien gekürzt)
+    const marks = n > 12 ? `${'🟥'.repeat(10)} … +${n - 11} 🟩` : guesses.map((id, i) => (i === n - 1 ? '🟩' : '🟥')).join('');
+    return `Gamedle #${no} · ${GD_SHARE_LABEL[mode]}\n${solved}\n${marks}\n${url}`;
   }
   const rows = guesses.slice(-6).map(id => gdCompare(GD_BY_ID.get(id), answer).map(c => GD_EMOJI[c.state]).join(''));
   const more = n > 6 ? `… und ${n - 6} weitere Versuche davor\n` : '';
@@ -5745,7 +6387,7 @@ function gdCurrentStreak(stats, mode, today) {
 }
 
 /* ───────── Gamedle: fester Rätsel-Spielplan ─────────
-   Tag n (Gamedle #n) bekommt den n-ten Eintrag; danach beginnt der Plan von vorn.
+   Tag n (Gamedle #n) bekommt je Modus den n-ten Eintrag; danach beginnt der Plan von vorn.
    NICHT von Hand umsortieren – neue Spiele hängt tools/gamedle-schedule.js ans Ende. */
 const GD_SCHEDULE = {
   classic: [
@@ -5948,6 +6590,310 @@ const GD_SCHEDULE = {
     'command-conquer', // 197
     'mortal-kombat', // 198
   ],
+  quote: [
+    'super-mario-64', // 1
+    'super-mario-bros', // 2
+    'star-wars-knights-of-the-old-republic', // 3
+    'starcraft', // 4
+    'the-witcher-3-wild-hunt', // 5
+    'assassin-s-creed-iv-black-flag', // 6
+    'halo-3', // 7
+    'fallout-4', // 8
+    'crash-bandicoot', // 9
+    'disco-elysium', // 10
+    'horizon-zero-dawn', // 11
+    'metal-gear-solid-v-the-phantom-pain', // 12
+    'assassin-s-creed', // 13
+    'hollow-knight', // 14
+    'silent-hill-2', // 15
+    'metal-gear-solid-2-sons-of-liberty', // 16
+    'overwatch', // 17
+    'grand-theft-auto-v', // 18
+    'shadow-of-the-colossus', // 19
+    'resident-evil-4', // 20
+    'max-payne', // 21
+    'undertale', // 22
+    'half-life-2', // 23
+    'halo-combat-evolved', // 24
+    'prince-of-persia-the-sands-of-time', // 25
+    'god-of-war-2018', // 26
+    'the-elder-scrolls-v-skyrim', // 27
+    'demon-s-souls', // 28
+    'helldivers-2', // 29
+    'banjo-kazooie', // 30
+    'dark-souls-iii', // 31
+    'call-of-duty', // 32
+    'world-of-warcraft', // 33
+    'batman-arkham-asylum', // 34
+    'mass-effect-2', // 35
+    'the-legend-of-zelda-the-wind-waker', // 36
+    'chrono-trigger', // 37
+    'baldur-s-gate-3', // 38
+    'the-elder-scrolls-iv-oblivion', // 39
+    'warcraft-iii-reign-of-chaos', // 40
+    'elden-ring', // 41
+    'command-conquer', // 42
+    'grand-theft-auto-iv', // 43
+    'grand-theft-auto-vice-city', // 44
+    'half-life', // 45
+    'red-dead-redemption-2', // 46
+    'batman-arkham-city', // 47
+    'red-dead-redemption', // 48
+    'ghost-of-tsushima', // 49
+    'minecraft', // 50
+    'the-last-of-us', // 51
+    'baldur-s-gate', // 52
+    'super-metroid', // 53
+    'bioshock-infinite', // 54
+    'the-secret-of-monkey-island', // 55
+    'left-4-dead', // 56
+    'halo-reach', // 57
+    'bioshock', // 58
+    'gears-of-war', // 59
+    'silent-hill', // 60
+    'league-of-legends', // 61
+    'diablo', // 62
+    'persona-5', // 63
+    'pokemon-gold-silver', // 64
+    'the-legend-of-zelda', // 65
+    'mass-effect', // 66
+    'fallout-new-vegas', // 67
+    'dark-souls', // 68
+    'god-of-war-ragnarok', // 69
+    'the-elder-scrolls-iii-morrowind', // 70
+    'the-legend-of-zelda-breath-of-the-wild', // 71
+    'fallout-3', // 72
+    'kingdom-hearts', // 73
+    'luigi-s-mansion', // 74
+    'the-legend-of-zelda-a-link-to-the-past', // 75
+    'bloodborne', // 76
+    'uncharted-4-a-thief-s-end', // 77
+    'assassin-s-creed-ii', // 78
+    'mortal-kombat', // 79
+    'the-legend-of-zelda-majora-s-mask', // 80
+    'the-legend-of-zelda-ocarina-of-time', // 81
+    'uncharted-2-among-thieves', // 82
+    'black-myth-wukong', // 83
+    'halo-2', // 84
+    'the-witcher-2-assassins-of-kings', // 85
+    'diablo-iii', // 86
+    'grand-theft-auto-iii', // 87
+    'final-fantasy-vii', // 88
+    'terraria', // 89
+    'portal-2', // 90
+    'shenmue', // 91
+    'metal-gear-solid-3-snake-eater', // 92
+    'portal', // 93
+    'far-cry-3', // 94
+    'diablo-ii', // 95
+    'pokemon-red-blue', // 96
+    'final-fantasy-x', // 97
+    'the-last-of-us-part-ii', // 98
+    'deus-ex', // 99
+    'grand-theft-auto-san-andreas', // 100
+    'uncharted-drake-s-fortune', // 101
+    'cyberpunk-2077', // 102
+  ],
+  emoji: [
+    'diablo-ii', // 1
+    'gran-turismo', // 2
+    'world-of-warcraft', // 3
+    'dark-souls', // 4
+    'baldur-s-gate', // 5
+    'clair-obscur-expedition-33', // 6
+    'mass-effect', // 7
+    'quake', // 8
+    'metroid', // 9
+    'the-last-of-us-part-ii', // 10
+    'call-of-duty-4-modern-warfare', // 11
+    'pro-evolution-soccer-6', // 12
+    'final-fantasy', // 13
+    'halo-2', // 14
+    'half-life-2', // 15
+    'halo-3', // 16
+    'super-metroid', // 17
+    'bloodborne', // 18
+    'it-takes-two', // 19
+    'crash-team-racing', // 20
+    'super-mario-bros', // 21
+    'super-mario-world', // 22
+    'hades', // 23
+    'gothic', // 24
+    'silent-hill', // 25
+    'max-payne', // 26
+    'stardew-valley', // 27
+    'kingdom-hearts', // 28
+    'mortal-kombat', // 29
+    'dark-souls-iii', // 30
+    'starcraft-ii-wings-of-liberty', // 31
+    'the-elder-scrolls-iii-morrowind', // 32
+    'metal-gear-solid', // 33
+    'doom', // 34
+    'age-of-empires-ii', // 35
+    'super-smash-bros-ultimate', // 36
+    'disco-elysium', // 37
+    'sekiro-shadows-die-twice', // 38
+    'the-legend-of-zelda-breath-of-the-wild', // 39
+    'tekken-3', // 40
+    'apex-legends', // 41
+    'the-legend-of-zelda-tears-of-the-kingdom', // 42
+    'resident-evil-2-remake', // 43
+    'pokemon-sword-shield', // 44
+    'super-mario-odyssey', // 45
+    'doom-eternal', // 46
+    'assassin-s-creed-ii', // 47
+    'fallout-4', // 48
+    'crysis', // 49
+    'assassin-s-creed', // 50
+    'horizon-forbidden-west', // 51
+    'pac-man', // 52
+    'halo-reach', // 53
+    'helldivers-2', // 54
+    'silent-hill-2', // 55
+    'left-4-dead', // 56
+    'age-of-empires', // 57
+    'super-mario-bros-wonder', // 58
+    'hollow-knight', // 59
+    'resident-evil-4-remake', // 60
+    'command-conquer', // 61
+    'terraria', // 62
+    'wii-sports', // 63
+    'the-legend-of-zelda-ocarina-of-time', // 64
+    'spyro-the-dragon', // 65
+    'rocket-league', // 66
+    'cyberpunk-2077', // 67
+    'marvel-s-spider-man', // 68
+    'diablo', // 69
+    'among-us', // 70
+    'the-legend-of-zelda-a-link-to-the-past', // 71
+    'final-fantasy-x', // 72
+    'horizon-zero-dawn', // 73
+    'tony-hawk-s-pro-skater', // 74
+    'hades-ii', // 75
+    'mario-kart-wii', // 76
+    'persona-4', // 77
+    'persona-5', // 78
+    'the-last-of-us', // 79
+    'half-life', // 80
+    'journey', // 81
+    'the-elder-scrolls-v-skyrim', // 82
+    'fifa-23', // 83
+    'mass-effect-2', // 84
+    'red-dead-redemption', // 85
+    'splatoon', // 86
+    'uncharted-4-a-thief-s-end', // 87
+    'resident-evil', // 88
+    'star-wars-knights-of-the-old-republic', // 89
+    'grand-theft-auto-iii', // 90
+    'warcraft-ii-tides-of-darkness', // 91
+    'need-for-speed-most-wanted', // 92
+    'animal-crossing-new-horizons', // 93
+    'red-dead-redemption-2', // 94
+    'the-legend-of-zelda-majora-s-mask', // 95
+    'death-stranding', // 96
+    'gothic-ii', // 97
+    'shenmue', // 98
+    'portal', // 99
+    'gears-of-war', // 100
+    'mega-man-2', // 101
+    'fallout-new-vegas', // 102
+    'kingdom-come-deliverance', // 103
+    'super-mario-kart', // 104
+    'counter-strike', // 105
+    'the-legend-of-zelda', // 106
+    'sea-of-thieves', // 107
+    'balatro', // 108
+    'ghost-of-tsushima', // 109
+    'overwatch', // 110
+    'borderlands-2', // 111
+    'donkey-kong-country', // 112
+    'crash-bandicoot', // 113
+    'banjo-kazooie', // 114
+    'halo-combat-evolved', // 115
+    'hogwarts-legacy', // 116
+    'grand-theft-auto-v', // 117
+    'assassin-s-creed-iv-black-flag', // 118
+    'tomb-raider', // 119
+    'doom-2016', // 120
+    'celeste', // 121
+    'prince-of-persia', // 122
+    'black-myth-wukong', // 123
+    'batman-arkham-asylum', // 124
+    'super-mario-64', // 125
+    'resident-evil-village', // 126
+    'sonic-the-hedgehog', // 127
+    'metaphor-refantazio', // 128
+    'the-witcher-2-assassins-of-kings', // 129
+    'metal-gear-solid-3-snake-eater', // 130
+    'luigi-s-mansion', // 131
+    'god-of-war-ragnarok', // 132
+    'elden-ring', // 133
+    'shadow-of-the-colossus', // 134
+    'uncharted-drake-s-fortune', // 135
+    'bioshock-infinite', // 136
+    'grand-theft-auto-san-andreas', // 137
+    'monster-hunter-world', // 138
+    'ghost-of-yotei', // 139
+    'portal-2', // 140
+    'super-mario-bros-3', // 141
+    'demon-s-souls', // 142
+    'mario-kart-world', // 143
+    'mario-kart-8', // 144
+    'batman-arkham-city', // 145
+    'the-sims', // 146
+    'fallout-3', // 147
+    'far-cry-3', // 148
+    'fortnite', // 149
+    'chrono-trigger', // 150
+    'cuphead', // 151
+    'god-of-war-2018', // 152
+    'resident-evil-7-biohazard', // 153
+    'super-mario-sunshine', // 154
+    'limbo', // 155
+    'goldeneye-007', // 156
+    'super-mario-galaxy', // 157
+    'super-smash-bros', // 158
+    'resident-evil-4', // 159
+    'mario-kart-64', // 160
+    'final-fantasy-vii', // 161
+    'the-elder-scrolls-iv-oblivion', // 162
+    'the-secret-of-monkey-island', // 163
+    'grand-theft-auto-vice-city', // 164
+    'call-of-duty', // 165
+    'grand-theft-auto-iv', // 166
+    'baldur-s-gate-3', // 167
+    'metal-gear-solid-2-sons-of-liberty', // 168
+    'the-legend-of-zelda-the-wind-waker', // 169
+    'hollow-knight-silksong', // 170
+    'prince-of-persia-the-sands-of-time', // 171
+    'starcraft', // 172
+    'final-fantasy-vii-rebirth', // 173
+    'donkey-kong', // 174
+    'bioshock', // 175
+    'kingdom-come-deliverance-ii', // 176
+    'forza-horizon-4', // 177
+    'diablo-iii', // 178
+    'star-fox-64', // 179
+    'minecraft', // 180
+    'pokemon-gold-silver', // 181
+    'outer-wilds', // 182
+    'dishonored', // 183
+    'league-of-legends', // 184
+    'warcraft-iii-reign-of-chaos', // 185
+    'pokemon-red-blue', // 186
+    'super-smash-bros-melee', // 187
+    'the-witcher-3-wild-hunt', // 188
+    'undertale', // 189
+    'deus-ex', // 190
+    'metal-gear-solid-v-the-phantom-pain', // 191
+    'metroid-prime', // 192
+    'street-fighter-ii', // 193
+    'uncharted-2-among-thieves', // 194
+    'death-stranding-2-on-the-beach', // 195
+    'astro-bot', // 196
+    'half-life-alyx', // 197
+    'counter-strike-global-offensive', // 198
+  ],
   cover: [
     'dark-souls-iii', // 1
     'tony-hawk-s-pro-skater', // 2
@@ -6145,21 +7091,219 @@ const GD_SCHEDULE = {
     'doom-eternal', // 194
     'resident-evil-2-remake', // 195
   ],
+  scene: [
+    'persona-4', // 1
+    'super-mario-odyssey', // 2
+    'left-4-dead', // 3
+    'monster-hunter-world', // 4
+    'max-payne', // 5
+    'bloodborne', // 6
+    'the-elder-scrolls-iv-oblivion', // 7
+    'red-dead-redemption', // 8
+    'bioshock-infinite', // 9
+    'warcraft-iii-reign-of-chaos', // 10
+    'the-legend-of-zelda-breath-of-the-wild', // 11
+    'mario-kart-world', // 12
+    'terraria', // 13
+    'star-fox-64', // 14
+    'resident-evil-village', // 15
+    'luigi-s-mansion', // 16
+    'chrono-trigger', // 17
+    'ghost-of-tsushima', // 18
+    'metroid-prime', // 19
+    'half-life', // 20
+    'dark-souls-iii', // 21
+    'uncharted-drake-s-fortune', // 22
+    'mario-kart-64', // 23
+    'metaphor-refantazio', // 24
+    'final-fantasy-vii', // 25
+    'halo-3', // 26
+    'age-of-empires', // 27
+    'sonic-the-hedgehog', // 28
+    'pokemon-sword-shield', // 29
+    'final-fantasy-x', // 30
+    'mortal-kombat', // 31
+    'far-cry-3', // 32
+    'grand-theft-auto-iv', // 33
+    'splatoon', // 34
+    'journey', // 35
+    'deus-ex', // 36
+    'the-legend-of-zelda', // 37
+    'grand-theft-auto-iii', // 38
+    'super-mario-kart', // 39
+    'helldivers-2', // 40
+    'half-life-2', // 41
+    'the-legend-of-zelda-ocarina-of-time', // 42
+    'death-stranding', // 43
+    'the-last-of-us-part-ii', // 44
+    'forza-horizon-4', // 45
+    'sea-of-thieves', // 46
+    'the-legend-of-zelda-a-link-to-the-past', // 47
+    'spyro-the-dragon', // 48
+    'tony-hawk-s-pro-skater', // 49
+    'counter-strike', // 50
+    'donkey-kong-country', // 51
+    'warcraft-ii-tides-of-darkness', // 52
+    'diablo-ii', // 53
+    'it-takes-two', // 54
+    'counter-strike-global-offensive', // 55
+    'outer-wilds', // 56
+    'doom-eternal', // 57
+    'uncharted-4-a-thief-s-end', // 58
+    'tomb-raider', // 59
+    'half-life-alyx', // 60
+    'metroid', // 61
+    'bioshock', // 62
+    'resident-evil-2-remake', // 63
+    'borderlands-2', // 64
+    'dark-souls', // 65
+    'crash-team-racing', // 66
+    'halo-2', // 67
+    'minecraft', // 68
+    'super-mario-bros-3', // 69
+    'baldur-s-gate', // 70
+    'halo-reach', // 71
+    'undertale', // 72
+    'super-mario-bros-wonder', // 73
+    'resident-evil-7-biohazard', // 74
+    'the-secret-of-monkey-island', // 75
+    'shenmue', // 76
+    'persona-5', // 77
+    'the-elder-scrolls-iii-morrowind', // 78
+    'quake', // 79
+    'prince-of-persia-the-sands-of-time', // 80
+    'hollow-knight', // 81
+    'gears-of-war', // 82
+    'super-mario-world', // 83
+    'celeste', // 84
+    'super-mario-64', // 85
+    'resident-evil-4', // 86
+    'elden-ring', // 87
+    'the-sims', // 88
+    'cuphead', // 89
+    'pokemon-red-blue', // 90
+    'super-mario-galaxy', // 91
+    'super-smash-bros-melee', // 92
+    'fallout-3', // 93
+    'diablo', // 94
+    'god-of-war-ragnarok', // 95
+    'mega-man-2', // 96
+    'red-dead-redemption-2', // 97
+    'metal-gear-solid-v-the-phantom-pain', // 98
+    'prince-of-persia', // 99
+    'stardew-valley', // 100
+    'kingdom-come-deliverance', // 101
+    'baldur-s-gate-3', // 102
+    'the-elder-scrolls-v-skyrim', // 103
+    'disco-elysium', // 104
+    'astro-bot', // 105
+    'age-of-empires-ii', // 106
+    'the-witcher-3-wild-hunt', // 107
+    'super-smash-bros-ultimate', // 108
+    'silent-hill', // 109
+    'hades', // 110
+    'animal-crossing-new-horizons', // 111
+    'crash-bandicoot', // 112
+    'clair-obscur-expedition-33', // 113
+    'league-of-legends', // 114
+    'goldeneye-007', // 115
+    'hades-ii', // 116
+    'demon-s-souls', // 117
+    'the-legend-of-zelda-majora-s-mask', // 118
+    'metal-gear-solid-3-snake-eater', // 119
+    'need-for-speed-most-wanted', // 120
+    'doom-2016', // 121
+    'uncharted-2-among-thieves', // 122
+    'gran-turismo', // 123
+    'super-mario-bros', // 124
+    'grand-theft-auto-v', // 125
+    'assassin-s-creed-ii', // 126
+    'hollow-knight-silksong', // 127
+    'balatro', // 128
+    'god-of-war-2018', // 129
+    'rocket-league', // 130
+    'batman-arkham-city', // 131
+    'horizon-zero-dawn', // 132
+    'starcraft-ii-wings-of-liberty', // 133
+    'super-mario-sunshine', // 134
+    'halo-combat-evolved', // 135
+    'the-legend-of-zelda-the-wind-waker', // 136
+    'kingdom-hearts', // 137
+    'silent-hill-2', // 138
+    'mario-kart-8', // 139
+    'the-last-of-us', // 140
+    'cyberpunk-2077', // 141
+    'sekiro-shadows-die-twice', // 142
+    'crysis', // 143
+    'mario-kart-wii', // 144
+    'fallout-4', // 145
+    'batman-arkham-asylum', // 146
+    'limbo', // 147
+    'mass-effect-2', // 148
+    'shadow-of-the-colossus', // 149
+    'the-witcher-2-assassins-of-kings', // 150
+    'mass-effect', // 151
+    'horizon-forbidden-west', // 152
+    'starcraft', // 153
+    'grand-theft-auto-vice-city', // 154
+    'grand-theft-auto-san-andreas', // 155
+    'among-us', // 156
+    'metal-gear-solid', // 157
+    'resident-evil', // 158
+    'final-fantasy', // 159
+    'metal-gear-solid-2-sons-of-liberty', // 160
+    'super-metroid', // 161
+    'doom', // 162
+    'street-fighter-ii', // 163
+    'banjo-kazooie', // 164
+    'hogwarts-legacy', // 165
+    'the-legend-of-zelda-tears-of-the-kingdom', // 166
+    'tekken-3', // 167
+    'super-smash-bros', // 168
+    'ghost-of-yotei', // 169
+    'fallout-new-vegas', // 170
+    'apex-legends', // 171
+    'kingdom-come-deliverance-ii', // 172
+    'overwatch', // 173
+    'donkey-kong', // 174
+    'call-of-duty-4-modern-warfare', // 175
+  ],
 };
 
 /* ───────── Gamedle: Oberfläche ─────────
-   Modi: Klassik (Eigenschaften vergleichen), Cover (verpixeltes Cover), Endlos (Übung, zählt nicht). */
+   Tagesmodi: Klassik (Eigenschaften vergleichen), Zitat, Emoji, Cover (verpixelt) und Szene
+   (Bildausschnitt) – dazu Endlos zum Üben (zählt nicht). */
 const GD_COVER_LEVELS = [7, 11, 16, 24, 36, 56]; // Pixelbreite pro Stufe, danach scharf
-const GD_HINT_LETTER = 4, GD_HINT_COVER = 8;     // Tipps nach so vielen Fehlversuchen
+const GD_SCENE_ZOOM = [3.4, 2.6, 2, 1.6, 1.3];   // Vergrößerung pro Stufe, danach das ganze Bild
 const GD_URL = () => location.href.split('#')[0];
 const GD_ISSUES = 'https://github.com/xQuicklook/Gamedle/issues/new';
 const GD_STATE_LABEL = { ok: 'richtig', partial: 'teilweise richtig', no: 'falsch', up: 'Lösung ist neuer', down: 'Lösung ist älter' };
 const GD_STATE_ICON = { ok: '✓', partial: '~', no: '✕', up: '▲', down: '▼' };
 
+const GD_MODE_UI = {
+  classic: { label: 'Klassik', title: 'Welches Spiel suchen wir heute?', sub: 'Jeder Tipp verrät, welche Eigenschaften passen.' },
+  quote: { label: 'Zitat', title: 'Aus welchem Spiel stammt dieses Zitat?', sub: 'Zitat in Originalsprache – nach Fehlversuchen gibt es Tipps.' },
+  emoji: { label: 'Emoji', title: 'Welches Spiel beschreiben diese Emojis?', sub: 'Mit jedem Fehlversuch kommt ein Emoji dazu.' },
+  cover: { label: 'Cover', title: 'Welches Spiel versteckt sich hinter dem Cover?', sub: 'Mit jedem Fehlversuch wird das Bild schärfer.' },
+  scene: { label: 'Szene', title: 'Aus welchem Spiel stammt diese Szene?', sub: 'Mit jedem Fehlversuch zoomt das Bild weiter heraus.' },
+  endless: { label: 'Endlos', title: 'Endlos-Modus', sub: 'Zum Üben – zählt nicht für die Statistik.' },
+};
+const gdModeHash = mode => (mode === 'classic' ? '#/gamedle' : '#/gamedle/' + mode);
+
+/* Tipps je Modus: [Art, freigeschaltet nach so vielen Fehlversuchen].
+   Cover und Szene brauchen keine – dort wird das Bild von selbst deutlicher. */
+const GD_HINTS = {
+  classic: [['letter', 4], ['cover', 8]],
+  quote: [['year', 3], ['speaker', 6], ['letter', 9]],
+  emoji: [['year', 5], ['letter', 8]],
+  endless: [['letter', 4], ['cover', 8]],
+};
+
 const Gamedle = {
   mode: 'classic',
   date: null,
   covers: {},          // Wikipedia-Artikel → Cover-URL
+  scenes: {},          // Spiel-ID → Bild-URL (Szene-Modus)
   endless: null,       // { answer, guesses }
   animateLast: false,
   timer: null,
@@ -6171,14 +7315,17 @@ const Gamedle = {
     $('#gdStatsBtn').onclick = () => gdStatsModal();
     $('#gdHelpBtn').onclick = () => gdHelpModal();
     $('#hubInfo').onclick = () => infoModal();
+    const fresh = c => c && Date.now() - c.at < 7 * 86400000;
     const cached = Store.get('gd.covers');
-    if (cached && Date.now() - cached.at < 7 * 86400000) this.covers = cached.map;
+    if (fresh(cached)) this.covers = cached.map;
+    const scenes = Store.get('gd.scenes');
+    if (fresh(scenes)) this.scenes = scenes.map;
     document.body.classList.toggle('gd-cb', !!Store.get('gd.colorblind'));
   },
 
   /* Wird vom Router aufgerufen */
   open(mode = 'classic') {
-    this.mode = ['classic', 'cover', 'endless'].includes(mode) ? mode : 'classic';
+    this.mode = [...GD_DAILY_MODES, 'endless'].includes(mode) ? mode : 'classic';
     this.date = gdToday();
     this.renderTabs();
     this.render();
@@ -6211,6 +7358,26 @@ const Gamedle = {
     if (!$('#gamedle').hidden) this.render();
   },
 
+  /* Szene-Bild nur bei Bedarf holen (eine Anfrage), ebenfalls eine Woche zwischengespeichert */
+  async loadScene(g) {
+    const file = GD_SCENES[g.id]?.[0];
+    if (!file || this.scenes[g.id] || this.sceneLoading === g.id) return;
+    this.sceneLoading = g.id;
+    try {
+      const data = await Wiki.api({ action: 'query', titles: 'File:' + file, prop: 'imageinfo', iiprop: 'url', iiurlwidth: '960' });
+      const info = data.query?.pages?.[0]?.imageinfo?.[0];
+      if (!info) throw new Error('Bild nicht gefunden: ' + file);
+      this.scenes[g.id] = (info.thumburl || info.url).replace(/\?utm_[^#]*$/, '');
+      Store.set('gd.scenes', { at: Date.now(), map: this.scenes });
+      this.sceneError = false;
+    } catch (e) {
+      console.warn('Szene nicht geladen', e);
+      this.sceneError = true;
+    }
+    this.sceneLoading = null;
+    if (this.mode === 'scene' && !$('#gamedle').hidden) this.render();
+  },
+
   cover(g) { return this.covers[g.wiki] || ''; },
   hasCover(g) { return !GD_NO_COVER.has(g.title) && !this.coverError; },
 
@@ -6232,14 +7399,17 @@ const Gamedle = {
     (all[this.date] ||= {})[this.mode] = p;
     Store.set('gd.progress', all);
   },
+  /* Lösung eines Tages – wer schon angefangen hat, behält seine (auch wenn sich der Plan ändern sollte) */
+  answerOf(mode, date) {
+    const stored = Store.get('gd.progress', {})[date]?.[mode]?.answer;
+    return (stored && GD_BY_ID.get(stored)) || gdDaily(mode, date);
+  },
   answer() {
     if (this.mode === 'endless') {
       if (!this.endless) this.newEndless();
       return GD_BY_ID.get(this.endless.answer);
     }
-    // Wer heute schon angefangen hat, behält seine Lösung – auch wenn sich der Plan ändern sollte
-    const stored = Store.get('gd.progress', {})[this.date]?.[this.mode]?.answer;
-    return (stored && GD_BY_ID.get(stored)) || gdDaily(this.mode, this.date);
+    return this.answerOf(this.mode, this.date);
   },
   newEndless() {
     const pool = gdPool('classic');
@@ -6267,11 +7437,12 @@ const Gamedle = {
   /* ── Rendering ── */
   renderTabs() {
     const today = Store.get('gd.progress', {})[gdToday()] || {};
-    const tab = (mode, label) => h('button.tab', {
+    const tab = mode => h('button.tab', {
       role: 'tab', 'aria-selected': String(this.mode === mode),
-      onclick: () => { location.hash = mode === 'classic' ? '#/gamedle' : '#/gamedle/' + mode; },
-    }, label, today[mode]?.done ? h('span.gd-done', ' ✓') : null);
-    $('#gdTabs').replaceChildren(tab('classic', 'Klassik'), tab('cover', 'Cover'), tab('endless', 'Endlos'));
+      onclick: () => { location.hash = gdModeHash(mode); },
+    }, GD_MODE_UI[mode].label, today[mode]?.done ? h('span.gd-done', ' ✓') : null);
+    $('#gdTabs').replaceChildren(...GD_DAILY_MODES.map(tab), tab('endless'));
+    $('#gdTabs [aria-selected="true"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   },
 
   render() {
@@ -6281,21 +7452,26 @@ const Gamedle = {
     const ans = this.answer();
     const no = gdDayNumber(this.date);
     const wrong = p.guesses.filter(id => id !== ans.id).length;
-    const titles = {
-      classic: ['Welches Spiel suchen wir heute?', `Gamedle #${no} · Jeder Tipp verrät, welche Eigenschaften passen.`],
-      cover: ['Welches Spiel versteckt sich hinter dem Cover?', `Gamedle #${no} · Mit jedem Fehlversuch wird das Bild schärfer.`],
-      endless: ['Endlos-Modus', 'Zum Üben – zählt nicht für die Statistik.'],
-    }[this.mode];
+    const ui = GD_MODE_UI[this.mode];
+    const table = this.mode === 'classic' || this.mode === 'endless';
 
     main.replaceChildren(h('div.gd-wrap',
-      h('div.gd-head', h('h2', titles[0]), h('p.muted', titles[1])),
-      this.mode === 'cover' ? this.coverStage(ans, p) : null,
+      h('div.gd-head', h('h2', ui.title), h('p.muted', this.mode === 'endless' ? ui.sub : `Gamedle #${no} · ${ui.sub}`)),
+      this.stage(ans, p, wrong),
       p.done ? this.resultCard(ans, p) : this.searchBox(p),
-      !p.done && this.mode !== 'cover' ? this.hintBar(ans, p, wrong) : null,
-      this.mode === 'cover' ? this.coverGuesses(ans, p) : this.table(ans, p),
-      this.mode !== 'endless' && no > 1 ? h('p.gd-yesterday.muted', 'Gestern gesucht: ', h('strong', gdDaily(this.mode, gdShiftDate(this.date, -1)).title)) : null,
+      p.done ? null : this.hintBar(ans, p, wrong),
+      this.yesterday(no),
+      table ? this.table(ans, p) : this.guessChips(ans, p),
     ));
     this.animateLast = false;
+  },
+
+  stage(ans, p, wrong) {
+    if (this.mode === 'quote') return this.quoteStage(ans);
+    if (this.mode === 'emoji') return this.emojiStage(ans, p, wrong);
+    if (this.mode === 'cover') return this.coverStage(ans, p, wrong);
+    if (this.mode === 'scene') return this.sceneStage(ans, p, wrong);
+    return null;
   },
 
   searchBox(p) {
@@ -6334,28 +7510,30 @@ const Gamedle = {
       h('span.gd-count', p.guesses.length ? `${p.guesses.length} ${p.guesses.length === 1 ? 'Versuch' : 'Versuche'}` : ''));
   },
 
+  /* Tipps: immer nur der nächste ist sichtbar (gesperrt oder abrufbar), genutzte bleiben offen */
   hintBar(ans, p, wrong) {
-    const hint = (n, label, show) => {
-      if (wrong < n) return h('span.gd-hint.gd-hint-locked', icon('lock'), `${label} in ${n - wrong}`);
-      return p.hints >= show
-        ? null
-        : h('button.gd-hint', { onclick: () => { p.hints = show; this.save(p); this.render(); } }, '💡 ', label);
-    };
+    const hints = GD_HINTS[this.mode] || [];
+    if (!hints.length) return null;
+    const used = p.hints || 0;
+    const next = hints[used];
     // Ohne Cover (Minecraft, Undertale, Fortnite – oder Wikipedia nicht erreichbar) gibt es stattdessen das Jahr
-    const coverHint = this.hasCover(ans);
-    const shown = [];
-    if (p.hints >= 1) {
+    const kindOf = k => (k === 'cover' && !this.hasCover(ans) ? 'year' : k);
+    const label = k => ({ letter: 'Tipp: Anfangsbuchstabe', cover: 'Tipp: Cover', year: 'Tipp: Erscheinungsjahr', speaker: 'Tipp: Wer spricht?' })[kindOf(k)];
+    const control = !next ? null
+      : wrong < next[1] ? h('span.gd-hint.gd-hint-locked', icon('lock'), `${label(next[0])} in ${next[1] - wrong}`)
+        : h('button.gd-hint', { onclick: () => { p.hints = used + 1; this.save(p); this.render(); } }, '💡 ', label(next[0]));
+    return h('div.gd-hints', control, hints.slice(0, used).map(([k]) => this.hintBox(kindOf(k), ans)));
+  },
+
+  hintBox(kind, ans) {
+    if (kind === 'letter') {
       const { letter, skipped } = gdHintLetter(ans.title);
-      shown.push(h('div.gd-hint-box', 'Anfangsbuchstabe: ', h('strong', letter), skipped ? h('span.muted', ` (ohne „${skipped}“)`) : null));
+      return h('div.gd-hint-box', 'Anfangsbuchstabe: ', h('strong', letter), skipped ? h('span.muted', ` (ohne „${skipped}“)`) : null);
     }
-    if (p.hints >= 2) {
-      const src = this.cover(ans);
-      shown.push(coverHint
-        ? h('div.gd-hint-box', 'Verschwommenes Cover:', src ? h('img.gd-blur', { src, alt: '', referrerpolicy: 'no-referrer' }) : h('span.muted', ' (wird geladen …)'))
-        : h('div.gd-hint-box', 'Erscheinungsjahr: ', h('strong', ans.year)));
-    }
-    return h('div.gd-hints', hint(GD_HINT_LETTER, 'Tipp: Anfangsbuchstabe', 1),
-      p.hints >= 1 ? hint(GD_HINT_COVER, coverHint ? 'Tipp: Cover' : 'Tipp: Erscheinungsjahr', 2) : null, ...shown);
+    if (kind === 'year') return h('div.gd-hint-box', 'Erscheinungsjahr: ', h('strong', ans.year));
+    if (kind === 'speaker') return h('div.gd-hint-box', 'Gesagt von: ', h('strong', GD_QUOTES[ans.id]?.[1] || '?'));
+    const src = this.cover(ans);
+    return h('div.gd-hint-box', 'Verschwommenes Cover:', src ? gdBlurCanvas(src) : h('span.muted', ' (wird geladen …)'));
   },
 
   table(ans, p) {
@@ -6383,8 +7561,23 @@ const Gamedle = {
       h('i.sw.ok', '✓'), 'richtig ', h('i.sw.partial', '~'), 'teilweise ', h('i.sw.no', '✕'), 'falsch · ▲▼ Lösung ist neuer/älter (gelb: höchstens 3 Jahre)'));
   },
 
-  coverStage(ans, p) {
-    const wrong = p.guesses.filter(id => id !== ans.id).length;
+  quoteStage(ans) {
+    return h('figure.gd-quote',
+      h('span.gd-quote-mark', { 'aria-hidden': 'true' }, '“'),
+      h('blockquote', GD_QUOTES[ans.id]?.[0] || '…'));
+  },
+
+  /* Emojis: zu Beginn eins, jeder Fehlversuch deckt ein weiteres auf */
+  emojiStage(ans, p, wrong) {
+    const list = (GD_EMOJI_HINTS[ans.id] || '').split(' ');
+    const shown = p.done ? list.length : Math.min(list.length, 1 + wrong);
+    return h('div.gd-emoji', { role: 'img', 'aria-label': `${shown} von ${list.length} Emojis aufgedeckt: ${list.slice(0, shown).join(' ')}` },
+      list.map((e, i) => (i < shown
+        ? h('span.gd-emoji-slot.on' + (this.animateLast && !p.done && i === shown - 1 ? '.new' : ''), e)
+        : h('span.gd-emoji-slot', '?'))));
+  },
+
+  coverStage(ans, p, wrong) {
     const level = p.done ? 0 : GD_COVER_LEVELS[wrong] || 0;
     const stage = h('div.gd-cover-stage', h('div.gd-cover-msg.muted', 'Cover wird geladen …'));
     const src = this.cover(ans);
@@ -6400,34 +7593,69 @@ const Gamedle = {
     return stage;
   },
 
-  coverGuesses(ans, p) {
+  /* Szene: stark vergrößerter Ausschnitt, der mit jedem Fehlversuch weiter herauszoomt */
+  sceneStage(ans, p, wrong) {
+    const step = p.done ? GD_SCENE_ZOOM.length : Math.min(wrong, GD_SCENE_ZOOM.length);
+    const zoom = GD_SCENE_ZOOM[step] || 1;
+    const [, fx = 50, fy = 50] = GD_SCENES[ans.id] || [];
+    const stage = h('div.gd-scene-stage', h('div.gd-cover-msg.muted', 'Szene wird geladen …'));
+    const src = this.scenes[ans.id];
+    if (src) {
+      const img = new Image();
+      img.referrerPolicy = 'no-referrer';
+      img.onload = () => {
+        stage.style.aspectRatio = `${img.naturalWidth} / ${img.naturalHeight}`;
+        stage.replaceChildren(gdZoom(img, zoom, fx, fy),
+          h('span.gd-cover-level', zoom > 1 ? `Ausschnitt ${step + 1}/${GD_SCENE_ZOOM.length + 1}` : 'Ganzes Bild'));
+      };
+      img.onerror = () => stage.replaceChildren(h('div.gd-cover-msg', 'Die Szene konnte nicht geladen werden. Probier es gleich noch einmal.'));
+      img.src = src;
+    } else if (navigator.onLine === false || this.sceneError) {
+      stage.replaceChildren(h('div.gd-cover-msg', 'Die Szenen kommen von Wikipedia – die ist gerade nicht erreichbar. Prüf deine Internetverbindung oder spiel solange Klassik.'));
+    } else this.loadScene(ans);
+    return stage;
+  },
+
+  guessChips(ans, p) {
     const wrong = p.guesses.filter(id => id !== ans.id);
     return wrong.length ? h('div.gd-chips', wrong.reverse().map(id => h('span.gd-chip', '✕ ', GD_BY_ID.get(id).title))) : null;
+  },
+
+  /* Wie bei Loldle: die Lösung von gestern */
+  yesterday(no) {
+    if (this.mode === 'endless' || no <= 1) return null;
+    const g = this.answerOf(this.mode, gdShiftDate(this.date, -1));
+    const src = this.cover(g);
+    return h('p.gd-yesterday', src ? h('img', { src, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }) : null,
+      h('span', `Gestern (#${no - 1}) gesucht: `, h('strong', g.title)));
   },
 
   resultCard(ans, p) {
     const n = p.guesses.length;
     const src = this.cover(ans);
-    const other = this.mode === 'classic' ? 'cover' : 'classic';
-    const otherDone = Store.get('gd.progress', {})[this.date]?.[other]?.done;
+    const today = Store.get('gd.progress', {})[this.date] || {};
+    // Nächstes noch offenes Tagesrätsel (in der Reihenfolge der Tabs)
+    const i = GD_DAILY_MODES.indexOf(this.mode);
+    const next = this.mode === 'endless' ? null
+      : [...GD_DAILY_MODES.slice(i + 1), ...GD_DAILY_MODES.slice(0, i)].find(m => !today[m]?.done);
+    const speaker = this.mode === 'quote' && GD_QUOTES[ans.id]?.[1];
     return h('div.gd-result',
       src ? h('img.gd-result-cover', { src, alt: '', referrerpolicy: 'no-referrer' }) : null,
       h('div.gd-result-body',
         h('span.gd-result-kicker', this.mode === 'endless' ? 'Richtig!' : `Gamedle #${gdDayNumber(this.date)} gelöst!`),
         h('h3', ans.title),
         h('p.muted', `${ans.year} · ${ans.dev} · ${n} ${n === 1 ? 'Versuch' : 'Versuche'}`),
+        speaker ? h('p.muted', `Gesagt von ${speaker}`) : null,
         h('div.gd-result-actions',
           this.mode === 'endless'
             ? h('button.btn.primary', { onclick: () => { this.newEndless(); this.render(); } }, 'Nächstes Spiel')
             : h('button.btn.primary', {
               // Der geteilte Link führt direkt in diesen Modus
-              onclick: () => gdShare(gdShareText(this.mode, this.date, p.guesses, GD_URL() + (this.mode === 'cover' ? '#/gamedle/cover' : '#/gamedle'), { answer: ans, hints: p.hints || 0 })),
+              onclick: () => gdShare(gdShareText(this.mode, this.date, p.guesses, GD_URL() + gdModeHash(this.mode), { answer: ans, hints: p.hints || 0 })),
             }, icon('upload'), 'Ergebnis teilen'),
-          this.mode !== 'endless' && !otherDone
-            ? h('a.btn', { href: other === 'cover' ? '#/gamedle/cover' : '#/gamedle' }, other === 'cover' ? 'Weiter zum Cover-Rätsel' : 'Weiter zum Klassik-Rätsel')
-            : null),
+          next ? h('a.btn', { href: gdModeHash(next) }, `Weiter: ${GD_MODE_UI[next].label}`) : null),
         this.mode !== 'endless' ? h('p.gd-next.muted', 'Nächstes Rätsel in ', h('strong#gdCountdown', gdFmtDuration(gdMsUntilNext()))) : null,
-        h('a.gd-report', { href: gdReportUrl(ans), target: '_blank', rel: 'noopener' }, 'Daten zu diesem Spiel falsch? Melden')));
+        h('a.gd-report', { href: gdReportUrl(ans, this.mode), target: '_blank', rel: 'noopener' }, 'Daten zu diesem Spiel falsch? Melden')));
   },
 };
 
@@ -6445,15 +7673,44 @@ function gdPixelate(img, level) {
   return c;
 }
 
+/* Bildausschnitt vergrößern – auf der Leinwand landet nur der Ausschnitt */
+function gdZoom(img, zoom, fx, fy) {
+  const W = img.naturalWidth, H = img.naturalHeight;
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const sw = W / zoom, sh = H / zoom;
+  const sx = Math.min(Math.max((fx / 100) * W - sw / 2, 0), W - sw);
+  const sy = Math.min(Math.max((fy / 100) * H - sh / 2, 0), H - sh);
+  const ctx = c.getContext('2d');
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(img, sx, sy, sw, sh, 0, 0, W, H);
+  c.className = 'gd-scene-canvas';
+  return c;
+}
+
+/* Verschwommenes Cover als Tipp: winzig gezeichnet, groß angezeigt. Anders als ein <img> mit
+   CSS-Unschärfe lässt sich so per Rechtsklick nicht das scharfe Original öffnen. */
+function gdBlurCanvas(src) {
+  const c = h('canvas.gd-blur', { width: 9, height: 12, 'aria-hidden': 'true' });
+  const img = new Image();
+  img.referrerPolicy = 'no-referrer';
+  img.onload = () => c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+  img.src = src;
+  return c;
+}
+
 function gdFmtDuration(ms) {
   const s = Math.max(0, Math.floor(ms / 1000));
   return [Math.floor(s / 3600), Math.floor(s / 60) % 60, s % 60].map(x => String(x).padStart(2, '0')).join(':');
 }
 
-/* Vorbefülltes GitHub-Issue mit allen Eigenschaften des Spiels */
-function gdReportUrl(g) {
+/* Vorbefülltes GitHub-Issue mit allen Eigenschaften des Spiels (und dem Inhalt des Modus) */
+function gdReportUrl(g, mode = 'classic') {
   const props = GD_COLUMNS.map(c => `- ${c.label}: ${c.key === 'year' ? g.year : c.fmt ? c.fmt(g[c.key]).replace(/­/g, '') : g[c.key]}`).join('\n');
-  const body = `Spiel: ${g.title}\n\nAktuelle Daten:\n${props}\n\nWas ist falsch und wie wäre es richtig? (gern mit Quelle)\n`;
+  const extra = mode === 'quote' ? `\nZitat: ${GD_QUOTES[g.id]?.[0]} (${GD_QUOTES[g.id]?.[1]})\n`
+    : mode === 'emoji' ? `\nEmojis: ${GD_EMOJI_HINTS[g.id]}\n`
+      : mode === 'scene' ? `\nSzene: File:${GD_SCENES[g.id]?.[0]}\n` : '';
+  const body = `Spiel: ${g.title}\nModus: ${GD_MODE_UI[mode]?.label || mode}\n\nAktuelle Daten:\n${props}\n${extra}\nWas ist falsch und wie wäre es richtig? (gern mit Quelle)\n`;
   return `${GD_ISSUES}?${new URLSearchParams({ title: `Daten: ${g.title}`, body })}`;
 }
 
@@ -6484,12 +7741,12 @@ function gdCelebrate() {
 function gdStatsModal() {
   const stats = Store.get('gd.stats', {});
   const today = gdToday();
-  const block = (mode, label) => {
+  const block = mode => {
     const s = stats[mode] || { won: 0, best: 0, total: 0, dist: {} };
     const buckets = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10+'];
     const max = Math.max(1, ...buckets.map(b => s.dist[b] || 0));
     return h('section.gd-stat-block',
-      h('h3', label),
+      h('h3', GD_MODE_UI[mode].label),
       h('div.gd-stat-nums',
         h('div', h('strong', s.won), h('span', 'Gelöst')),
         h('div', h('strong', gdCurrentStreak(stats, mode, today)), h('span', 'Serie')),
@@ -6498,7 +7755,7 @@ function gdStatsModal() {
       h('div.gd-dist', buckets.map(b => h('div.gd-dist-row', h('span', b),
         h('div.gd-bar', { style: { width: Math.max(4, ((s.dist[b] || 0) / max) * 100) + '%' } }, String(s.dist[b] || 0))))));
   };
-  openModal({ title: 'Deine Statistik', width: 560, autofocus: false, body: h('div.gd-stats', block('classic', 'Klassik'), block('cover', 'Cover')) });
+  openModal({ title: 'Deine Statistik', width: 620, autofocus: false, body: h('div.gd-stats', GD_DAILY_MODES.map(block)) });
 }
 
 function gdHelpModal() {
@@ -6508,26 +7765,34 @@ function gdHelpModal() {
     onchange: e => { Store.set('gd.colorblind', e.target.checked); document.body.classList.toggle('gd-cb', e.target.checked); m.close(); gdHelpModal(); },
   });
   const cbOn = !!Store.get('gd.colorblind');
+  const sub = text => h('h3', { style: { fontSize: '15px' } }, text);
+  const [letterAfter, coverAfter] = GD_HINTS.classic.map(x => x[1]);
   const m = openModal({
-    title: 'So funktioniert Gamedle', width: 520, autofocus: false,
+    title: 'So funktioniert Gamedle', width: 540, autofocus: false,
     body: [
-      h('p', 'Jeden Tag wartet ein neues Spiel – für alle dasselbe. Das Rätsel wechselt um Mitternacht (deutsche Zeit).'),
-      h('h3', { style: { fontSize: '15px' } }, 'Klassik'),
+      h('p', `Jeden Tag warten ${GD_DAILY_MODES.length} neue Rätsel – für alle dieselben. Sie wechseln um Mitternacht (deutsche Zeit); darunter siehst du jeweils die Lösung von gestern.`),
+      sub('Klassik'),
       h('p.help', 'Tipp ein beliebiges Spiel ein. Für jede Eigenschaft siehst du, wie nah du dran bist:'),
       legend('ok', `${cbOn ? 'Blau' : 'Grün'} ✓ – stimmt genau`),
       legend('partial', `${cbOn ? 'Orange' : 'Gelb'} ~ – teilweise (z. B. eines von mehreren Genres oder Plattformen)`),
       legend('no', `${cbOn ? 'Grau' : 'Rot'} ✕ – passt nicht`),
       h('p.help', '▲ / ▼ beim Jahr: Die Lösung ist neuer bzw. älter; die mittlere Farbe heißt höchstens drei Jahre daneben. „Plattform“ meint die Plattformen bei der Erstveröffentlichung.'),
       h('p.help', 'Entwickler & Publisher: Dasselbe Unternehmen unter anderem Namen zählt als richtig (z. B. Sony Computer Entertainment = Sony Interactive Entertainment), Studios einer Familie als teilweise (z. B. Rockstar North ~ Rockstar San Diego).'),
-      h('p.help', `Nach ${GD_HINT_LETTER} Fehlversuchen gibt es den Anfangsbuchstaben als Tipp, nach ${GD_HINT_COVER} ein verschwommenes Cover (bei Spielen ohne Cover das Erscheinungsjahr).`),
+      h('p.help', `Nach ${letterAfter} Fehlversuchen gibt es den Anfangsbuchstaben als Tipp, nach ${coverAfter} ein verschwommenes Cover (bei Spielen ohne Cover das Erscheinungsjahr).`),
       h('label.switch-row',
         h('span', h('strong', 'Farbenblind-Modus'), h('br'), h('span.help', 'Blau / Orange / Grau statt Grün / Gelb / Rot.')),
         h('span.switch', cb, h('span'))),
-      h('h3', { style: { fontSize: '15px' } }, 'Cover'),
+      sub('Zitat'),
+      h('p.help', 'Ein bekanntes Zitat aus dem Spiel – in der Originalsprache, meist Englisch. Nach Fehlversuchen gibt es nacheinander das Erscheinungsjahr, wer es sagt, und den Anfangsbuchstaben.'),
+      sub('Emoji'),
+      h('p.help', 'Fünf Emojis beschreiben das Spiel. Zu Beginn siehst du eins, jeder Fehlversuch deckt ein weiteres auf.'),
+      sub('Cover'),
       h('p.help', 'Erkenne das Spiel am Cover. Es startet stark verpixelt und wird mit jedem Fehlversuch schärfer.'),
-      h('h3', { style: { fontSize: '15px' } }, 'Endlos'),
-      h('p.help', 'Zufällige Spiele zum Üben – zählt nicht für die Statistik.'),
-      h('p.help', `Im Spiele-Pool: ${GD.length} bekannte Spiele von 1980 bis heute. Daten geprüft mit Wikipedia, Cover über Wikipedia.`),
+      sub('Szene'),
+      h('p.help', 'Ein stark vergrößerter Ausschnitt aus einer Spielszene. Mit jedem Fehlversuch zoomt das Bild weiter heraus.'),
+      sub('Endlos'),
+      h('p.help', 'Zufällige Spiele im Klassik-Modus zum Üben – zählt nicht für die Statistik.'),
+      h('p.help', `Im Spiele-Pool: ${GD.length} bekannte Spiele von 1980 bis heute. Daten geprüft mit Wikipedia, Zitate mit Wikiquote; Cover und Szenen kommen von Wikipedia.`),
     ],
   });
 }
@@ -6571,8 +7836,13 @@ const Router = {
 
   renderHub() {
     const today = Store.get('gd.progress', {})[gdToday()] || {};
-    const solved = ['classic', 'cover'].filter(m => today[m]?.done).length;
-    $('#hubBadge').textContent = solved === 2 ? 'Heute alles gelöst ✓' : solved ? 'Heute 1 von 2 gelöst' : `#${gdDayNumber(gdToday())} wartet`;
+    const total = GD_DAILY_MODES.length;
+    const solved = GD_DAILY_MODES.filter(m => today[m]?.done).length;
+    $('#hubBadge').textContent = solved === total ? 'Heute alles gelöst ✓' : solved ? `Heute ${solved} von ${total} gelöst` : `#${gdDayNumber(gdToday())} wartet`;
+    // Ein offener Tierly-Raum läuft im Hintergrund weiter
+    const open = !!App.state;
+    $('#hubTierlyBadge').textContent = !open ? '' : Net.role === 'solo' ? 'Solo-Liste offen' : `Raum ${Net.code} offen`;
+    $('#hubTierlyCta').textContent = open ? 'Zurück zur Tier-Liste →' : 'Tier-Liste starten →';
   },
 };
 

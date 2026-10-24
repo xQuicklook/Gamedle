@@ -52,7 +52,7 @@ const Undo = {
   capture(a) {
     if (this.replaying || !UNDO_LABELS[a?.type]) return null;
     const actions = this.inverse(a);
-    return actions ? { label: UNDO_LABELS[a.type], actions } : null;
+    return actions ? { label: UNDO_LABELS[a.multi ? 'place' : a.type], actions } : null;
   },
 
   push(entry) {

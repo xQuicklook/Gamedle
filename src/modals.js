@@ -80,7 +80,7 @@ function toggleMenu() {
     item('users', Net.role === 'solo' ? 'Freunde einladen' : 'Raum & Spieler', () => roomModal()),
     item('image', 'Als Bild speichern', () => exportPng()),
     item('download', 'Exportieren (JSON)', () => exportJson()),
-    isHost ? item('upload', 'Importieren (JSON)', () => importJson()) : null,
+    ...(isHost ? [item('upload', 'Importieren (JSON)', () => importJson())] : []),
     item('library', 'Gespeicherte Räume', () => roomsModal()),
     h('div.menu-row',
       h('button', { role: 'menuitem', disabled: !Undo.undoStack.length, title: 'Strg + Z', onclick: () => { menu.hidden = true; Undo.undoLast(); } }, icon('rotate'), 'Rückgängig'),
@@ -223,7 +223,7 @@ function roomModal() {
             open
               ? h('button.btn.sm', { onclick: () => { m.close(); newRound(b); } }, icon('rotate'), 'Neue Runde')
               : h('button.btn.sm.primary', { onclick: () => { m.close(); revealNow(b); } }, icon('eye'), 'Aufdecken'));
-        })) : null,
+        })) : '',
         h('label.switch-row',
           h('span', h('strong', 'Nur ich bearbeite Spiele & Stufen'), h('br'), h('span.help', 'Freunde können dann nur noch ranken.')),
           h('span.switch', cb, h('span'))),

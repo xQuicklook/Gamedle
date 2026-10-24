@@ -23,7 +23,8 @@ function dragDown(e) {
   const tile = e.target.closest('.tile');
   if (!tile || tile.classList.contains('readonly') || !tile.closest('#board, #poolBody') || App.view !== 'me') return;
   const touch = e.pointerType !== 'mouse';
-  const s = Drag.start = { x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, id: tile.dataset.id, tile, pid: e.pointerId, touch, timer: 0 };
+  const additive = e.ctrlKey || e.metaKey || e.shiftKey; // Strg/Umschalt-Klick: zur Auswahl hinzufügen
+  const s = Drag.start = { x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, id: tile.dataset.id, tile, pid: e.pointerId, touch, additive, timer: 0 };
   if (touch) s.timer = setTimeout(() => { if (Drag.start === s) dragBegin(s.lx, s.ly); }, 240);
   else e.preventDefault(); // keine Textauswahl
 }
@@ -48,7 +49,7 @@ function dragUp(e) {
   const s = Drag.start;
   if (!s || e.pointerId !== s.pid) return;
   dragReset();
-  tapTile(s.id, s.tile);
+  tapTile(s.id, s.tile, s.additive);
 }
 
 function dragCancel(e) {
@@ -65,19 +66,22 @@ function dragBegin(x, y) {
   const s = Drag.start;
   dragReset();
   if (!s || !s.tile.isConnected) return;
+  // Gehört die Kachel zu einer Mehrfachauswahl, wandert die ganze Auswahl mit
+  const ids = App.sel.length > 1 && App.sel.includes(s.id) ? [...App.sel] : [s.id];
   const r = s.tile.getBoundingClientRect();
   const ghost = s.tile.cloneNode(true);
   ghost.classList.add('ghost');
   ghost.classList.remove('selected');
+  if (ids.length > 1) { ghost.classList.add('stack'); ghost.append(h('span.ghost-count', ids.length)); }
   Object.assign(ghost.style, { width: r.width + 'px', height: r.height + 'px', left: r.left + 'px', top: r.top + 'px' });
   document.body.append(ghost);
-  s.tile.classList.add('dragging-src');
+  for (const id of ids) $$(`#board .tile[data-id="${CSS.escape(id)}"], #poolBody .tile[data-id="${CSS.escape(id)}"]`).forEach(t => t.classList.add('dragging-src'));
   document.body.classList.add('is-dragging');
   if (s.touch && navigator.vibrate) navigator.vibrate(12);
-  if (App.selected) { App.selected = null; $$('.tile.selected').forEach(t => t.classList.remove('selected')); document.body.classList.remove('selecting'); }
+  if (ids.length === 1 && App.sel.length) { App.sel = []; App.updateSelection(false); }
 
   Drag.active = {
-    id: s.id, src: s.tile, pid: s.pid, ghost,
+    id: s.id, ids, src: s.tile, pid: s.pid, ghost,
     offX: x - r.left, offY: y - r.top, x, y,
     placeholder: h('div.tile-placeholder'),
     target: null,
@@ -99,7 +103,7 @@ function dragTo(x, y) {
 
   if (tier) {
     const box = tier.querySelector('.tier-items');
-    const tiles = [...box.children].filter(c => c.classList.contains('tile') && c !== d.src);
+    const tiles = [...box.children].filter(c => c.classList.contains('tile') && !d.ids.includes(c.dataset.id));
     const before = tiles.find(t => {
       const r = t.getBoundingClientRect();
       return y < r.top || (y <= r.bottom && x < r.left + r.width / 2);
@@ -146,34 +150,37 @@ function dragFinish(target) {
   cancelAnimationFrame(Drag.scrollRaf);
   d.ghost.remove();
   d.placeholder.remove();
-  d.src.classList.remove('dragging-src');
+  $$('.dragging-src').forEach(t => t.classList.remove('dragging-src'));
   document.body.classList.remove('is-dragging');
   $$('.drop-hover').forEach(n => n.classList.remove('drop-hover'));
   Drag.active = null;
   Drag.lastDrop = Date.now();
 
   if (target) {
-    const fromPool = !!d.src.closest('#poolBody');
+    const placed = new Set(Object.values(App.state.rankings[App.me.id]?.[App.board] || {}).flat());
+    const fromPool = d.ids.every(id => !placed.has(id));
     if (!(target.tierId === null && fromPool)) {
-      App.dispatch({ type: 'place', board: App.board, itemId: d.id, tierId: target.tierId, index: target.index });
+      if (d.ids.length > 1) { App.sel = d.ids; App.placeSelection(target.tierId, target.index); }
+      else App.dispatch({ type: 'place', board: App.board, itemId: d.id, tierId: target.tierId, index: target.index });
       return;
     }
   }
   if (App.renderPending) App.render();
 }
 
-/* Tap-to-place: erst auswählen, dann Ziel antippen */
-function tapTile(id, tile) {
+/* Tap-to-place: erst auswählen, dann Ziel antippen. additive (Strg/Umschalt-Klick oder
+   Mehrfachauswahl-Modus) nimmt die Kachel zur Auswahl hinzu bzw. wieder heraus. */
+function tapTile(id, tile, additive = false) {
   Drag.lastDrop = Date.now(); // das click-Event dieser Geste nicht als Ziel-Tap werten
   const inTier = tile.closest('.tier');
-  if (App.selected && App.selected !== id && inTier) {
+  if (additive || App.multi) {
+    App.toggleSelect(id);
+  } else if (App.sel.length && !App.sel.includes(id) && inTier) {
     const box = inTier.querySelector('.tier-items');
-    const ids = [...box.querySelectorAll('.tile')].map(t => t.dataset.id).filter(x => x !== App.selected);
-    const itemId = App.selected;
-    App.selected = null;
-    App.dispatch({ type: 'place', board: App.board, itemId, tierId: inTier.dataset.tier, index: ids.indexOf(id) });
+    const ids = [...box.querySelectorAll('.tile')].map(t => t.dataset.id).filter(x => !App.sel.includes(x));
+    App.placeSelection(inTier.dataset.tier, ids.indexOf(id));
   } else {
-    App.selected = App.selected === id ? null : id;
+    App.sel = App.sel.length === 1 && App.sel[0] === id ? [] : [id];
     App.updateSelection(); // kein Neuaufbau, damit das folgende click-Event die Kachel trifft
   }
 }

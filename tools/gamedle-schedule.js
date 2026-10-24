@@ -1,5 +1,5 @@
 // Pflegt den festen Rätsel-Spielplan (src/gamedle-schedule.js).
-// Ausführen nach dem Hinzufügen neuer Spiele: node tools/gamedle-schedule.js
+// Ausführen nach dem Hinzufügen neuer Spiele oder Inhalte: node tools/gamedle-schedule.js
 //
 // Regeln: Bestehende Einträge werden NIE umsortiert – neue Spiele kommen gemischt ans Ende.
 // So bleiben vergangene und kommende Rätsel stabil, egal wie der Spiele-Pool wächst.
@@ -12,12 +12,12 @@ const root = path.join(__dirname, '..');
 const src = f => fs.readFileSync(path.join(root, 'src', f), 'utf8');
 const file = path.join(root, 'src', 'gamedle-schedule.js');
 const ctx = { Intl, Date, Map, Set };
-const { GD, GD_NO_COVER, gdRng, gdHash, gdDayNumber, gdToday } = vm.runInNewContext(
-  `${src('gamedle-data.js')}\nconst GD_SCHEDULE = null;\n${src('gamedle-core.js')}\n;({ GD, GD_NO_COVER, gdRng, gdHash, gdDayNumber, gdToday })`, ctx);
+const { GD, GD_DAILY_MODES, gdPool, gdRng, gdHash, gdDayNumber, gdToday } = vm.runInNewContext(
+  `${src('gamedle-data.js')}\n${src('gamedle-content.js')}\nconst GD_SCHEDULE = null;\n${src('gamedle-core.js')}\n;({ GD, GD_DAILY_MODES, gdPool, gdRng, gdHash, gdDayNumber, gdToday })`, ctx);
 
 const existing = fs.existsSync(file)
   ? vm.runInNewContext(`${fs.readFileSync(file, 'utf8')}\n;GD_SCHEDULE`)
-  : { classic: [], cover: [] };
+  : {};
 
 const shuffle = (ids, seed) => {
   const out = [...ids].sort();
@@ -29,11 +29,11 @@ const shuffle = (ids, seed) => {
 const known = new Set(GD.map(g => g.id));
 const day = gdDayNumber(gdToday());
 const result = {};
-for (const mode of ['classic', 'cover']) {
-  const pool = GD.filter(g => mode === 'classic' || !GD_NO_COVER.has(g.title)).map(g => g.id);
+for (const mode of GD_DAILY_MODES) {
+  const pool = gdPool(mode).map(g => g.id);
   const plan = existing[mode] || [];
-  const missing = plan.filter(id => !known.has(id));
-  if (missing.length) throw new Error(`${mode}: Spiele fehlen in den Daten (nie löschen!): ${missing.join(', ')}`);
+  const missing = plan.filter(id => !known.has(id) || !pool.includes(id));
+  if (missing.length) throw new Error(`${mode}: Spiele fehlen in den Daten oder Inhalten (nie löschen!): ${missing.join(', ')}`);
   const fresh = pool.filter(id => !plan.includes(id));
   // Erstanlage: dieselbe Mischung wie die bisherige Berechnung → laufende Rätsel bleiben gleich
   const add = shuffle(fresh, plan.length ? `gamedle:${mode}:${plan.length}` : `gamedle:${mode}`);
@@ -47,15 +47,10 @@ for (const mode of ['classic', 'cover']) {
 
 const lines = ids => ids.map((id, i) => `    '${id}', // ${i + 1}`).join('\n');
 fs.writeFileSync(file, `/* ───────── Gamedle: fester Rätsel-Spielplan ─────────
-   Tag n (Gamedle #n) bekommt den n-ten Eintrag; danach beginnt der Plan von vorn.
+   Tag n (Gamedle #n) bekommt je Modus den n-ten Eintrag; danach beginnt der Plan von vorn.
    NICHT von Hand umsortieren – neue Spiele hängt tools/gamedle-schedule.js ans Ende. */
 const GD_SCHEDULE = {
-  classic: [
-${lines(result.classic)}
-  ],
-  cover: [
-${lines(result.cover)}
-  ],
+${GD_DAILY_MODES.map(mode => `  ${mode}: [\n${lines(result[mode])}\n  ],`).join('\n')}
 };
 `);
-console.log(`Gespeichert: ${path.relative(root, file)} (${result.classic.length} Klassik, ${result.cover.length} Cover)`);
+console.log(`Gespeichert: ${path.relative(root, file)} (${GD_DAILY_MODES.map(m => `${result[m].length} ${m}`).join(', ')})`);

@@ -34,7 +34,7 @@ function showTips() {
       h('div.tips-ico', icon(st.icon)),
       h('h3', st.title),
       h('p', st.text),
-      st.keys ? h('div.keys', st.keys.map(([k, d]) => [h('kbd', k), h('span', d)])) : null,
+      ...(st.keys ? [h('div.keys', st.keys.map(([k, d]) => [h('kbd', k), h('span', d)]))] : []),
       h('div.tips-dots', steps.map((_, j) => h('i' + (j === i ? '.on' : '')))),
     );
     back.hidden = i === 0;

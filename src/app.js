@@ -4,7 +4,8 @@ const App = {
   state: null,
   board: 'games',
   view: 'me',            // 'me' | 'group' | Spieler-ID
-  selected: null,        // Tap-to-place Auswahl
+  sel: [],               // Tap-to-place-Auswahl (mehrere möglich, in Auswahl-Reihenfolge)
+  multi: false,          // Mehrfachauswahl per Antippen (für Touch)
   filter: { q: '', decade: null, sort: 'year' },
   renderQueued: false,
   renderPending: false,
@@ -182,7 +183,8 @@ const App = {
     $('#board').replaceChildren();
     $('#poolBody')._sig = null;
     this.state = null;
-    this.selected = null;
+    this.sel = [];
+    this.multi = false;
     this.view = 'me';
     closeAllModals();
     $('#app').hidden = true;
@@ -341,7 +343,7 @@ const App = {
     if (!this.state || $('#app').hidden) return;
     this.renderPending = false;
     if (!['me', 'group', 'stats'].includes(this.view) && !this.state.players[this.view]) this.view = 'me';
-    document.body.classList.toggle('selecting', !!this.selected);
+    document.body.classList.toggle('selecting', this.sel.length > 0);
     this.renderTopbar();
     this.renderToolbar();
     this.renderHint();
@@ -393,7 +395,7 @@ const App = {
     seg.replaceChildren(
       btn('me', 'Meine Liste'),
       btn('group', locked ? lock() : icon('users'), 'Gruppe'),
-      Net.role === 'solo' ? null : btn('stats', locked ? lock() : icon('chart'), 'Statistik'),
+      ...(Net.role === 'solo' ? [] : [btn('stats', locked ? lock() : icon('chart'), 'Statistik')]),
       ...others.map(p => btn(p.id, h('span.mini-dot', { style: { background: p.color } }), p.name, lock())),
     );
     seg.hidden = Net.role === 'solo' && !others.length;
@@ -409,15 +411,43 @@ const App = {
   },
 
   updateSelection(withHint = true) {
-    document.body.classList.toggle('selecting', !!this.selected);
+    document.body.classList.toggle('selecting', this.sel.length > 0);
     $$('#app .tile.selected').forEach(t => t.classList.remove('selected'));
-    if (this.selected) $$(`#app .tile[data-id="${CSS.escape(this.selected)}"]`).forEach(t => t.classList.add('selected'));
+    for (const id of this.sel) $$(`#app .tile[data-id="${CSS.escape(id)}"]`).forEach(t => t.classList.add('selected'));
+    $('#multiBtn').setAttribute('aria-pressed', String(this.multi));
     if (withHint) this.renderHint();
+  },
+
+  toggleSelect(id) {
+    this.sel = this.sel.includes(id) ? this.sel.filter(x => x !== id) : [...this.sel, id];
+    this.updateSelection();
+  },
+
+  clearSelection() {
+    this.sel = [];
+    this.multi = false;
+    this.updateSelection();
+  },
+
+  /* Ausgewählte Spiele gemeinsam einsortieren (tierId null = zurück in die Liste) */
+  placeSelection(tierId, index) {
+    const known = new Set(boardItems(this.state, this.board).map(it => it.id));
+    const ids = this.sel.filter(id => known.has(id));
+    this.sel = [];
+    if (ids.length === 1) this.dispatch({ type: 'place', board: this.board, itemId: ids[0], tierId, index });
+    else if (ids.length > 1) {
+      const rows = placeMany(this.state.rankings[this.me.id]?.[this.board], ids, tierId, index);
+      if (this.dispatch({ type: 'ranking/set', board: this.board, rows, multi: true })) {
+        toast(`${ids.length} ${this.board === 'games' ? 'Spiele' : 'Franchises'} ${tierId ? 'einsortiert' : 'zurück in die Liste'}`, 4000,
+          { label: 'Rückgängig', onClick: () => Undo.undoLast() });
+      }
+    }
+    this.render();
   },
 
   setView(view) {
     this.view = view;
-    this.selected = null;
+    this.sel = [];
     this.render();
     $('#boardWrap').scrollTop = 0;
   },
@@ -437,10 +467,16 @@ const App = {
           : `Host nicht erreichbar – ${next.name} übernimmt den Raum in ${Migration.secondsLeft()} s automatisch.`;
       el.append(icon('wifi'), h('span', { style: { flex: 1 } }, text),
         h('button.btn.sm', { onclick: () => confirmDialog('Raum jetzt übernehmen?', 'Du wirst neuer Host mit dem zuletzt bekannten Stand. Die anderen verbinden sich automatisch mit dir.', 'Übernehmen').then(ok => ok && this.takeOver()) }, 'Jetzt übernehmen'));
-    } else if (this.selected && this.view === 'me') {
-      const it = boardItems(s, this.board).find(x => x.id === this.selected);
-      el.append(h('span', { style: { flex: 1 } }, h('strong', `„${it?.title || ''}“`), ' ausgewählt – tippe auf eine Stufe oder ein Spiel, um es dort einzusortieren.'),
-        h('button.btn.sm', { onclick: () => { this.selected = null; this.render(); } }, 'Abbrechen'));
+    } else if ((this.sel.length || this.multi) && this.view === 'me') {
+      const n = this.sel.length;
+      const it = n === 1 && boardItems(s, this.board).find(x => x.id === this.sel[0]);
+      const touch = matchMedia('(pointer: coarse)').matches;
+      el.append(icon('checks'), h('span', { style: { flex: 1 } },
+        !n ? 'Mehrfachauswahl: Tippe alle Spiele an, die zusammen in eine Stufe sollen.'
+          : it && !this.multi ? [h('strong', `„${it.title}“`), ' ausgewählt – tippe auf eine Stufe oder ein Spiel, um es dort einzusortieren.',
+            touch ? '' : ' Mit Strg- oder Umschalt-Klick wählst du weitere aus.']
+            : [h('strong', `${n} ausgewählt`), ` – tippe auf eine Stufe (z. B. ihren Namen), um ${n === 1 ? 'es' : 'alle'} dort einzusortieren.`]),
+        h('button.btn.sm', { onclick: () => this.clearSelection() }, 'Abbrechen'));
     } else if (this.view !== 'me' && this.hidden()) {
       // Sperrbildschirm erklärt sich selbst
     } else if (this.view === 'group') {
@@ -530,6 +566,7 @@ const App = {
   renderPool() {
     const s = this.state;
     const readonly = this.view !== 'me';
+    $('#multiBtn').hidden = readonly;
     if (readonly && this.hidden()) {
       $('#poolBody')._sig = null;
       $('#poolTitle').textContent = 'Verdeckt';
@@ -604,7 +641,7 @@ const App = {
   wireApp() {
     $$('.tab').forEach(t => t.addEventListener('click', () => {
       this.board = t.dataset.board;
-      this.selected = null;
+      this.sel = [];
       Store.set('ui', { board: this.board, sort: this.filter.sort });
       this.render();
     }));
@@ -630,17 +667,23 @@ const App = {
       if (e.target.closest('button')) return;
       const tile = e.target.closest('.tile');
       if (tile && tile.classList.contains('readonly')) { itemModal(tile.dataset.id); return; }
-      if (!this.selected || this.view !== 'me' || tile) return;
+      if (!this.sel.length || this.view !== 'me' || tile) return;
       const tier = e.target.closest('.tier');
-      if (tier) { this.dispatch({ type: 'place', board: this.board, itemId: this.selected, tierId: tier.dataset.tier }); this.selected = null; this.render(); return; }
-      if (e.target.closest('#poolBody')) { this.dispatch({ type: 'place', board: this.board, itemId: this.selected, tierId: null }); this.selected = null; this.render(); }
+      if (tier) this.placeSelection(tier.dataset.tier);
+      else if (e.target.closest('#poolBody')) this.placeSelection(null);
     });
+    $('#multiBtn').append(icon('checks'), h('span', 'Mehrere'));
+    $('#multiBtn').onclick = () => {
+      this.multi = !this.multi;
+      if (!this.multi) this.sel = [];
+      this.updateSelection();
+    };
 
     document.addEventListener('keydown', e => {
       if (e.key !== 'Escape') return;
       if (closeTopModal()) return;
       if (!$('#menu').hidden) { $('#menu').hidden = true; return; }
-      if (this.selected) { this.selected = null; this.render(); }
+      if (this.sel.length || this.multi) this.clearSelection();
     });
     // Strg+Z / Strg+Umschalt+Z (bzw. Strg+Y) – nicht, während man in einem Feld tippt
     document.addEventListener('keydown', e => {
@@ -685,9 +728,11 @@ const App = {
       e.preventDefault();
       siblings[siblings.indexOf(tile) + (e.key === 'ArrowRight' ? 1 : -1)]?.focus();
       return;
-    } else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tapTile(id, tile); return; }
+    } else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tapTile(id, tile, e.shiftKey); return; }
     if (!target) return;
     e.preventDefault();
+    // Teil einer Mehrfachauswahl? Dann wandern alle ausgewählten mit (Zahlen & Entf)
+    if (this.sel.length > 1 && this.sel.includes(id) && !e.key.startsWith('Arrow')) { this.placeSelection(target.tierId); return; }
     // Aus der Liste platziert → gleich die nächste Kachel der Liste fokussieren (schnelles Durchranken)
     this.focusId = cur < 0 && target.tierId ? neighbour?.dataset.id || id : id;
     this.dispatch({ type: 'place', board: this.board, itemId: id, tierId: target.tierId, index: target.index });
@@ -746,7 +791,7 @@ const TileCache = {
     this.used.add(k);
     let el = this.map.get(k);
     if (!el) { el = makeTile(it, opts); this.map.set(k, el); }
-    el.classList.toggle('selected', App.selected === it.id);
+    el.classList.toggle('selected', App.sel.includes(it.id));
     return el;
   },
   touch(it, opts) { this.used.add(tileKey(it, opts)); },
@@ -776,7 +821,7 @@ function makeTile(item, { readonly = false, group = false } = {}) {
   if (srcs.length) el.classList.add('has-img');
   if (isFr) el.classList.add('fr');
   if (readonly) el.classList.add('readonly');
-  if (App.selected === item.id) el.classList.add('selected');
+  if (App.sel.includes(item.id)) el.classList.add('selected');
   if (group && item._votes) {
     el.append(h('div.tile-votes', item._votes.slice(0, 6).map(v => h('i', { style: { background: App.state.players[v.pid]?.color || '#888' } }))));
   }

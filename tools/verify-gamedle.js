@@ -1,13 +1,14 @@
 // Prüft die Gamedle-Daten gegen die Infoboxen der englischen Wikipedia.
 // Ausführen: node tools/verify-gamedle.js   (braucht Internet)
-// Meldet Abweichungen bei Jahr, Entwickler, Publisher und Plattformen sowie fehlende Cover.
+// Meldet Abweichungen bei Jahr, Entwickler, Publisher und Plattformen, fehlende Cover,
+// Zitate, die nicht (mehr) auf ihrer Wikiquote-Seite stehen, und fehlende Szenen-Bilder.
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
-const { fetchPages, infobox, families, years, norm } = require('./lib-wikipedia');
+const { api, fetchPages, fetchQuotePages, flatText, infobox, families, years, norm } = require('./lib-wikipedia');
 
-const code = fs.readFileSync(path.join(__dirname, '..', 'src', 'gamedle-data.js'), 'utf8');
-const { GD_GAMES } = vm.runInNewContext(`${code}\n;({ GD_GAMES })`);
+const src = f => fs.readFileSync(path.join(__dirname, '..', 'src', f), 'utf8');
+const { GD_GAMES, GD_QUOTES, GD_SCENES } = vm.runInNewContext(`${src('gamedle-data.js')}\n${src('gamedle-content.js')}\n;({ GD_GAMES, GD_QUOTES, GD_SCENES })`);
 
 // Bewusst so gelassen (geläufiger Name statt internem Team) – nicht erneut melden
 const ACCEPTED = new Set([
@@ -36,6 +37,28 @@ const ACCEPTED = new Set([
     const fam = new Set(families(box.platforms || box.platform || ''));
     const extra = r.plats.filter(x => !fam.has(x));
     if (fam.size && extra.length) issues.push([r.title, 'Plattform', `${r.plats.join(',')} ↔ ${[...fam].join(',')} (${(box.platforms || '').slice(0, 70)})`]);
+  }
+
+  // Zitate: Stehen sie wörtlich auf der angegebenen Wikiquote-Seite?
+  const titleOf = Object.fromEntries(GD_GAMES.map(g => [norm(g[0]).replace(/ /g, '-'), g[0]]));
+  const nameOf = id => titleOf[id] || id;
+  const quotePages = await fetchQuotePages([...new Set(Object.values(GD_QUOTES).map(q => q[2]))]);
+  for (const [id, [text, , page]] of Object.entries(GD_QUOTES)) {
+    const wiki = quotePages.get(page);
+    if (!wiki) issues.push([nameOf(id), 'Zitat-Quelle fehlt', page]);
+    else if (!flatText(wiki).includes(flatText(text))) issues.push([nameOf(id), 'Zitat nicht auf Wikiquote', `„${text.slice(0, 70)}“ (${page})`]);
+  }
+
+  // Szenen: Gibt es die Bilddateien noch?
+  const files = Object.entries(GD_SCENES).map(([id, s]) => [id, 'File:' + s[0]]);
+  for (let i = 0; i < files.length; i += 50) {
+    const chunk = files.slice(i, i + 50);
+    const data = await api({ action: 'query', titles: chunk.map(f => f[1]).join('|'), prop: 'imageinfo', iiprop: 'size' });
+    const step = new Map((data.query.normalized || []).map(r => [r.from, r.to]));
+    for (const [id, f] of chunk) {
+      const p = data.query.pages.find(x => x.title === (step.get(f) || f));
+      if (!p?.imageinfo) issues.push([nameOf(id), 'Szene fehlt', f]);
+    }
   }
 
   const open = issues.filter(([t, k]) => !ACCEPTED.has(`${t}|${k}`));
