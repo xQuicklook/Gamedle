@@ -10,10 +10,11 @@ const vm = require('node:vm');
 // und die benötigten Funktionen herausreichen
 const src = f => fs.readFileSync(path.join(__dirname, '..', 'src', f), 'utf8');
 const ctx = vm.createContext({ crypto: globalThis.crypto, TextEncoder, console, structuredClone });
-const T = vm.runInContext(`${['presets.js', 'core.js', 'wiki.js', 'gamedle-data.js', 'gamedle-core.js'].map(src).join('\n')}\n;({
+const T = vm.runInContext(`${['gamedle-data.js', 'catalog.js', 'presets.js', 'core.js', 'wiki.js'].map(src).join('\n')}\n;({
   initialState, applyAction, visibleState, isBlind, placedCount, groupView, keyHash, itemIndex, adoptRanking, PROTOCOL,
   normalizeAction, opFor, statsFor, franchiseSuggestion, imgAllowed, FULL_SYNC_ACTIONS, placeMany,
-  ratedTiers, boardItems, genreKeys, knownGenres, GAME_PRESET, GD_GENRES,
+  ratedTiers, boardItems, genreKeys, knownGenres, catalogEntry, presetPacks, norm,
+  CATALOG, CATALOG_EXTRA, CATALOG_SHORT, GD_GAMES, GD_GENRES, GD_PLATFORMS, GD_MODES, PACK_MIN, SMALL_PACK_MIN,
 })`, ctx);
 const clone = o => JSON.parse(JSON.stringify(o));
 
@@ -341,14 +342,56 @@ test('Genres: Wikidata-Namen werden auf unsere Genres abgebildet', () => {
   }
 });
 
-test('Genres: alle Vorlagen-Spiele haben kuratierte Genres, gleichnamige andere Spiele nicht', () => {
-  for (const g of T.GAME_PRESET) {
-    const genres = T.knownGenres({ wiki: g[3] || g[0], title: g[0], year: g[1] });
-    assert.ok(genres?.length, `${g[0]}: kein Genre`);
-    for (const k of genres) assert.ok(T.GD_GENRES[k], `${g[0]}: Genre ${k}`);
-  }
+test('Genres: kuratiert aus dem Katalog, gleichnamige andere Spiele nicht', () => {
+  same(T.knownGenres({ title: 'Tetris', year: 1984 }), ['puz']);
   assert.ok(T.knownGenres({ title: 'Hollow Knight', year: 2017 }));
   assert.equal(T.knownGenres({ title: 'Hollow Knight', year: 2031 }), null, 'anderes Jahr → anderes Spiel');
+});
+
+/* ───────── Spielekatalog & Pakete ───────── */
+
+test('Katalog: Gamedle-Spiele plus Tierly-Extras, eindeutig und mit bekannten Kürzeln', () => {
+  assert.equal(T.CATALOG.length, T.GD_GAMES.length + T.CATALOG_EXTRA.length);
+  const wikis = new Set(), names = new Set();
+  for (const g of T.CATALOG) {
+    assert.ok(!wikis.has(g.wiki), `${g.title}: Artikel doppelt`);
+    assert.ok(!names.has(T.norm(g.name)), `${g.title}: Name doppelt`);
+    wikis.add(g.wiki); names.add(T.norm(g.name));
+    assert.ok(g.year >= 1970 && g.year <= 2030, `${g.title}: Jahr`);
+    for (const k of g.genres) assert.ok(T.GD_GENRES[k], `${g.title}: Genre ${k}`);
+    for (const k of g.plats) assert.ok(T.GD_PLATFORMS[k], `${g.title}: Plattform ${k}`);
+    for (const k of g.modes) assert.ok(T.GD_MODES[k], `${g.title}: Spielmodus ${k}`);
+  }
+  // Ein Extra, das inzwischen in den Gamedle-Daten steht, muss aus CATALOG_EXTRA raus
+  for (const g of T.CATALOG.filter(x => !x.gamedle)) {
+    assert.ok(!T.GD_GAMES.some(r => T.norm(r[0]) === T.norm(g.title) || (r[10] || r[0]) === g.wiki), `${g.title} steht doppelt`);
+  }
+});
+
+test('Katalog: Tierly-Kurznamen sind Alternativnamen und führen zum richtigen Spiel', () => {
+  for (const [title, short] of Object.entries(T.CATALOG_SHORT)) {
+    const g = T.CATALOG.find(x => x.title === title);
+    assert.ok(g, `${title}: nicht im Katalog`);
+    assert.ok(g.aliases.includes(short), `${short}: kein Alternativname von ${title}`);
+    assert.equal(T.catalogEntry({ title: short, year: g.year }), g);
+  }
+  // Räume mit älteren Vorlagen-Titeln werden erkannt (über Artikel oder Namen)
+  assert.equal(T.catalogEntry({ title: 'Zelda: Ocarina of Time', year: 1998 })?.title, 'The Legend of Zelda: Ocarina of Time');
+  assert.equal(T.catalogEntry({ title: 'Doom', year: 2016 }), null, 'Doom 2016 ist nicht Doom 1993');
+});
+
+test('Pakete: nur ausreichend große, eindeutige IDs, Reihen ab 5 Spielen', () => {
+  const packs = T.presetPacks();
+  assert.equal(new Set(packs.map(p => p.id)).size, packs.length);
+  for (const p of packs) assert.ok(p.games.length >= (p.min || T.PACK_MIN), p.name);
+  assert.ok(packs.filter(p => p.id.startsWith('series:')).every(p => p.min === T.SMALL_PACK_MIN));
+  assert.equal(packs.find(p => p.id === 'all').games.length, T.CATALOG.length);
+  for (const id of ['rpg', 'shooter', 'nintendo', 'coop']) assert.ok(packs.some(p => p.id === id), `Paket ${id} fehlt`);
+  const mario = packs.find(p => p.id === 'series:Super Mario');
+  assert.ok(mario && mario.games.every(g => g.series === 'Super Mario'));
+  // Jedes Jahrzehnt-Paket deckt genau seine Jahre ab
+  const decades = packs.filter(p => /^\d0$/.test(p.id));
+  assert.equal(decades.reduce((n, p) => n + p.games.length, 0), T.CATALOG.length);
 });
 
 test('Bildquellen: Wikipedia und Uploads erlaubt, fremde Links nur nach Freigabe', () => {

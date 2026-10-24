@@ -21,6 +21,7 @@ const Router = {
 
   show(view, sub) {
     if (this.current === 'gamedle' && view !== 'gamedle') Gamedle.close();
+    if (this.current && this.current !== view) closeAllModals(); // z. B. Zurück-Taste bei offenem Fenster
     this.current = view;
     const tierlyActive = !!App.state && !$('#app').hidden;
     $('#hub').hidden = view !== 'hub';

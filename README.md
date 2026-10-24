@@ -30,6 +30,16 @@ Gamedle-Daten gegen die Wikipedia-Infoboxen prüfen – inklusive Zitate (müsse
 node tools/verify-gamedle.js
 ```
 
+## Spielekatalog
+
+Beide Module nutzen einen gemeinsamen Katalog (`src/catalog.js`):
+
+- **Gamedle-Spiele** (`src/gamedle-data.js`) – vollständig gegen Wikipedia geprüft. Sie sind zugleich Tierly-Startspiele.
+- **Nur für Tierly** (`CATALOG_EXTRA` in `src/catalog.js`) – Basisdaten genügen (Jahr, Genres, Plattform, Reihe, Spielmodi). Sobald ein Spiel mit allen Rätsel-Angaben geprüft ist, zieht es nach `gamedle-data.js` um (der Test meldet doppelte Einträge).
+- **Kurznamen** (`CATALOG_SHORT`) – kürzere bzw. deutsche Namen für Tierly, z. B. „Zelda: Ocarina of Time“. Jeder Kurzname muss ein Alternativname des Spiels sein.
+
+Die Tierly-Pakete (`src/presets.js`) sind Filter über den Katalog – nach Jahrzehnt, Genre, Plattform, Spielweise und Reihe. Ein neues Spiel landet so automatisch in allen passenden Paketen; Pakete unter 12 Spielen (Jahrzehnte und Reihen: unter 5) bleiben ausgeblendet, bis der Katalog groß genug ist.
+
 ## Neue Spiele für Gamedle
 
 1. Entwürfe aus Wikipedia erzeugen lassen (mit `PRÜFEN` markierte Felder von Hand kontrollieren – vor allem die Plattform *bei Erstveröffentlichung* und die Perspektive):
@@ -91,6 +101,8 @@ Nach ein bis zwei Minuten ist die neue Version online.
 | Datei | Inhalt |
 | --- | --- |
 | `src/hub.js` | Übersicht & Navigation (`#/`, `#/gamedle`, `#/tierly`, Raum-Codes) |
+| `src/catalog.js` | Gemeinsamer Spielekatalog (Gamedle-Spiele + Tierly-Extras, Kurznamen) |
+| `src/presets.js` | Tierly-Pakete (Filter über den Katalog) und Stufen-Vorlagen |
 | `src/gamedle-data.js` | Kuratierte Spieldaten (≈200 Spiele, geprüft gegen Wikipedia) |
 | `src/gamedle-content.js` | Emojis, Zitate (geprüft gegen Wikiquote) und Szenen-Bilder |
 | `src/gamedle-core.js` | Tagesrätsel, Vergleich, Suche, Teilen, Statistik |

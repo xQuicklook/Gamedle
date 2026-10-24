@@ -85,7 +85,7 @@ function libraryModal(tab = null, query = '') {
   tab = tab || (query || App.state.order.length ? 'add' : 'packs');
   const content = h('div', { style: { display: 'flex', flexDirection: 'column', gap: '14px' } });
   const mkTabs = () => tabbed([
-    ['add', 'Suchen'], ['packs', 'Vorlagen'], ['import', 'Liste'], ['list', `Bibliothek (${App.state.order.length})`],
+    ['add', 'Suchen'], ['packs', 'Pakete'], ['import', 'Liste'], ['list', `Bibliothek (${App.state.order.length})`],
   ], tab, t => { tab = t; refresh(); });
   let tabsEl = mkTabs();
   const refreshTabs = () => { const n = mkTabs(); tabsEl.replaceWith(n); tabsEl = n; };
@@ -159,34 +159,38 @@ function libraryModal(tab = null, query = '') {
     },
 
     packs() {
-      const known = new Set(libItems().map(it => norm(it.title)));
+      // Schon im Raum? Über den Katalog – so zählen auch ältere Titel wie „Zelda: Ocarina of Time“
+      const have = new Set(libItems().map(catalogEntry).filter(Boolean));
+      const packs = presetPacks();
+      const pack = p => {
+        const fresh = p.games.filter(g => !have.has(g));
+        const btn = h('button.btn.sm' + (fresh.length ? '.primary' : ''), {
+          disabled: !fresh.length,
+          onclick: async () => {
+            btn.disabled = true;
+            btn.textContent = 'Lade Cover …';
+            let found = new Map();
+            try { found = await Wiki.byTitles(fresh.map(g => g.wiki)); }
+            catch (e) { console.warn(e); toast('Cover nicht erreichbar – Spiele werden ohne Cover hinzugefügt.'); }
+            const before = App.state.order.length;
+            App.dispatch({
+              type: 'items/add',
+              items: fresh.map(g => {
+                const info = found.get(g.wiki);
+                return { title: g.name, year: g.year, franchise: g.series, wiki: info?.wiki || g.wiki, img: info?.img || '', genres: g.genres };
+              }),
+            });
+            const n = App.state.order.length - before;
+            toast(n ? `${n} Spiele hinzugefügt` : 'Alle Spiele waren schon vorhanden.');
+            refresh();
+          },
+        }, fresh.length ? (fresh.length === p.games.length ? 'Hinzufügen' : `+ ${fresh.length} neue`) : 'Schon drin');
+        return h('div.pack', h('div.pack-info', h('strong', p.name), h('span', `${p.desc} · ${p.games.length} Spiele`)), btn);
+      };
       return [
-        h('p.help', 'Bekannte Spiele aus mehreren Jahrzehnten – inklusive Cover, Genre und Franchise-Zuordnung. Bereits vorhandene Titel werden übersprungen.'),
-        ...PRESET_PACKS.map(p => {
-          const games = GAME_PRESET.filter(([, y]) => p.filter(y));
-          const fresh = games.filter(([t]) => !known.has(norm(t)));
-          const btn = h('button.btn.sm' + (fresh.length ? '.primary' : ''), {
-            disabled: !fresh.length,
-            onclick: async () => {
-              btn.disabled = true;
-              btn.textContent = 'Lade Cover …';
-              let found = new Map();
-              try { found = await Wiki.byTitles(fresh.map(presetWikiTitle)); }
-              catch (e) { console.warn(e); toast('Cover nicht erreichbar – Spiele werden ohne Cover hinzugefügt.'); }
-              App.dispatch({
-                type: 'items/add',
-                items: fresh.map(g => {
-                  const info = found.get(presetWikiTitle(g));
-                  const genres = knownGenres({ wiki: presetWikiTitle(g), title: g[0], year: g[1] });
-                  return { title: g[0], year: g[1], franchise: g[2], wiki: info?.wiki || '', img: info?.img || '', genres };
-                }),
-              });
-              toast(`${fresh.length} Spiele hinzugefügt`);
-              refresh();
-            },
-          }, fresh.length ? (fresh.length === games.length ? 'Hinzufügen' : `+ ${fresh.length} neue`) : 'Schon drin');
-          return h('div.pack', h('div.pack-info', h('strong', p.name), h('span', `${p.desc} · ${games.length} Spiele`)), btn);
-        }),
+        h('p.help', `Pakete aus unserem Katalog mit ${CATALOG.length} bekannten Spielen – inklusive Cover, Genre und Reihe. Pakete lassen sich kombinieren, vorhandene Spiele werden übersprungen.`),
+        ...[...new Set(packs.map(p => p.group))].map(group => h('section.pack-group',
+          h('h4', group), h('div.pack-grid', packs.filter(p => p.group === group).map(pack)))),
       ];
     },
 

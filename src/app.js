@@ -537,9 +537,9 @@ const App = {
       board.replaceChildren(this.board === 'games'
         ? h('div.empty-board',
           h('h3', 'Noch keine Spiele im Raum'),
-          h('p', 'Starte mit einer Vorlage aus den letzten Jahrzehnten oder füge eigene Spiele hinzu.'),
+          h('p', 'Starte mit einem Paket – nach Jahrzehnt, Genre, Plattform oder Reihe – oder füge eigene Spiele hinzu.'),
           h('div', { style: { display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' } },
-            h('button.btn.primary', { onclick: () => libraryModal('packs') }, icon('library'), 'Vorlage laden'),
+            h('button.btn.primary', { onclick: () => libraryModal('packs') }, icon('library'), 'Paket laden'),
             h('button.btn', { onclick: () => libraryModal('add') }, icon('plus'), 'Spiel hinzufügen')))
         : h('div.empty-board',
           h('h3', 'Noch keine Franchises'),
@@ -635,7 +635,7 @@ const App = {
       body.replaceChildren(h('div.pool-empty', isGames ? 'Noch keine Spiele.' : 'Noch keine Franchises.',
         isGames ? h('div', { style: { display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' } },
           h('button.btn.sm.primary', { onclick: () => libraryModal('add') }, icon('plus'), 'Spiel suchen'),
-          h('button.btn.sm', { onclick: () => libraryModal('packs') }, 'Vorlage laden')) : null));
+          h('button.btn.sm', { onclick: () => libraryModal('packs') }, 'Paket laden')) : null));
     } else if (!pool.length && !quick) {
       body.replaceChildren(h('div.pool-empty', readonly ? 'Hier ist alles platziert.' : 'Alles platziert – stark! Markiere deine Liste als fertig oder schau dir das Gruppenergebnis an.'));
     } else if (!list.length) {

@@ -149,7 +149,7 @@ const Wiki = {
 };
 
 /* ───────── Genres ─────────
-   Tierly nutzt dieselben Genre-Kürzel wie Gamedle (Namen in GD_GENRES). */
+   Tierly nutzt dieselben Genre-Kürzel wie Gamedle und der Spielekatalog (Namen in GD_GENRES). */
 const genreName = k => GD_GENRES[k] || k;
 
 /* Wikidata-Genres (englisch, sehr fein) → unsere groben Genres */
@@ -188,28 +188,10 @@ function genreKeys(labels) {
   return [...out].slice(0, 4);
 }
 
-/* Kuratierte Genres ohne Netz: Gamedle-Daten (geprüft gegen Wikipedia) + Vorlagen-Liste.
-   Über den Wikipedia-Artikel, sonst über den Titel (bei bekanntem Jahr nur, wenn es passt). */
-let knownGenreIndex = null;
+/* Kuratierte Genres ohne Netz – aus dem Spielekatalog (catalog.js) */
 function knownGenres(it) {
-  if (!knownGenreIndex) {
-    const byWiki = new Map(), byTitle = new Map();
-    for (const g of GD) {
-      byWiki.set(g.wiki, g.genres);
-      for (const t of [g.title, ...g.aliases]) byTitle.set(norm(t), { genres: g.genres, year: g.year });
-    }
-    for (const p of GAME_PRESET) {
-      const genres = p[4] ? p[4].split(',') : byWiki.get(presetWikiTitle(p));
-      if (!genres) continue;
-      byWiki.set(presetWikiTitle(p), genres);
-      if (!byTitle.has(norm(p[0]))) byTitle.set(norm(p[0]), { genres, year: p[1] });
-    }
-    knownGenreIndex = { byWiki, byTitle };
-  }
-  const { byWiki, byTitle } = knownGenreIndex;
-  if (it.wiki && byWiki.has(it.wiki)) return [...byWiki.get(it.wiki)];
-  const t = byTitle.get(norm(it.title));
-  return t && (!it.year || it.year === t.year) ? [...t.genres] : null;
+  const g = catalogEntry(it);
+  return g ? [...g.genres] : null;
 }
 
 /* Genres für Spiele ohne Genre: erst kuratiert, dann über Wikidata. onProgress(done, total) */
@@ -279,11 +261,10 @@ async function enrichResults(list) {
 
 /* Lädt Cover für vorhandene Spiele ohne Bild. onProgress(done, total) */
 async function fetchMissingCovers(items, onProgress = () => {}) {
-  const presetWiki = new Map(GAME_PRESET.map(p => [norm(p[0]), presetWikiTitle(p)]));
   const patches = [];
   const withTitle = [], rest = [];
   for (const it of items) {
-    const w = it.wiki || presetWiki.get(norm(it.title));
+    const w = it.wiki || catalogEntry(it)?.wiki;
     (w ? withTitle : rest).push([it, w]);
   }
   let done = 0;

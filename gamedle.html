@@ -614,6 +614,11 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
 .pack-info { flex: 1; min-width: 0; }
 .pack-info strong { display: block; }
 .pack-info span { font-size: 13px; color: var(--muted); }
+.pack-group h4 {
+  margin: 4px 0 8px; font-size: 12px; font-weight: 700; letter-spacing: .05em;
+  text-transform: uppercase; color: var(--muted);
+}
+.pack-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 8px; }
 
 .room-code-big {
   font-size: 40px; font-weight: 800; letter-spacing: .25em; text-align: center;
@@ -1292,194 +1297,355 @@ button.gd-hint:hover { border-color: var(--accent); }
 </script>
 <script>
 'use strict';
-/* ───────── Vorlagen: Spiele & Tier-Sets ─────────
-   Format: [Titel, Erscheinungsjahr, Franchise, englischer Wikipedia-Artikel (nur wenn abweichend),
-            Genres (nur für Spiele, die nicht in den Gamedle-Daten stehen)]
-   Über den Artikel werden die Cover beim Hinzufügen live von Wikipedia geladen,
-   die Genres kommen aus den Gamedle-Daten (siehe knownGenres). */
-const GAME_PRESET = [
+/* ───────── Gamedle: kuratierte Spieldaten (Kern des Spielekatalogs, siehe catalog.js) ─────────
+   Format: [Titel, Jahr, Genres, Plattformen bei Erstveröffentlichung, Entwickler, Publisher,
+            Reihe, Perspektive, Spielmodi, Herkunftsland, Wikipedia-Artikel (falls abweichend), Alternativnamen]
+   Mehrere Werte sind mit Komma getrennt. Ein leerer Wikipedia-Artikel heißt: wie der Titel.
+   Geprüft gegen die Infoboxen der englischen Wikipedia (tools/verify-gamedle.js). */
+const GD_GENRES = {
+  aa: 'Action-Adventure', rpg: 'Rollenspiel', arpg: 'Action-RPG', fps: 'Ego-Shooter', tps: 'Third-Person-Shooter',
+  str: 'Strategie', sim: 'Simulation', spo: 'Sport', rac: 'Rennspiel', fig: 'Kampfspiel', plat: 'Jump ’n’ Run',
+  puz: 'Puzzle', hor: 'Horror', adv: 'Adventure', sbx: 'Sandbox', mmo: 'MMORPG', br: 'Battle Royale',
+  rog: 'Roguelike', mv: 'Metroidvania', par: 'Party', stl: 'Stealth', hns: 'Hack ’n’ Slay', sou: 'Soulslike',
+  moba: 'MOBA', arc: 'Arcade', surv: 'Survival', shm: 'Shoot ’em up', card: 'Kartenspiel',
+};
+const GD_PLATFORMS = { pc: 'PC', ps: 'PlayStation', xb: 'Xbox', nin: 'Nintendo', mob: 'Mobile', sega: 'Sega', arc: 'Arcade' };
+const GD_PERSP = { ego: 'Ego', third: 'Third-Person', top: 'Von oben', side: 'Seitlich (2D)', mixed: 'Gemischt' };
+const GD_MODES = { e: 'Einzelspieler', m: 'Mehrspieler', k: 'Koop' };
+// Ohne brauchbares Cover in der Wikipedia → nicht im Cover-Modus
+const GD_NO_COVER = new Set(['Minecraft', 'Undertale', 'Fortnite']);
+
+/* Dasselbe Unternehmen unter verschiedenen (historischen) Namen → zählt als richtig */
+const GD_COMPANY = {
+  'Sony Computer Entertainment': 'Sony', 'Sony Interactive Entertainment': 'Sony',
+  'Microsoft': 'Microsoft', 'Microsoft Game Studios': 'Microsoft', 'Microsoft Studios': 'Microsoft',
+  'Namco': 'Bandai Namco', 'Namco Bandai Games': 'Bandai Namco', 'Bandai Namco Entertainment': 'Bandai Namco', 'Bandai Namco Studios': 'Bandai Namco',
+  'Square': 'Square Enix', 'Square Enix': 'Square Enix',
+  'Lucasfilm Games': 'LucasArts', 'LucasArts': 'LucasArts',
+  'Warner Bros. Interactive Entertainment': 'Warner Bros.', 'Warner Bros. Games': 'Warner Bros.',
+  'Electronic Arts': 'Electronic Arts', 'EA Sports': 'Electronic Arts',
+  'DMA Design': 'Rockstar North', '2K Boston': 'Irrational Games',
+};
+/* Studios derselben Familie → zählt als teilweise richtig */
+const GD_FAMILY = {
+  'Rockstar North': 'Rockstar', 'DMA Design': 'Rockstar', 'Rockstar San Diego': 'Rockstar', 'Rockstar Studios': 'Rockstar',
+  'Blizzard Entertainment': 'Blizzard', 'Blizzard North': 'Blizzard',
+  'EA Black Box': 'EA', 'EA Vancouver': 'EA',
+};
+
+const GD_GAMES = [
   // 1980er
-  ['Pac-Man', 1980, 'Pac-Man'],
-  ['Donkey Kong', 1981, 'Donkey Kong', 'Donkey Kong (1981 video game)'],
-  ['Tetris', 1984, 'Tetris', '', 'puz'],
-  ['Super Mario Bros.', 1985, 'Super Mario'],
-  ['The Legend of Zelda', 1986, 'The Legend of Zelda', 'The Legend of Zelda (video game)'],
-  ['Metroid', 1986, 'Metroid', 'Metroid (video game)'],
-  ['Final Fantasy', 1987, 'Final Fantasy', 'Final Fantasy (video game)'],
-  ['Mega Man 2', 1988, 'Mega Man'],
-  ['Super Mario Bros. 3', 1988, 'Super Mario'],
-  ['Prince of Persia', 1989, 'Prince of Persia', 'Prince of Persia (1989 video game)'],
+  ['Pac-Man', 1980, 'arc', 'arc', 'Namco', 'Namco', 'Pac-Man', 'top', 'e', 'Japan'],
+  ['Donkey Kong', 1981, 'plat,arc', 'arc', 'Nintendo', 'Nintendo', 'Donkey Kong', 'side', 'e', 'Japan', 'Donkey Kong (1981 video game)'],
+  ['Super Mario Bros.', 1985, 'plat', 'nin', 'Nintendo', 'Nintendo', 'Super Mario', 'side', 'e', 'Japan'],
+  ['The Legend of Zelda', 1986, 'aa', 'nin', 'Nintendo', 'Nintendo', 'The Legend of Zelda', 'top', 'e', 'Japan', 'The Legend of Zelda (video game)', 'Zelda 1'],
+  ['Metroid', 1986, 'aa,mv', 'nin', 'Nintendo', 'Nintendo', 'Metroid', 'side', 'e', 'Japan', 'Metroid (video game)'],
+  ['Final Fantasy', 1987, 'rpg', 'nin', 'Square', 'Square', 'Final Fantasy', 'top', 'e', 'Japan', 'Final Fantasy (video game)', 'Final Fantasy I'],
+  ['Mega Man 2', 1988, 'plat', 'nin', 'Capcom', 'Capcom', 'Mega Man', 'side', 'e', 'Japan'],
+  ['Super Mario Bros. 3', 1988, 'plat', 'nin', 'Nintendo', 'Nintendo', 'Super Mario', 'side', 'e', 'Japan'],
+  ['Prince of Persia', 1989, 'plat', 'pc', 'Brøderbund', 'Brøderbund', 'Prince of Persia', 'side', 'e', 'USA', 'Prince of Persia (1989 video game)'],
   // 1990er
-  ['Super Mario World', 1990, 'Super Mario'],
-  ['The Secret of Monkey Island', 1990, 'Monkey Island'],
-  ['Sonic the Hedgehog', 1991, 'Sonic', 'Sonic the Hedgehog (1991 video game)'],
-  ['Street Fighter II', 1991, 'Street Fighter'],
-  ['Zelda: A Link to the Past', 1991, 'The Legend of Zelda', 'The Legend of Zelda: A Link to the Past'],
-  ['Mortal Kombat', 1992, 'Mortal Kombat', 'Mortal Kombat (1992 video game)'],
-  ['Super Mario Kart', 1992, 'Mario Kart'],
-  ['Doom', 1993, 'Doom', 'Doom (1993 video game)'],
-  ['Super Metroid', 1994, 'Metroid'],
-  ['Donkey Kong Country', 1994, 'Donkey Kong'],
-  ['Chrono Trigger', 1995, ''],
-  ['Command & Conquer', 1995, 'Command & Conquer', 'Command & Conquer (1995 video game)'],
-  ['Warcraft II', 1995, 'Warcraft', 'Warcraft II: Tides of Darkness'],
-  ['Super Mario 64', 1996, 'Super Mario'],
-  ['Mario Kart 64', 1996, 'Mario Kart'],
-  ['Pokémon Rot & Blau', 1996, 'Pokémon', 'Pokémon Red, Blue, and Yellow'],
-  ['Resident Evil', 1996, 'Resident Evil', 'Resident Evil (1996 video game)'],
-  ['Tomb Raider', 1996, 'Tomb Raider', 'Tomb Raider (1996 video game)'],
-  ['Crash Bandicoot', 1996, 'Crash Bandicoot', 'Crash Bandicoot (video game)'],
-  ['Diablo', 1996, 'Diablo', 'Diablo (video game)'],
-  ['Quake', 1996, '', 'Quake (video game)'],
-  ['Final Fantasy VII', 1997, 'Final Fantasy'],
-  ['GoldenEye 007', 1997, ''],
-  ['Age of Empires', 1997, 'Age of Empires', 'Age of Empires (video game)'],
-  ['Gran Turismo', 1997, 'Gran Turismo', 'Gran Turismo (1997 video game)'],
-  ['Zelda: Ocarina of Time', 1998, 'The Legend of Zelda', 'The Legend of Zelda: Ocarina of Time'],
-  ['Half-Life', 1998, 'Half-Life', 'Half-Life (video game)'],
-  ['Metal Gear Solid', 1998, 'Metal Gear', 'Metal Gear Solid (video game)'],
-  ['StarCraft', 1998, 'StarCraft', 'StarCraft (video game)'],
-  ['Banjo-Kazooie', 1998, '', 'Banjo-Kazooie (video game)'],
-  ['Spyro the Dragon', 1998, 'Spyro'],
-  ["Baldur's Gate", 1998, "Baldur's Gate", "Baldur's Gate (video game)"],
-  ['Silent Hill', 1999, 'Silent Hill', 'Silent Hill (video game)'],
-  ['Age of Empires II', 1999, 'Age of Empires'],
-  ["Tony Hawk's Pro Skater", 1999, ''],
-  ['Pokémon Gold & Silber', 1999, 'Pokémon', 'Pokémon Gold and Silver'],
-  ['Super Smash Bros.', 1999, 'Super Smash Bros.', 'Super Smash Bros. (video game)'],
+  ['Super Mario World', 1990, 'plat', 'nin', 'Nintendo', 'Nintendo', 'Super Mario', 'side', 'e', 'Japan'],
+  ['The Secret of Monkey Island', 1990, 'adv', 'pc', 'Lucasfilm Games', 'Lucasfilm Games', 'Monkey Island', 'side', 'e', 'USA', '', 'Monkey Island'],
+  ['Sonic the Hedgehog', 1991, 'plat', 'sega', 'Sonic Team', 'Sega', 'Sonic', 'side', 'e', 'Japan', 'Sonic the Hedgehog (1991 video game)', 'Sonic 1'],
+  ['Street Fighter II', 1991, 'fig', 'arc', 'Capcom', 'Capcom', 'Street Fighter', 'side', 'e,m', 'Japan'],
+  ['The Legend of Zelda: A Link to the Past', 1991, 'aa', 'nin', 'Nintendo', 'Nintendo', 'The Legend of Zelda', 'top', 'e', 'Japan', '', 'Zelda: A Link to the Past|ALttP'],
+  ['Mortal Kombat', 1992, 'fig', 'arc', 'Midway', 'Midway', 'Mortal Kombat', 'side', 'e,m', 'USA', 'Mortal Kombat (1992 video game)'],
+  ['Super Mario Kart', 1992, 'rac', 'nin', 'Nintendo', 'Nintendo', 'Mario Kart', 'third', 'e,m', 'Japan'],
+  ['Doom', 1993, 'fps', 'pc', 'id Software', 'id Software', 'Doom', 'ego', 'e,m,k', 'USA', 'Doom (1993 video game)'],
+  ['Super Metroid', 1994, 'aa,mv', 'nin', 'Nintendo', 'Nintendo', 'Metroid', 'side', 'e', 'Japan'],
+  ['Donkey Kong Country', 1994, 'plat', 'nin', 'Rare', 'Nintendo', 'Donkey Kong', 'side', 'e,k', 'Großbritannien'],
+  ['Chrono Trigger', 1995, 'rpg', 'nin', 'Square', 'Square', 'Chrono', 'top', 'e', 'Japan'],
+  ['Command & Conquer', 1995, 'str', 'pc', 'Westwood Studios', 'Virgin Interactive', 'Command & Conquer', 'top', 'e,m', 'USA', 'Command & Conquer (1995 video game)', 'C&C|Command and Conquer'],
+  ['Warcraft II: Tides of Darkness', 1995, 'str', 'pc', 'Blizzard Entertainment', 'Davidson & Associates', 'Warcraft', 'top', 'e,m', 'USA', '', 'Warcraft II|Warcraft 2'],
+  ['Super Mario 64', 1996, 'plat', 'nin', 'Nintendo', 'Nintendo', 'Super Mario', 'third', 'e', 'Japan'],
+  ['Mario Kart 64', 1996, 'rac', 'nin', 'Nintendo', 'Nintendo', 'Mario Kart', 'third', 'e,m', 'Japan'],
+  ['Pokémon Red & Blue', 1996, 'rpg', 'nin', 'Game Freak', 'Nintendo', 'Pokémon', 'top', 'e,m', 'Japan', 'Pokémon Red, Blue, and Yellow', 'Pokémon Rot & Blau|Pokémon Rote Edition|Pokémon Blaue Edition'],
+  ['Resident Evil', 1996, 'hor', 'ps', 'Capcom', 'Capcom', 'Resident Evil', 'third', 'e', 'Japan', 'Resident Evil (1996 video game)', 'Biohazard'],
+  ['Tomb Raider', 1996, 'aa', 'sega,ps,pc', 'Core Design', 'Eidos Interactive', 'Tomb Raider', 'third', 'e', 'Großbritannien', 'Tomb Raider (1996 video game)'],
+  ['Crash Bandicoot', 1996, 'plat', 'ps', 'Naughty Dog', 'Sony Computer Entertainment', 'Crash Bandicoot', 'third', 'e', 'USA', 'Crash Bandicoot (video game)'],
+  ['Diablo', 1996, 'arpg,hns', 'pc', 'Blizzard North', 'Blizzard Entertainment', 'Diablo', 'top', 'e,m,k', 'USA', 'Diablo (video game)'],
+  ['Quake', 1996, 'fps', 'pc', 'id Software', 'GT Interactive', 'Quake', 'ego', 'e,m,k', 'USA', 'Quake (video game)'],
+  ['Final Fantasy VII', 1997, 'rpg', 'ps', 'Square', 'Square', 'Final Fantasy', 'third', 'e', 'Japan', '', 'FF7|FFVII'],
+  ['GoldenEye 007', 1997, 'fps', 'nin', 'Rare', 'Nintendo', 'James Bond', 'ego', 'e,m', 'Großbritannien', 'GoldenEye 007 (1997 video game)', 'GoldenEye'],
+  ['Age of Empires', 1997, 'str', 'pc', 'Ensemble Studios', 'Microsoft', 'Age of Empires', 'top', 'e,m', 'USA', 'Age of Empires (video game)'],
+  ['Gran Turismo', 1997, 'rac,sim', 'ps', 'Polyphony Digital', 'Sony Computer Entertainment', 'Gran Turismo', 'third', 'e,m', 'Japan', 'Gran Turismo (1997 video game)'],
+  ['Star Fox 64', 1997, 'shm', 'nin', 'Nintendo', 'Nintendo', 'Star Fox', 'third', 'e,m', 'Japan', '', 'Lylat Wars'],
+  ['Tekken 3', 1997, 'fig', 'arc', 'Namco', 'Namco', 'Tekken', 'side', 'e,m', 'Japan'],
+  ['The Legend of Zelda: Ocarina of Time', 1998, 'aa', 'nin', 'Nintendo', 'Nintendo', 'The Legend of Zelda', 'third', 'e', 'Japan', '', 'Zelda: Ocarina of Time|OoT'],
+  ['Half-Life', 1998, 'fps', 'pc', 'Valve', 'Sierra Studios', 'Half-Life', 'ego', 'e,m', 'USA', 'Half-Life (video game)'],
+  ['Metal Gear Solid', 1998, 'stl,aa', 'ps', 'Konami', 'Konami', 'Metal Gear', 'third', 'e', 'Japan', 'Metal Gear Solid (video game)', 'MGS'],
+  ['StarCraft', 1998, 'str', 'pc', 'Blizzard Entertainment', 'Blizzard Entertainment', 'StarCraft', 'top', 'e,m', 'USA', 'StarCraft (video game)'],
+  ['Banjo-Kazooie', 1998, 'plat', 'nin', 'Rare', 'Nintendo', 'Banjo-Kazooie', 'third', 'e', 'Großbritannien', 'Banjo-Kazooie (video game)'],
+  ['Spyro the Dragon', 1998, 'plat', 'ps', 'Insomniac Games', 'Sony Computer Entertainment', 'Spyro', 'third', 'e', 'USA', '', 'Spyro'],
+  ["Baldur's Gate", 1998, 'rpg', 'pc', 'BioWare', 'Interplay Entertainment', "Baldur's Gate", 'top', 'e,m,k', 'Kanada', "Baldur's Gate (video game)"],
+  ['Silent Hill', 1999, 'hor', 'ps', 'Konami', 'Konami', 'Silent Hill', 'third', 'e', 'Japan', 'Silent Hill (video game)'],
+  ['Age of Empires II', 1999, 'str', 'pc', 'Ensemble Studios', 'Microsoft', 'Age of Empires', 'top', 'e,m', 'USA', 'Age of Empires II: The Age of Kings', 'Age of Empires 2|AoE 2'],
+  ["Tony Hawk's Pro Skater", 1999, 'spo', 'ps', 'Neversoft', 'Activision', "Tony Hawk's", 'third', 'e,m', 'USA', "Tony Hawk's Pro Skater (video game)"],
+  ['Pokémon Gold & Silver', 1999, 'rpg', 'nin', 'Game Freak', 'Nintendo', 'Pokémon', 'top', 'e,m', 'Japan', 'Pokémon Gold and Silver', 'Pokémon Gold & Silber|Pokémon Goldene Edition'],
+  ['Super Smash Bros.', 1999, 'fig,par', 'nin', 'HAL Laboratory', 'Nintendo', 'Super Smash Bros.', 'side', 'e,m', 'Japan', 'Super Smash Bros. (video game)', 'Smash 64'],
+  ['Shenmue', 1999, 'aa', 'sega', 'Sega AM2', 'Sega', 'Shenmue', 'third', 'e', 'Japan', 'Shenmue (video game)'],
+  ['Crash Team Racing', 1999, 'rac', 'ps', 'Naughty Dog', 'Sony Computer Entertainment', 'Crash Bandicoot', 'third', 'e,m', 'USA', '', 'CTR'],
   // 2000er
-  ['Counter-Strike', 2000, 'Counter-Strike', 'Counter-Strike (video game)'],
-  ['Deus Ex', 2000, '', 'Deus Ex (video game)'],
-  ['Die Sims', 2000, 'Die Sims', 'The Sims (video game)'],
-  ['Diablo II', 2000, 'Diablo'],
-  ['Halo: Combat Evolved', 2001, 'Halo'],
-  ['Grand Theft Auto III', 2001, 'Grand Theft Auto'],
-  ['Metal Gear Solid 2', 2001, 'Metal Gear', 'Metal Gear Solid 2: Sons of Liberty'],
-  ['Super Smash Bros. Melee', 2001, 'Super Smash Bros.'],
-  ['Max Payne', 2001, '', 'Max Payne (video game)'],
-  ['Gothic', 2001, 'Gothic', 'Gothic (video game)'],
-  ['Warcraft III', 2002, 'Warcraft', 'Warcraft III: Reign of Chaos'],
-  ['Metroid Prime', 2002, 'Metroid'],
-  ['Kingdom Hearts', 2002, '', 'Kingdom Hearts (video game)'],
-  ['The Elder Scrolls III: Morrowind', 2002, 'The Elder Scrolls'],
-  ['GTA: Vice City', 2002, 'Grand Theft Auto', 'Grand Theft Auto: Vice City'],
-  ['Zelda: The Wind Waker', 2002, 'The Legend of Zelda', 'The Legend of Zelda: The Wind Waker'],
-  ['Gothic II', 2002, 'Gothic'],
-  ['Star Wars: Knights of the Old Republic', 2003, '', 'Star Wars: Knights of the Old Republic (video game)'],
-  ['Prince of Persia: The Sands of Time', 2003, 'Prince of Persia'],
-  ['Call of Duty', 2003, 'Call of Duty', 'Call of Duty (video game)'],
-  ['Half-Life 2', 2004, 'Half-Life'],
-  ['World of Warcraft', 2004, 'Warcraft'],
-  ['GTA: San Andreas', 2004, 'Grand Theft Auto', 'Grand Theft Auto: San Andreas'],
-  ['Halo 2', 2004, 'Halo'],
-  ['Metal Gear Solid 3: Snake Eater', 2004, 'Metal Gear'],
-  ['Resident Evil 4', 2005, 'Resident Evil'],
-  ['Shadow of the Colossus', 2005, ''],
-  ['The Elder Scrolls IV: Oblivion', 2006, 'The Elder Scrolls'],
-  ['Wii Sports', 2006, ''],
-  ['Gears of War', 2006, '', 'Gears of War (video game)'],
-  ['BioShock', 2007, 'BioShock'],
-  ['Call of Duty 4: Modern Warfare', 2007, 'Call of Duty'],
-  ['Super Mario Galaxy', 2007, 'Super Mario'],
-  ['Portal', 2007, 'Portal', 'Portal (video game)'],
-  ['Mass Effect', 2007, 'Mass Effect', 'Mass Effect (video game)'],
-  ["Assassin's Creed", 2007, "Assassin's Creed", "Assassin's Creed (video game)"],
-  ["Uncharted: Drake's Fortune", 2007, 'Uncharted'],
-  ['Halo 3', 2007, 'Halo'],
-  ['Crysis', 2007, '', 'Crysis (video game)'],
-  ['Fallout 3', 2008, 'Fallout'],
-  ['Left 4 Dead', 2008, ''],
-  ['Grand Theft Auto IV', 2008, 'Grand Theft Auto'],
-  ['Mario Kart Wii', 2008, 'Mario Kart'],
-  ['Persona 4', 2008, 'Persona'],
-  ["Assassin's Creed II", 2009, "Assassin's Creed"],
-  ['Uncharted 2: Among Thieves', 2009, 'Uncharted'],
-  ['Batman: Arkham Asylum', 2009, 'Batman: Arkham'],
-  ["Demon's Souls", 2009, ''],
+  ['Counter-Strike', 2000, 'fps', 'pc', 'Valve', 'Valve', 'Counter-Strike', 'ego', 'm', 'USA', 'Counter-Strike (video game)', 'CS 1.6'],
+  ['Deus Ex', 2000, 'fps,rpg,stl', 'pc', 'Ion Storm', 'Eidos Interactive', 'Deus Ex', 'ego', 'e', 'USA', 'Deus Ex (video game)'],
+  ['The Sims', 2000, 'sim', 'pc', 'Maxis', 'Electronic Arts', 'The Sims', 'top', 'e', 'USA', 'The Sims (video game)', 'Die Sims'],
+  ['Diablo II', 2000, 'arpg,hns', 'pc', 'Blizzard North', 'Blizzard Entertainment', 'Diablo', 'top', 'e,m,k', 'USA', '', 'Diablo 2'],
+  ["The Legend of Zelda: Majora's Mask", 2000, 'aa', 'nin', 'Nintendo', 'Nintendo', 'The Legend of Zelda', 'third', 'e', 'Japan', '', "Zelda: Majora's Mask"],
+  ['Halo: Combat Evolved', 2001, 'fps', 'xb', 'Bungie', 'Microsoft Game Studios', 'Halo', 'ego', 'e,m,k', 'USA', '', 'Halo 1|Halo CE'],
+  ['Grand Theft Auto III', 2001, 'aa', 'ps', 'DMA Design', 'Rockstar Games', 'Grand Theft Auto', 'third', 'e', 'Großbritannien', '', 'GTA 3|GTA III'],
+  ['Metal Gear Solid 2: Sons of Liberty', 2001, 'stl,aa', 'ps', 'Konami', 'Konami', 'Metal Gear', 'third', 'e', 'Japan', '', 'MGS2|Metal Gear Solid 2'],
+  ['Super Smash Bros. Melee', 2001, 'fig,par', 'nin', 'HAL Laboratory', 'Nintendo', 'Super Smash Bros.', 'side', 'e,m', 'Japan'],
+  ['Max Payne', 2001, 'tps', 'pc', 'Remedy Entertainment', 'Gathering of Developers', 'Max Payne', 'third', 'e', 'Finnland', 'Max Payne (video game)'],
+  ['Gothic', 2001, 'arpg', 'pc', 'Piranha Bytes', 'Egmont Interactive', 'Gothic', 'third', 'e', 'Deutschland', 'Gothic (video game)'],
+  ["Luigi's Mansion", 2001, 'aa', 'nin', 'Nintendo', 'Nintendo', "Luigi's Mansion", 'third', 'e', 'Japan'],
+  ['Final Fantasy X', 2001, 'rpg', 'ps', 'Square', 'Square', 'Final Fantasy', 'third', 'e', 'Japan', '', 'FF10|FFX'],
+  ['Silent Hill 2', 2001, 'hor', 'ps', 'Konami', 'Konami', 'Silent Hill', 'third', 'e', 'Japan'],
+  ['Warcraft III: Reign of Chaos', 2002, 'str', 'pc', 'Blizzard Entertainment', 'Blizzard Entertainment', 'Warcraft', 'top', 'e,m', 'USA', '', 'Warcraft 3|Warcraft III'],
+  ['Metroid Prime', 2002, 'aa,fps', 'nin', 'Retro Studios', 'Nintendo', 'Metroid', 'ego', 'e', 'USA'],
+  ['Kingdom Hearts', 2002, 'arpg', 'ps', 'Square', 'Square', 'Kingdom Hearts', 'third', 'e', 'Japan', 'Kingdom Hearts (video game)'],
+  ['The Elder Scrolls III: Morrowind', 2002, 'rpg', 'pc,xb', 'Bethesda Game Studios', 'Bethesda Softworks', 'The Elder Scrolls', 'ego', 'e', 'USA', '', 'Morrowind'],
+  ['Grand Theft Auto: Vice City', 2002, 'aa', 'ps', 'Rockstar North', 'Rockstar Games', 'Grand Theft Auto', 'third', 'e', 'Großbritannien', '', 'GTA Vice City|GTA: Vice City'],
+  ['The Legend of Zelda: The Wind Waker', 2002, 'aa', 'nin', 'Nintendo', 'Nintendo', 'The Legend of Zelda', 'third', 'e', 'Japan', '', 'Zelda: The Wind Waker|Wind Waker'],
+  ['Gothic II', 2002, 'arpg', 'pc', 'Piranha Bytes', 'JoWooD Productions', 'Gothic', 'third', 'e', 'Deutschland', '', 'Gothic 2'],
+  ['Super Mario Sunshine', 2002, 'plat', 'nin', 'Nintendo', 'Nintendo', 'Super Mario', 'third', 'e', 'Japan'],
+  ['Star Wars: Knights of the Old Republic', 2003, 'rpg', 'xb', 'BioWare', 'LucasArts', 'Star Wars', 'third', 'e', 'Kanada', 'Star Wars: Knights of the Old Republic (video game)', 'KotOR'],
+  ['Prince of Persia: The Sands of Time', 2003, 'aa,plat', 'ps,xb,nin,pc', 'Ubisoft Montreal', 'Ubisoft', 'Prince of Persia', 'third', 'e', 'Kanada', '', 'Sands of Time'],
+  ['Call of Duty', 2003, 'fps', 'pc', 'Infinity Ward', 'Activision', 'Call of Duty', 'ego', 'e,m', 'USA', 'Call of Duty (video game)', 'CoD 1'],
+  ['Half-Life 2', 2004, 'fps', 'pc', 'Valve', 'Valve', 'Half-Life', 'ego', 'e', 'USA', '', 'HL2'],
+  ['World of Warcraft', 2004, 'mmo', 'pc', 'Blizzard Entertainment', 'Blizzard Entertainment', 'Warcraft', 'third', 'm,k', 'USA', '', 'WoW'],
+  ['Grand Theft Auto: San Andreas', 2004, 'aa', 'ps', 'Rockstar North', 'Rockstar Games', 'Grand Theft Auto', 'third', 'e,k', 'Großbritannien', '', 'GTA San Andreas|GTA: San Andreas|GTA SA'],
+  ['Halo 2', 2004, 'fps', 'xb', 'Bungie', 'Microsoft Game Studios', 'Halo', 'ego', 'e,m,k', 'USA'],
+  ['Metal Gear Solid 3: Snake Eater', 2004, 'stl,aa', 'ps', 'Konami', 'Konami', 'Metal Gear', 'third', 'e', 'Japan', '', 'MGS3|Metal Gear Solid 3'],
+  ['Resident Evil 4', 2005, 'hor,tps', 'nin', 'Capcom', 'Capcom', 'Resident Evil', 'third', 'e', 'Japan', '', 'RE4|Biohazard 4'],
+  ['Shadow of the Colossus', 2005, 'aa', 'ps', 'Team Ico', 'Sony Computer Entertainment', '', 'third', 'e', 'Japan'],
+  ['Need for Speed: Most Wanted', 2005, 'rac', 'pc,ps,xb,nin', 'EA Black Box', 'Electronic Arts', 'Need for Speed', 'third', 'e,m', 'Kanada', 'Need for Speed: Most Wanted (2005 video game)', 'NFS Most Wanted'],
+  ['The Elder Scrolls IV: Oblivion', 2006, 'rpg', 'pc,xb', 'Bethesda Game Studios', 'Bethesda Softworks', 'The Elder Scrolls', 'ego', 'e', 'USA', '', 'Oblivion'],
+  ['Wii Sports', 2006, 'spo,par', 'nin', 'Nintendo', 'Nintendo', '', 'mixed', 'e,m', 'Japan'],
+  ['Gears of War', 2006, 'tps', 'xb', 'Epic Games', 'Microsoft Game Studios', 'Gears of War', 'third', 'e,m,k', 'USA', 'Gears of War (video game)'],
+  ['Pro Evolution Soccer 6', 2006, 'spo', 'pc,ps,xb', 'Konami', 'Konami', 'Pro Evolution Soccer', 'third', 'e,m', 'Japan', '', 'PES 6|Winning Eleven 10'],
+  ['BioShock', 2007, 'fps', 'pc,xb', '2K Boston', '2K Games', 'BioShock', 'ego', 'e', 'USA', 'BioShock (video game)'],
+  ['Call of Duty 4: Modern Warfare', 2007, 'fps', 'pc,ps,xb', 'Infinity Ward', 'Activision', 'Call of Duty', 'ego', 'e,m', 'USA', '', 'CoD 4|Modern Warfare'],
+  ['Super Mario Galaxy', 2007, 'plat', 'nin', 'Nintendo', 'Nintendo', 'Super Mario', 'third', 'e,k', 'Japan'],
+  ['Portal', 2007, 'puz', 'pc,xb', 'Valve', 'Valve', 'Portal', 'ego', 'e', 'USA', 'Portal (video game)'],
+  ['Mass Effect', 2007, 'rpg,tps', 'xb', 'BioWare', 'Microsoft Game Studios', 'Mass Effect', 'third', 'e', 'Kanada', 'Mass Effect (video game)'],
+  ["Assassin's Creed", 2007, 'aa,stl', 'ps,xb', 'Ubisoft Montreal', 'Ubisoft', "Assassin's Creed", 'third', 'e', 'Kanada', "Assassin's Creed (video game)"],
+  ["Uncharted: Drake's Fortune", 2007, 'aa,tps', 'ps', 'Naughty Dog', 'Sony Computer Entertainment', 'Uncharted', 'third', 'e', 'USA', '', 'Uncharted 1'],
+  ['Halo 3', 2007, 'fps', 'xb', 'Bungie', 'Microsoft Game Studios', 'Halo', 'ego', 'e,m,k', 'USA'],
+  ['Crysis', 2007, 'fps', 'pc', 'Crytek', 'Electronic Arts', 'Crysis', 'ego', 'e,m', 'Deutschland', 'Crysis (video game)'],
+  ['Fallout 3', 2008, 'rpg', 'pc,ps,xb', 'Bethesda Game Studios', 'Bethesda Softworks', 'Fallout', 'ego', 'e', 'USA'],
+  ['Left 4 Dead', 2008, 'fps,hor', 'pc,xb', 'Valve', 'Valve', 'Left 4 Dead', 'ego', 'e,m,k', 'USA', '', 'L4D'],
+  ['Grand Theft Auto IV', 2008, 'aa', 'ps,xb', 'Rockstar North', 'Rockstar Games', 'Grand Theft Auto', 'third', 'e,m', 'Großbritannien', '', 'GTA 4|GTA IV'],
+  ['Mario Kart Wii', 2008, 'rac', 'nin', 'Nintendo', 'Nintendo', 'Mario Kart', 'third', 'e,m', 'Japan'],
+  ['Persona 4', 2008, 'rpg', 'ps', 'Atlus', 'Atlus', 'Persona', 'third', 'e', 'Japan', '', 'Persona 4 Golden'],
+  ["Assassin's Creed II", 2009, 'aa,stl', 'ps,xb', 'Ubisoft Montreal', 'Ubisoft', "Assassin's Creed", 'third', 'e', 'Kanada', '', "Assassin's Creed 2"],
+  ['Uncharted 2: Among Thieves', 2009, 'aa,tps', 'ps', 'Naughty Dog', 'Sony Computer Entertainment', 'Uncharted', 'third', 'e,m,k', 'USA', '', 'Uncharted 2'],
+  ['Batman: Arkham Asylum', 2009, 'aa,stl', 'ps,xb', 'Rocksteady Studios', 'Eidos Interactive', 'Batman: Arkham', 'third', 'e', 'Großbritannien'],
+  ["Demon's Souls", 2009, 'sou,arpg', 'ps', 'FromSoftware', 'Sony Computer Entertainment', '', 'third', 'e,m,k', 'Japan'],
+  ['League of Legends', 2009, 'moba', 'pc', 'Riot Games', 'Riot Games', '', 'top', 'm', 'USA', '', 'LoL'],
   // 2010er
-  ['Mass Effect 2', 2010, 'Mass Effect'],
-  ['Red Dead Redemption', 2010, 'Red Dead'],
-  ['StarCraft II', 2010, 'StarCraft', 'StarCraft II: Wings of Liberty'],
-  ['The Elder Scrolls V: Skyrim', 2011, 'The Elder Scrolls'],
-  ['Dark Souls', 2011, 'Dark Souls', 'Dark Souls (video game)'],
-  ['Portal 2', 2011, 'Portal'],
-  ['Minecraft', 2011, ''],
-  ['Batman: Arkham City', 2011, 'Batman: Arkham'],
-  ['The Witcher 2', 2011, 'The Witcher', 'The Witcher 2: Assassins of Kings'],
-  ['Journey', 2012, '', 'Journey (2012 video game)'],
-  ['The Last of Us', 2013, 'The Last of Us', 'The Last of Us (video game)'],
-  ['Grand Theft Auto V', 2013, 'Grand Theft Auto'],
-  ['BioShock Infinite', 2013, 'BioShock'],
-  ['Mario Kart 8', 2014, 'Mario Kart'],
-  ['Bloodborne', 2015, ''],
-  ['The Witcher 3: Wild Hunt', 2015, 'The Witcher'],
-  ['Metal Gear Solid V', 2015, 'Metal Gear', 'Metal Gear Solid V: The Phantom Pain'],
-  ['Undertale', 2015, ''],
-  ['Rocket League', 2015, ''],
-  ['Fallout 4', 2015, 'Fallout'],
-  ['Overwatch', 2016, '', 'Overwatch (2016 video game)'],
-  ['Dark Souls III', 2016, 'Dark Souls'],
-  ['Doom (2016)', 2016, 'Doom', 'Doom (2016 video game)'],
-  ["Uncharted 4: A Thief's End", 2016, 'Uncharted'],
-  ['Stardew Valley', 2016, ''],
-  ['Persona 5', 2016, 'Persona'],
-  ['Zelda: Breath of the Wild', 2017, 'The Legend of Zelda', 'The Legend of Zelda: Breath of the Wild'],
-  ['Super Mario Odyssey', 2017, 'Super Mario'],
-  ['Hollow Knight', 2017, 'Hollow Knight'],
-  ['Horizon Zero Dawn', 2017, 'Horizon'],
-  ['Fortnite', 2017, ''],
-  ['God of War (2018)', 2018, 'God of War', 'God of War (2018 video game)'],
-  ['Red Dead Redemption 2', 2018, 'Red Dead'],
-  ['Celeste', 2018, '', 'Celeste (video game)'],
-  ['Super Smash Bros. Ultimate', 2018, 'Super Smash Bros.'],
-  ['Kingdom Come: Deliverance', 2018, 'Kingdom Come'],
-  ['Sekiro: Shadows Die Twice', 2019, ''],
-  ['Resident Evil 2 (Remake)', 2019, 'Resident Evil', 'Resident Evil 2 (2019 video game)'],
-  ['Disco Elysium', 2019, ''],
-  ['Death Stranding', 2019, 'Death Stranding'],
-  ['Apex Legends', 2019, ''],
+  ['Mass Effect 2', 2010, 'rpg,tps', 'pc,xb', 'BioWare', 'Electronic Arts', 'Mass Effect', 'third', 'e', 'Kanada'],
+  ['Red Dead Redemption', 2010, 'aa', 'ps,xb', 'Rockstar San Diego', 'Rockstar Games', 'Red Dead', 'third', 'e,m', 'USA', '', 'RDR'],
+  ['StarCraft II: Wings of Liberty', 2010, 'str', 'pc', 'Blizzard Entertainment', 'Blizzard Entertainment', 'StarCraft', 'top', 'e,m', 'USA', '', 'StarCraft 2|StarCraft II'],
+  ['Fallout: New Vegas', 2010, 'rpg', 'pc,ps,xb', 'Obsidian Entertainment', 'Bethesda Softworks', 'Fallout', 'ego', 'e', 'USA', '', 'New Vegas'],
+  ['Halo: Reach', 2010, 'fps', 'xb', 'Bungie', 'Microsoft Game Studios', 'Halo', 'ego', 'e,m,k', 'USA'],
+  ['Limbo', 2010, 'plat,puz', 'xb', 'Playdead', 'Microsoft Game Studios', '', 'side', 'e', 'Dänemark', 'Limbo (video game)'],
+  ['The Elder Scrolls V: Skyrim', 2011, 'rpg', 'pc,ps,xb', 'Bethesda Game Studios', 'Bethesda Softworks', 'The Elder Scrolls', 'ego', 'e', 'USA', '', 'Skyrim'],
+  ['Dark Souls', 2011, 'sou,arpg', 'ps,xb', 'FromSoftware', 'Namco Bandai Games', 'Dark Souls', 'third', 'e,m,k', 'Japan', 'Dark Souls (video game)'],
+  ['Portal 2', 2011, 'puz', 'pc,ps,xb', 'Valve', 'Valve', 'Portal', 'ego', 'e,k', 'USA'],
+  ['Minecraft', 2011, 'sbx,surv', 'pc', 'Mojang', 'Mojang', '', 'ego', 'e,m,k', 'Schweden'],
+  ['Batman: Arkham City', 2011, 'aa', 'ps,xb', 'Rocksteady Studios', 'Warner Bros. Interactive Entertainment', 'Batman: Arkham', 'third', 'e', 'Großbritannien'],
+  ['The Witcher 2: Assassins of Kings', 2011, 'arpg', 'pc', 'CD Projekt Red', 'CD Projekt', 'The Witcher', 'third', 'e', 'Polen', '', 'The Witcher 2|Witcher 2'],
+  ['Terraria', 2011, 'sbx,aa', 'pc', 'Re-Logic', 'Re-Logic', '', 'side', 'e,m,k', 'USA'],
+  ['Journey', 2012, 'adv', 'ps', 'Thatgamecompany', 'Sony Computer Entertainment', '', 'third', 'e,k', 'USA', 'Journey (2012 video game)'],
+  ['Counter-Strike: Global Offensive', 2012, 'fps', 'pc,ps,xb', 'Valve', 'Valve', 'Counter-Strike', 'ego', 'm', 'USA', '', 'CS:GO|CSGO'],
+  ['Borderlands 2', 2012, 'fps,arpg', 'pc,ps,xb', 'Gearbox Software', '2K Games', 'Borderlands', 'ego', 'e,k', 'USA'],
+  ['Diablo III', 2012, 'arpg,hns', 'pc', 'Blizzard Entertainment', 'Blizzard Entertainment', 'Diablo', 'top', 'e,k', 'USA', '', 'Diablo 3'],
+  ['Far Cry 3', 2012, 'fps', 'pc,ps,xb', 'Ubisoft Montreal', 'Ubisoft', 'Far Cry', 'ego', 'e,m,k', 'Kanada'],
+  ['Dishonored', 2012, 'stl,aa', 'pc,ps,xb', 'Arkane Studios', 'Bethesda Softworks', 'Dishonored', 'ego', 'e', 'Frankreich'],
+  ['The Last of Us', 2013, 'aa,hor', 'ps', 'Naughty Dog', 'Sony Computer Entertainment', 'The Last of Us', 'third', 'e,m', 'USA', 'The Last of Us (video game)', 'TLOU'],
+  ['Grand Theft Auto V', 2013, 'aa', 'ps,xb', 'Rockstar North', 'Rockstar Games', 'Grand Theft Auto', 'third', 'e,m', 'Großbritannien', '', 'GTA 5|GTA V'],
+  ['BioShock Infinite', 2013, 'fps', 'pc,ps,xb', 'Irrational Games', '2K Games', 'BioShock', 'ego', 'e', 'USA'],
+  ["Assassin's Creed IV: Black Flag", 2013, 'aa', 'ps,xb', 'Ubisoft Montreal', 'Ubisoft', "Assassin's Creed", 'third', 'e,m', 'Kanada', '', 'Black Flag|AC4'],
+  ['Mario Kart 8', 2014, 'rac', 'nin', 'Nintendo', 'Nintendo', 'Mario Kart', 'third', 'e,m', 'Japan', '', 'Mario Kart 8 Deluxe'],
+  ['Bloodborne', 2015, 'sou,arpg', 'ps', 'FromSoftware', 'Sony Computer Entertainment', '', 'third', 'e,m,k', 'Japan'],
+  ['The Witcher 3: Wild Hunt', 2015, 'arpg', 'pc,ps,xb', 'CD Projekt Red', 'CD Projekt', 'The Witcher', 'third', 'e', 'Polen', '', 'The Witcher 3|Witcher 3'],
+  ['Metal Gear Solid V: The Phantom Pain', 2015, 'stl,aa', 'pc,ps,xb', 'Kojima Productions', 'Konami', 'Metal Gear', 'third', 'e,m', 'Japan', '', 'MGS5|Metal Gear Solid V|The Phantom Pain'],
+  ['Undertale', 2015, 'rpg', 'pc', 'Toby Fox', 'Toby Fox', '', 'top', 'e', 'USA'],
+  ['Rocket League', 2015, 'spo,rac', 'pc,ps', 'Psyonix', 'Psyonix', '', 'third', 'e,m', 'USA'],
+  ['Fallout 4', 2015, 'rpg', 'pc,ps,xb', 'Bethesda Game Studios', 'Bethesda Softworks', 'Fallout', 'ego', 'e', 'USA'],
+  ['Splatoon', 2015, 'tps', 'nin', 'Nintendo', 'Nintendo', 'Splatoon', 'third', 'e,m', 'Japan', 'Splatoon (video game)'],
+  ['Overwatch', 2016, 'fps', 'pc,ps,xb', 'Blizzard Entertainment', 'Blizzard Entertainment', 'Overwatch', 'ego', 'm', 'USA', 'Overwatch (2016 video game)'],
+  ['Dark Souls III', 2016, 'sou,arpg', 'pc,ps,xb', 'FromSoftware', 'Bandai Namco Entertainment', 'Dark Souls', 'third', 'e,m,k', 'Japan', '', 'Dark Souls 3'],
+  ['Doom (2016)', 2016, 'fps', 'pc,ps,xb', 'id Software', 'Bethesda Softworks', 'Doom', 'ego', 'e,m', 'USA', 'Doom (2016 video game)', 'Doom 2016'],
+  ["Uncharted 4: A Thief's End", 2016, 'aa,tps', 'ps', 'Naughty Dog', 'Sony Interactive Entertainment', 'Uncharted', 'third', 'e,m', 'USA', '', 'Uncharted 4'],
+  ['Stardew Valley', 2016, 'sim,rpg', 'pc', 'ConcernedApe', 'ConcernedApe', '', 'top', 'e,k', 'USA'],
+  ['Persona 5', 2016, 'rpg', 'ps', 'Atlus', 'Atlus', 'Persona', 'third', 'e', 'Japan', '', 'Persona 5 Royal'],
+  ['The Legend of Zelda: Breath of the Wild', 2017, 'aa', 'nin', 'Nintendo', 'Nintendo', 'The Legend of Zelda', 'third', 'e', 'Japan', '', 'Zelda: Breath of the Wild|BotW'],
+  ['Super Mario Odyssey', 2017, 'plat', 'nin', 'Nintendo', 'Nintendo', 'Super Mario', 'third', 'e,k', 'Japan'],
+  ['Hollow Knight', 2017, 'mv', 'pc', 'Team Cherry', 'Team Cherry', 'Hollow Knight', 'side', 'e', 'Australien'],
+  ['Horizon Zero Dawn', 2017, 'arpg,aa', 'ps', 'Guerrilla Games', 'Sony Interactive Entertainment', 'Horizon', 'third', 'e', 'Niederlande'],
+  ['Fortnite', 2017, 'br,tps', 'pc,ps,xb', 'Epic Games', 'Epic Games', '', 'third', 'm,k', 'USA'],
+  ['Cuphead', 2017, 'plat', 'pc,xb', 'Studio MDHR', 'Studio MDHR', '', 'side', 'e,k', 'Kanada'],
+  ['Resident Evil 7: Biohazard', 2017, 'hor', 'pc,ps,xb', 'Capcom', 'Capcom', 'Resident Evil', 'ego', 'e', 'Japan', '', 'Resident Evil 7|RE7'],
+  ['God of War (2018)', 2018, 'aa,hns', 'ps', 'Santa Monica Studio', 'Sony Interactive Entertainment', 'God of War', 'third', 'e', 'USA', 'God of War (2018 video game)', 'God of War 2018'],
+  ['Red Dead Redemption 2', 2018, 'aa', 'ps,xb', 'Rockstar Studios', 'Rockstar Games', 'Red Dead', 'third', 'e,m', 'USA', '', 'RDR2'],
+  ['Celeste', 2018, 'plat', 'pc,ps,xb,nin', 'Maddy Makes Games', 'Maddy Makes Games', '', 'side', 'e', 'Kanada', 'Celeste (video game)'],
+  ['Super Smash Bros. Ultimate', 2018, 'fig,par', 'nin', 'Bandai Namco Studios', 'Nintendo', 'Super Smash Bros.', 'side', 'e,m', 'Japan'],
+  ['Kingdom Come: Deliverance', 2018, 'rpg', 'pc,ps,xb', 'Warhorse Studios', 'Deep Silver', 'Kingdom Come', 'ego', 'e', 'Tschechien'],
+  ['Among Us', 2018, 'par', 'mob,pc', 'Innersloth', 'Innersloth', '', 'top', 'm', 'USA'],
+  ['Sea of Thieves', 2018, 'aa', 'pc,xb', 'Rare', 'Microsoft Studios', '', 'ego', 'm,k', 'Großbritannien'],
+  ['Monster Hunter: World', 2018, 'arpg', 'ps,xb', 'Capcom', 'Capcom', 'Monster Hunter', 'third', 'e,k', 'Japan', '', 'MHW'],
+  ["Marvel's Spider-Man", 2018, 'aa', 'ps', 'Insomniac Games', 'Sony Interactive Entertainment', "Marvel's Spider-Man", 'third', 'e', 'USA', "Spider-Man (2018 video game)", 'Spider-Man PS4'],
+  ['Forza Horizon 4', 2018, 'rac', 'pc,xb', 'Playground Games', 'Microsoft Studios', 'Forza', 'third', 'e,m', 'Großbritannien'],
+  ['Sekiro: Shadows Die Twice', 2019, 'sou,aa', 'pc,ps,xb', 'FromSoftware', 'Activision', '', 'third', 'e', 'Japan', '', 'Sekiro'],
+  ['Resident Evil 2 (Remake)', 2019, 'hor,tps', 'pc,ps,xb', 'Capcom', 'Capcom', 'Resident Evil', 'third', 'e', 'Japan', 'Resident Evil 2 (2019 video game)', 'Resident Evil 2 Remake|RE2'],
+  ['Disco Elysium', 2019, 'rpg', 'pc', 'ZA/UM', 'ZA/UM', '', 'top', 'e', 'Estland'],
+  ['Death Stranding', 2019, 'aa', 'ps', 'Kojima Productions', 'Sony Interactive Entertainment', 'Death Stranding', 'third', 'e', 'Japan'],
+  ['Apex Legends', 2019, 'br,fps', 'pc,ps,xb', 'Respawn Entertainment', 'Electronic Arts', '', 'ego', 'm,k', 'USA'],
+  ['Outer Wilds', 2019, 'adv', 'pc,xb', 'Mobius Digital', 'Annapurna Interactive', '', 'ego', 'e', 'USA'],
+  ['Pokémon Sword & Shield', 2019, 'rpg', 'nin', 'Game Freak', 'Nintendo', 'Pokémon', 'third', 'e,m,k', 'Japan', 'Pokémon Sword and Shield', 'Pokémon Schwert & Schild|Pokémon Schwert und Schild'],
   // 2020er
-  ['Animal Crossing: New Horizons', 2020, 'Animal Crossing'],
-  ['Hades', 2020, 'Hades', 'Hades (video game)'],
-  ['The Last of Us Part II', 2020, 'The Last of Us'],
-  ['Doom Eternal', 2020, 'Doom'],
-  ['Cyberpunk 2077', 2020, ''],
-  ['Ghost of Tsushima', 2020, 'Ghost'],
-  ['Half-Life: Alyx', 2020, 'Half-Life'],
-  ['It Takes Two', 2021, '', 'It Takes Two (video game)'],
-  ['Resident Evil Village', 2021, 'Resident Evil'],
-  ['Elden Ring', 2022, ''],
-  ['God of War Ragnarök', 2022, 'God of War'],
-  ['Horizon Forbidden West', 2022, 'Horizon'],
-  ['Zelda: Tears of the Kingdom', 2023, 'The Legend of Zelda', 'The Legend of Zelda: Tears of the Kingdom'],
-  ["Baldur's Gate 3", 2023, "Baldur's Gate"],
-  ['Hogwarts Legacy', 2023, ''],
-  ['Resident Evil 4 (Remake)', 2023, 'Resident Evil', 'Resident Evil 4 (2023 video game)'],
-  ['Super Mario Bros. Wonder', 2023, 'Super Mario'],
-  ['Final Fantasy VII Rebirth', 2024, 'Final Fantasy'],
-  ['Balatro', 2024, ''],
-  ['Astro Bot', 2024, ''],
-  ['Black Myth: Wukong', 2024, ''],
-  ['Helldivers 2', 2024, ''],
-  ['Metaphor: ReFantazio', 2024, ''],
-  ['Hades II', 2025, 'Hades'],
-  ['Clair Obscur: Expedition 33', 2025, ''],
-  ['Kingdom Come: Deliverance II', 2025, 'Kingdom Come'],
-  ['Hollow Knight: Silksong', 2025, 'Hollow Knight'],
-  ['Mario Kart World', 2025, 'Mario Kart'],
-  ['Death Stranding 2', 2025, 'Death Stranding', 'Death Stranding 2: On the Beach'],
-  ['Ghost of Yōtei', 2025, 'Ghost'],
+  ['Animal Crossing: New Horizons', 2020, 'sim', 'nin', 'Nintendo', 'Nintendo', 'Animal Crossing', 'third', 'e,m,k', 'Japan'],
+  ['Hades', 2020, 'rog,arpg', 'pc,nin', 'Supergiant Games', 'Supergiant Games', 'Hades', 'top', 'e', 'USA', 'Hades (video game)'],
+  ['The Last of Us Part II', 2020, 'aa,hor', 'ps', 'Naughty Dog', 'Sony Interactive Entertainment', 'The Last of Us', 'third', 'e', 'USA', '', 'TLOU 2|The Last of Us 2'],
+  ['Doom Eternal', 2020, 'fps', 'pc,ps,xb', 'id Software', 'Bethesda Softworks', 'Doom', 'ego', 'e,m', 'USA'],
+  ['Cyberpunk 2077', 2020, 'rpg,fps', 'pc,ps,xb', 'CD Projekt Red', 'CD Projekt', '', 'ego', 'e', 'Polen'],
+  ['Ghost of Tsushima', 2020, 'aa', 'ps', 'Sucker Punch Productions', 'Sony Interactive Entertainment', 'Ghost', 'third', 'e,k', 'USA'],
+  ['Half-Life: Alyx', 2020, 'fps', 'pc', 'Valve', 'Valve', 'Half-Life', 'ego', 'e', 'USA'],
+  ['It Takes Two', 2021, 'plat,adv', 'pc,ps,xb', 'Hazelight Studios', 'Electronic Arts', '', 'third', 'k', 'Schweden', 'It Takes Two (video game)'],
+  ['Resident Evil Village', 2021, 'hor', 'pc,ps,xb', 'Capcom', 'Capcom', 'Resident Evil', 'ego', 'e', 'Japan', '', 'Resident Evil 8|RE8'],
+  ['Elden Ring', 2022, 'sou,arpg', 'pc,ps,xb', 'FromSoftware', 'Bandai Namco Entertainment', '', 'third', 'e,m,k', 'Japan'],
+  ['God of War Ragnarök', 2022, 'aa,hns', 'ps', 'Santa Monica Studio', 'Sony Interactive Entertainment', 'God of War', 'third', 'e', 'USA', '', 'God of War Ragnarok'],
+  ['Horizon Forbidden West', 2022, 'arpg,aa', 'ps', 'Guerrilla Games', 'Sony Interactive Entertainment', 'Horizon', 'third', 'e', 'Niederlande'],
+  ['FIFA 23', 2022, 'spo', 'pc,ps,xb,nin', 'EA Vancouver', 'EA Sports', 'FIFA', 'third', 'e,m', 'Kanada'],
+  ['The Legend of Zelda: Tears of the Kingdom', 2023, 'aa', 'nin', 'Nintendo', 'Nintendo', 'The Legend of Zelda', 'third', 'e', 'Japan', '', 'Zelda: Tears of the Kingdom|TotK'],
+  ["Baldur's Gate 3", 2023, 'rpg', 'pc', 'Larian Studios', 'Larian Studios', "Baldur's Gate", 'top', 'e,k', 'Belgien', '', 'BG3'],
+  ['Hogwarts Legacy', 2023, 'arpg,aa', 'pc,ps,xb', 'Avalanche Software', 'Warner Bros. Games', '', 'third', 'e', 'USA'],
+  ['Resident Evil 4 (Remake)', 2023, 'hor,tps', 'pc,ps,xb', 'Capcom', 'Capcom', 'Resident Evil', 'third', 'e', 'Japan', 'Resident Evil 4 (2023 video game)', 'Resident Evil 4 Remake|RE4 Remake'],
+  ['Super Mario Bros. Wonder', 2023, 'plat', 'nin', 'Nintendo', 'Nintendo', 'Super Mario', 'side', 'e,m,k', 'Japan'],
+  ['Final Fantasy VII Rebirth', 2024, 'arpg', 'ps', 'Square Enix', 'Square Enix', 'Final Fantasy', 'third', 'e', 'Japan', '', 'FF7 Rebirth'],
+  ['Balatro', 2024, 'rog,card', 'pc,ps,xb,nin', 'LocalThunk', 'Playstack', '', 'top', 'e', 'Kanada', 'Balatro (video game)'],
+  ['Astro Bot', 2024, 'plat', 'ps', 'Team Asobi', 'Sony Interactive Entertainment', 'Astro Bot', 'third', 'e', 'Japan'],
+  ['Black Myth: Wukong', 2024, 'arpg,sou', 'pc,ps', 'Game Science', 'Game Science', '', 'third', 'e', 'China'],
+  ['Helldivers 2', 2024, 'tps', 'pc,ps', 'Arrowhead Game Studios', 'Sony Interactive Entertainment', 'Helldivers', 'third', 'e,k', 'Schweden'],
+  ['Metaphor: ReFantazio', 2024, 'rpg', 'pc,ps,xb', 'Studio Zero', 'Atlus', '', 'third', 'e', 'Japan'],
+  ['Hades II', 2025, 'rog,arpg', 'pc,nin', 'Supergiant Games', 'Supergiant Games', 'Hades', 'top', 'e', 'USA', '', 'Hades 2'],
+  ['Clair Obscur: Expedition 33', 2025, 'rpg', 'pc,ps,xb', 'Sandfall Interactive', 'Kepler Interactive', '', 'third', 'e', 'Frankreich', '', 'Expedition 33'],
+  ['Kingdom Come: Deliverance II', 2025, 'rpg', 'pc,ps,xb', 'Warhorse Studios', 'Deep Silver', 'Kingdom Come', 'ego', 'e', 'Tschechien', '', 'Kingdom Come 2'],
+  ['Hollow Knight: Silksong', 2025, 'mv', 'pc,ps,xb,nin', 'Team Cherry', 'Team Cherry', 'Hollow Knight', 'side', 'e', 'Australien', '', 'Silksong'],
+  ['Mario Kart World', 2025, 'rac', 'nin', 'Nintendo', 'Nintendo', 'Mario Kart', 'third', 'e,m', 'Japan'],
+  ['Death Stranding 2: On the Beach', 2025, 'aa', 'ps', 'Kojima Productions', 'Sony Interactive Entertainment', 'Death Stranding', 'third', 'e', 'Japan', '', 'Death Stranding 2'],
+  ['Ghost of Yōtei', 2025, 'aa', 'ps', 'Sucker Punch Productions', 'Sony Interactive Entertainment', 'Ghost', 'third', 'e', 'USA', '', 'Ghost of Yotei'],
 ];
-const presetWikiTitle = g => g[3] || g[0];
+
+/* ───────── Spielekatalog (gemeinsam für Tierly und Gamedle) ─────────
+   Kern sind die vollständig geprüften Spiele aus gamedle-data.js – sie sind zugleich
+   Tierly-Startspiele. CATALOG_EXTRA ergänzt Spiele nur für Tierly: Basisdaten genügen,
+   bis ein Spiel mit allen Rätsel-Angaben geprüft ist und nach gamedle-data.js umzieht.
+   Format: [Titel, Jahr, Genres, Plattformen bei Erstveröffentlichung, Reihe, Spielmodi,
+            Wikipedia-Artikel (falls abweichend), Alternativnamen] – Kürzel wie in gamedle-data.js */
+const CATALOG_EXTRA = [
+  ['Tetris', 1984, 'puz', 'pc', 'Tetris', 'e'],
+];
+
+/* Kürzerer bzw. deutscher Name für Tierly – muss ein Alternativname sein (Gamedle findet ihn so auch) */
+const CATALOG_SHORT = {
+  'The Legend of Zelda: A Link to the Past': 'Zelda: A Link to the Past',
+  'The Legend of Zelda: Ocarina of Time': 'Zelda: Ocarina of Time',
+  "The Legend of Zelda: Majora's Mask": "Zelda: Majora's Mask",
+  'The Legend of Zelda: The Wind Waker': 'Zelda: The Wind Waker',
+  'The Legend of Zelda: Breath of the Wild': 'Zelda: Breath of the Wild',
+  'The Legend of Zelda: Tears of the Kingdom': 'Zelda: Tears of the Kingdom',
+  'Warcraft II: Tides of Darkness': 'Warcraft II',
+  'Warcraft III: Reign of Chaos': 'Warcraft III',
+  'StarCraft II: Wings of Liberty': 'StarCraft II',
+  'Pokémon Red & Blue': 'Pokémon Rot & Blau',
+  'Pokémon Gold & Silver': 'Pokémon Gold & Silber',
+  'Pokémon Sword & Shield': 'Pokémon Schwert & Schild',
+  'The Sims': 'Die Sims',
+  'Metal Gear Solid 2: Sons of Liberty': 'Metal Gear Solid 2',
+  'Metal Gear Solid V: The Phantom Pain': 'Metal Gear Solid V',
+  'Grand Theft Auto: Vice City': 'GTA: Vice City',
+  'Grand Theft Auto: San Andreas': 'GTA: San Andreas',
+  'The Witcher 2: Assassins of Kings': 'The Witcher 2',
+  'Death Stranding 2: On the Beach': 'Death Stranding 2',
+};
+
+const CATALOG = [
+  ...GD_GAMES.map(([title, year, genres, plats, , , series, , modes, , wiki, aliases]) => ({ title, year, genres, plats, series, modes, wiki, aliases, gamedle: true })),
+  ...CATALOG_EXTRA.map(([title, year, genres, plats, series, modes, wiki, aliases]) => ({ title, year, genres, plats, series, modes, wiki, aliases, gamedle: false })),
+].map(g => ({
+  ...g,
+  name: CATALOG_SHORT[g.title] || g.title, // Anzeigename in Tierly
+  wiki: g.wiki || g.title,
+  genres: g.genres.split(','), plats: g.plats.split(','), modes: g.modes.split(','),
+  aliases: g.aliases ? g.aliases.split('|') : [],
+}));
+
+/* Katalog-Eintrag zu einem Spiel: über den Wikipedia-Artikel, sonst über Titel oder
+   Alternativnamen – bei bekanntem Jahr nur, wenn es passt (Doom 1993 ≠ Doom 2016). */
+let catalogIndex = null;
+function catalogEntry(it) {
+  if (!catalogIndex) {
+    catalogIndex = { byWiki: new Map(), byTitle: new Map() };
+    for (const g of CATALOG) {
+      catalogIndex.byWiki.set(g.wiki, g);
+      for (const t of [g.title, g.name, ...g.aliases]) if (!catalogIndex.byTitle.has(norm(t))) catalogIndex.byTitle.set(norm(t), g);
+    }
+  }
+  if (it.wiki && catalogIndex.byWiki.has(it.wiki)) return catalogIndex.byWiki.get(it.wiki);
+  const g = catalogIndex.byTitle.get(norm(it.title));
+  return g && (!it.year || it.year === g.year) ? g : null;
+}
+
+/* ───────── Vorlagen-Pakete ─────────
+   Pakete sind Filter über den Spielekatalog (catalog.js): Ein neues Spiel im Katalog landet
+   automatisch in allen passenden Paketen. Zu kleine Pakete (unter PACK_MIN Spielen) bleiben
+   ausgeblendet und erscheinen von selbst, sobald der Katalog wächst. */
+const hasGenre = (g, ...keys) => keys.some(k => g.genres.includes(k));
+const onlyOn = (g, plat) => g.plats.length === 1 && g.plats[0] === plat; // zum Start nur auf dieser Plattform
+const PACK_MIN = 12, SMALL_PACK_MIN = 5; // klein: Jahrzehnte und Reihen dürfen kürzer sein
 
 const PRESET_PACKS = [
-  { id: 'all', name: 'Alle Klassiker', desc: 'Die komplette Auswahl von 1980 bis heute', filter: () => true },
-  { id: '80', name: '1980er', desc: 'Arcade, NES & frühe Heimcomputer', filter: y => y < 1990 },
-  { id: '90', name: '1990er', desc: '16-Bit, PlayStation & N64', filter: y => y >= 1990 && y < 2000 },
-  { id: '00', name: '2000er', desc: 'PS2, GameCube, Xbox & PC-Hochzeit', filter: y => y >= 2000 && y < 2010 },
-  { id: '10', name: '2010er', desc: 'Open Worlds, Souls & Indies', filter: y => y >= 2010 && y < 2020 },
-  { id: '20', name: '2020er', desc: 'Die aktuelle Generation', filter: y => y >= 2020 },
+  { group: 'Jahrzehnte', id: 'all', name: 'Alle Spiele', desc: 'Der komplette Katalog von 1980 bis heute', filter: () => true },
+  { group: 'Jahrzehnte', id: '80', name: '1980er', desc: 'Arcade, NES & frühe Heimcomputer', filter: g => g.year < 1990, min: SMALL_PACK_MIN },
+  { group: 'Jahrzehnte', id: '90', name: '1990er', desc: '16-Bit, PlayStation & N64', filter: g => g.year >= 1990 && g.year < 2000, min: SMALL_PACK_MIN },
+  { group: 'Jahrzehnte', id: '00', name: '2000er', desc: 'PS2, GameCube, Xbox & PC-Hochzeit', filter: g => g.year >= 2000 && g.year < 2010, min: SMALL_PACK_MIN },
+  { group: 'Jahrzehnte', id: '10', name: '2010er', desc: 'Open Worlds, Souls & Indies', filter: g => g.year >= 2010 && g.year < 2020, min: SMALL_PACK_MIN },
+  { group: 'Jahrzehnte', id: '20', name: '2020er', desc: 'Die aktuelle Generation', filter: g => g.year >= 2020, min: SMALL_PACK_MIN },
+
+  { group: 'Genres', id: 'rpg', name: 'Rollenspiele', desc: 'Klassisch, Action-RPG & Online', filter: g => hasGenre(g, 'rpg', 'arpg', 'mmo') },
+  { group: 'Genres', id: 'aa', name: 'Action-Adventure', desc: 'Zelda, Uncharted, Arkham & Co.', filter: g => hasGenre(g, 'aa') },
+  { group: 'Genres', id: 'shooter', name: 'Shooter', desc: 'Ego, Third-Person & Battle Royale', filter: g => hasGenre(g, 'fps', 'tps', 'br', 'shm') },
+  { group: 'Genres', id: 'plat', name: 'Jump ’n’ Run & Metroidvania', desc: 'Hüpfen, springen, erkunden', filter: g => hasGenre(g, 'plat', 'mv') },
+  { group: 'Genres', id: 'fun', name: 'Rennen, Kampf & Party', desc: 'Rennspiele, Prügler, Sport & Partyspiele', filter: g => hasGenre(g, 'rac', 'fig', 'spo', 'par') },
+  { group: 'Genres', id: 'strategy', name: 'Strategie & Simulation', desc: 'Echtzeit, Runden, Aufbau & Sandbox', filter: g => hasGenre(g, 'str', 'sim', 'sbx', 'moba', 'card') },
+  { group: 'Genres', id: 'horror', name: 'Horror & Survival', desc: 'Für den Gruselabend', filter: g => hasGenre(g, 'hor', 'surv') },
+  { group: 'Genres', id: 'souls', name: 'Soulslikes & Hack ’n’ Slay', desc: 'Schwer, schnell, gnadenlos', filter: g => hasGenre(g, 'sou', 'hns') },
+  { group: 'Genres', id: 'stealth', name: 'Stealth', desc: 'Schleichen statt kämpfen', filter: g => hasGenre(g, 'stl') },
+  { group: 'Genres', id: 'adventure', name: 'Adventures & Puzzles', desc: 'Rätseln, erkunden, nachdenken', filter: g => hasGenre(g, 'adv', 'puz') },
+
+  { group: 'Plattformen', id: 'nintendo', name: 'Nintendo', desc: 'Zum Start nur auf Nintendo-Konsolen', filter: g => onlyOn(g, 'nin') },
+  { group: 'Plattformen', id: 'playstation', name: 'PlayStation-Exklusives', desc: 'Zum Start nur auf PlayStation', filter: g => onlyOn(g, 'ps') },
+  { group: 'Plattformen', id: 'xbox', name: 'Xbox-Exklusives', desc: 'Zum Start nur auf Xbox', filter: g => onlyOn(g, 'xb') },
+  { group: 'Plattformen', id: 'pc', name: 'PC-Klassiker', desc: 'Zum Start nur auf dem PC', filter: g => onlyOn(g, 'pc') },
+  { group: 'Plattformen', id: 'retro', name: 'Arcade & Sega', desc: 'Spielhalle, Master System & Mega Drive', filter: g => g.plats.includes('arc') || g.plats.includes('sega') },
+
+  { group: 'Spielweise', id: 'coop', name: 'Koop-Spiele', desc: 'Gemeinsam spielbar – lokal oder online', filter: g => g.modes.includes('k') },
 ];
+
+/* Alle anzeigbaren Pakete samt Spielen; jede Reihe mit mindestens 5 Spielen bekommt ein eigenes Paket */
+function presetPacks() {
+  const series = new Map();
+  for (const g of CATALOG) if (g.series) series.set(g.series, (series.get(g.series) || 0) + 1);
+  const seriesPacks = [...series].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'de')).map(([s]) => ({
+    group: 'Reihen', id: 'series:' + s, name: s, desc: 'Die Teile der Reihe im Katalog', filter: g => g.series === s, min: SMALL_PACK_MIN,
+  }));
+  return [...PRESET_PACKS, ...seriesPacks]
+    .map(p => ({ ...p, games: CATALOG.filter(p.filter) }))
+    .filter(p => p.games.length >= (p.min || PACK_MIN));
+}
 
 const TIER_PRESETS = [
   { id: 'classic', name: 'S – F', tiers: [['S', '#f87171'], ['A', '#fb923c'], ['B', '#facc15'], ['C', '#4ade80'], ['D', '#38bdf8'], ['F', '#a78bfa']] },
@@ -2375,7 +2541,7 @@ const Wiki = {
 };
 
 /* ───────── Genres ─────────
-   Tierly nutzt dieselben Genre-Kürzel wie Gamedle (Namen in GD_GENRES). */
+   Tierly nutzt dieselben Genre-Kürzel wie Gamedle und der Spielekatalog (Namen in GD_GENRES). */
 const genreName = k => GD_GENRES[k] || k;
 
 /* Wikidata-Genres (englisch, sehr fein) → unsere groben Genres */
@@ -2414,28 +2580,10 @@ function genreKeys(labels) {
   return [...out].slice(0, 4);
 }
 
-/* Kuratierte Genres ohne Netz: Gamedle-Daten (geprüft gegen Wikipedia) + Vorlagen-Liste.
-   Über den Wikipedia-Artikel, sonst über den Titel (bei bekanntem Jahr nur, wenn es passt). */
-let knownGenreIndex = null;
+/* Kuratierte Genres ohne Netz – aus dem Spielekatalog (catalog.js) */
 function knownGenres(it) {
-  if (!knownGenreIndex) {
-    const byWiki = new Map(), byTitle = new Map();
-    for (const g of GD) {
-      byWiki.set(g.wiki, g.genres);
-      for (const t of [g.title, ...g.aliases]) byTitle.set(norm(t), { genres: g.genres, year: g.year });
-    }
-    for (const p of GAME_PRESET) {
-      const genres = p[4] ? p[4].split(',') : byWiki.get(presetWikiTitle(p));
-      if (!genres) continue;
-      byWiki.set(presetWikiTitle(p), genres);
-      if (!byTitle.has(norm(p[0]))) byTitle.set(norm(p[0]), { genres, year: p[1] });
-    }
-    knownGenreIndex = { byWiki, byTitle };
-  }
-  const { byWiki, byTitle } = knownGenreIndex;
-  if (it.wiki && byWiki.has(it.wiki)) return [...byWiki.get(it.wiki)];
-  const t = byTitle.get(norm(it.title));
-  return t && (!it.year || it.year === t.year) ? [...t.genres] : null;
+  const g = catalogEntry(it);
+  return g ? [...g.genres] : null;
 }
 
 /* Genres für Spiele ohne Genre: erst kuratiert, dann über Wikidata. onProgress(done, total) */
@@ -2505,11 +2653,10 @@ async function enrichResults(list) {
 
 /* Lädt Cover für vorhandene Spiele ohne Bild. onProgress(done, total) */
 async function fetchMissingCovers(items, onProgress = () => {}) {
-  const presetWiki = new Map(GAME_PRESET.map(p => [norm(p[0]), presetWikiTitle(p)]));
   const patches = [];
   const withTitle = [], rest = [];
   for (const it of items) {
-    const w = it.wiki || presetWiki.get(norm(it.title));
+    const w = it.wiki || catalogEntry(it)?.wiki;
     (w ? withTitle : rest).push([it, w]);
   }
   let done = 0;
@@ -3615,9 +3762,9 @@ const App = {
       board.replaceChildren(this.board === 'games'
         ? h('div.empty-board',
           h('h3', 'Noch keine Spiele im Raum'),
-          h('p', 'Starte mit einer Vorlage aus den letzten Jahrzehnten oder füge eigene Spiele hinzu.'),
+          h('p', 'Starte mit einem Paket – nach Jahrzehnt, Genre, Plattform oder Reihe – oder füge eigene Spiele hinzu.'),
           h('div', { style: { display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' } },
-            h('button.btn.primary', { onclick: () => libraryModal('packs') }, icon('library'), 'Vorlage laden'),
+            h('button.btn.primary', { onclick: () => libraryModal('packs') }, icon('library'), 'Paket laden'),
             h('button.btn', { onclick: () => libraryModal('add') }, icon('plus'), 'Spiel hinzufügen')))
         : h('div.empty-board',
           h('h3', 'Noch keine Franchises'),
@@ -3713,7 +3860,7 @@ const App = {
       body.replaceChildren(h('div.pool-empty', isGames ? 'Noch keine Spiele.' : 'Noch keine Franchises.',
         isGames ? h('div', { style: { display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' } },
           h('button.btn.sm.primary', { onclick: () => libraryModal('add') }, icon('plus'), 'Spiel suchen'),
-          h('button.btn.sm', { onclick: () => libraryModal('packs') }, 'Vorlage laden')) : null));
+          h('button.btn.sm', { onclick: () => libraryModal('packs') }, 'Paket laden')) : null));
     } else if (!pool.length && !quick) {
       body.replaceChildren(h('div.pool-empty', readonly ? 'Hier ist alles platziert.' : 'Alles platziert – stark! Markiere deine Liste als fertig oder schau dir das Gruppenergebnis an.'));
     } else if (!list.length) {
@@ -5180,7 +5327,7 @@ function libraryModal(tab = null, query = '') {
   tab = tab || (query || App.state.order.length ? 'add' : 'packs');
   const content = h('div', { style: { display: 'flex', flexDirection: 'column', gap: '14px' } });
   const mkTabs = () => tabbed([
-    ['add', 'Suchen'], ['packs', 'Vorlagen'], ['import', 'Liste'], ['list', `Bibliothek (${App.state.order.length})`],
+    ['add', 'Suchen'], ['packs', 'Pakete'], ['import', 'Liste'], ['list', `Bibliothek (${App.state.order.length})`],
   ], tab, t => { tab = t; refresh(); });
   let tabsEl = mkTabs();
   const refreshTabs = () => { const n = mkTabs(); tabsEl.replaceWith(n); tabsEl = n; };
@@ -5254,34 +5401,38 @@ function libraryModal(tab = null, query = '') {
     },
 
     packs() {
-      const known = new Set(libItems().map(it => norm(it.title)));
+      // Schon im Raum? Über den Katalog – so zählen auch ältere Titel wie „Zelda: Ocarina of Time“
+      const have = new Set(libItems().map(catalogEntry).filter(Boolean));
+      const packs = presetPacks();
+      const pack = p => {
+        const fresh = p.games.filter(g => !have.has(g));
+        const btn = h('button.btn.sm' + (fresh.length ? '.primary' : ''), {
+          disabled: !fresh.length,
+          onclick: async () => {
+            btn.disabled = true;
+            btn.textContent = 'Lade Cover …';
+            let found = new Map();
+            try { found = await Wiki.byTitles(fresh.map(g => g.wiki)); }
+            catch (e) { console.warn(e); toast('Cover nicht erreichbar – Spiele werden ohne Cover hinzugefügt.'); }
+            const before = App.state.order.length;
+            App.dispatch({
+              type: 'items/add',
+              items: fresh.map(g => {
+                const info = found.get(g.wiki);
+                return { title: g.name, year: g.year, franchise: g.series, wiki: info?.wiki || g.wiki, img: info?.img || '', genres: g.genres };
+              }),
+            });
+            const n = App.state.order.length - before;
+            toast(n ? `${n} Spiele hinzugefügt` : 'Alle Spiele waren schon vorhanden.');
+            refresh();
+          },
+        }, fresh.length ? (fresh.length === p.games.length ? 'Hinzufügen' : `+ ${fresh.length} neue`) : 'Schon drin');
+        return h('div.pack', h('div.pack-info', h('strong', p.name), h('span', `${p.desc} · ${p.games.length} Spiele`)), btn);
+      };
       return [
-        h('p.help', 'Bekannte Spiele aus mehreren Jahrzehnten – inklusive Cover, Genre und Franchise-Zuordnung. Bereits vorhandene Titel werden übersprungen.'),
-        ...PRESET_PACKS.map(p => {
-          const games = GAME_PRESET.filter(([, y]) => p.filter(y));
-          const fresh = games.filter(([t]) => !known.has(norm(t)));
-          const btn = h('button.btn.sm' + (fresh.length ? '.primary' : ''), {
-            disabled: !fresh.length,
-            onclick: async () => {
-              btn.disabled = true;
-              btn.textContent = 'Lade Cover …';
-              let found = new Map();
-              try { found = await Wiki.byTitles(fresh.map(presetWikiTitle)); }
-              catch (e) { console.warn(e); toast('Cover nicht erreichbar – Spiele werden ohne Cover hinzugefügt.'); }
-              App.dispatch({
-                type: 'items/add',
-                items: fresh.map(g => {
-                  const info = found.get(presetWikiTitle(g));
-                  const genres = knownGenres({ wiki: presetWikiTitle(g), title: g[0], year: g[1] });
-                  return { title: g[0], year: g[1], franchise: g[2], wiki: info?.wiki || '', img: info?.img || '', genres };
-                }),
-              });
-              toast(`${fresh.length} Spiele hinzugefügt`);
-              refresh();
-            },
-          }, fresh.length ? (fresh.length === games.length ? 'Hinzufügen' : `+ ${fresh.length} neue`) : 'Schon drin');
-          return h('div.pack', h('div.pack-info', h('strong', p.name), h('span', `${p.desc} · ${games.length} Spiele`)), btn);
-        }),
+        h('p.help', `Pakete aus unserem Katalog mit ${CATALOG.length} bekannten Spielen – inklusive Cover, Genre und Reihe. Pakete lassen sich kombinieren, vorhandene Spiele werden übersprungen.`),
+        ...[...new Set(packs.map(p => p.group))].map(group => h('section.pack-group',
+          h('h4', group), h('div.pack-grid', packs.filter(p => p.group === group).map(pack)))),
       ];
     },
 
@@ -5770,248 +5921,6 @@ function drawTileCanvas(ctx, it, x, y, w, h2, { font, rr, imgs, showTitles }) {
 
 /* ───────── Start ───────── */
 App.init();
-
-/* ───────── Gamedle: kuratierte Spieldaten ─────────
-   Format: [Titel, Jahr, Genres, Plattformen bei Erstveröffentlichung, Entwickler, Publisher,
-            Reihe, Perspektive, Spielmodi, Herkunftsland, Wikipedia-Artikel (falls abweichend), Alternativnamen]
-   Mehrere Werte sind mit Komma getrennt. Ein leerer Wikipedia-Artikel heißt: wie der Titel.
-   Geprüft gegen die Infoboxen der englischen Wikipedia (tools/verify-gamedle.js). */
-const GD_GENRES = {
-  aa: 'Action-Adventure', rpg: 'Rollenspiel', arpg: 'Action-RPG', fps: 'Ego-Shooter', tps: 'Third-Person-Shooter',
-  str: 'Strategie', sim: 'Simulation', spo: 'Sport', rac: 'Rennspiel', fig: 'Kampfspiel', plat: 'Jump ’n’ Run',
-  puz: 'Puzzle', hor: 'Horror', adv: 'Adventure', sbx: 'Sandbox', mmo: 'MMORPG', br: 'Battle Royale',
-  rog: 'Roguelike', mv: 'Metroidvania', par: 'Party', stl: 'Stealth', hns: 'Hack ’n’ Slay', sou: 'Soulslike',
-  moba: 'MOBA', arc: 'Arcade', surv: 'Survival', shm: 'Shoot ’em up', card: 'Kartenspiel',
-};
-const GD_PLATFORMS = { pc: 'PC', ps: 'PlayStation', xb: 'Xbox', nin: 'Nintendo', mob: 'Mobile', sega: 'Sega', arc: 'Arcade' };
-const GD_PERSP = { ego: 'Ego', third: 'Third-Person', top: 'Von oben', side: 'Seitlich (2D)', mixed: 'Gemischt' };
-const GD_MODES = { e: 'Einzelspieler', m: 'Mehrspieler', k: 'Koop' };
-// Ohne brauchbares Cover in der Wikipedia → nicht im Cover-Modus
-const GD_NO_COVER = new Set(['Minecraft', 'Undertale', 'Fortnite']);
-
-/* Dasselbe Unternehmen unter verschiedenen (historischen) Namen → zählt als richtig */
-const GD_COMPANY = {
-  'Sony Computer Entertainment': 'Sony', 'Sony Interactive Entertainment': 'Sony',
-  'Microsoft': 'Microsoft', 'Microsoft Game Studios': 'Microsoft', 'Microsoft Studios': 'Microsoft',
-  'Namco': 'Bandai Namco', 'Namco Bandai Games': 'Bandai Namco', 'Bandai Namco Entertainment': 'Bandai Namco', 'Bandai Namco Studios': 'Bandai Namco',
-  'Square': 'Square Enix', 'Square Enix': 'Square Enix',
-  'Lucasfilm Games': 'LucasArts', 'LucasArts': 'LucasArts',
-  'Warner Bros. Interactive Entertainment': 'Warner Bros.', 'Warner Bros. Games': 'Warner Bros.',
-  'Electronic Arts': 'Electronic Arts', 'EA Sports': 'Electronic Arts',
-  'DMA Design': 'Rockstar North', '2K Boston': 'Irrational Games',
-};
-/* Studios derselben Familie → zählt als teilweise richtig */
-const GD_FAMILY = {
-  'Rockstar North': 'Rockstar', 'DMA Design': 'Rockstar', 'Rockstar San Diego': 'Rockstar', 'Rockstar Studios': 'Rockstar',
-  'Blizzard Entertainment': 'Blizzard', 'Blizzard North': 'Blizzard',
-  'EA Black Box': 'EA', 'EA Vancouver': 'EA',
-};
-
-const GD_GAMES = [
-  // 1980er
-  ['Pac-Man', 1980, 'arc', 'arc', 'Namco', 'Namco', 'Pac-Man', 'top', 'e', 'Japan'],
-  ['Donkey Kong', 1981, 'plat,arc', 'arc', 'Nintendo', 'Nintendo', 'Donkey Kong', 'side', 'e', 'Japan', 'Donkey Kong (1981 video game)'],
-  ['Super Mario Bros.', 1985, 'plat', 'nin', 'Nintendo', 'Nintendo', 'Super Mario', 'side', 'e', 'Japan'],
-  ['The Legend of Zelda', 1986, 'aa', 'nin', 'Nintendo', 'Nintendo', 'The Legend of Zelda', 'top', 'e', 'Japan', 'The Legend of Zelda (video game)', 'Zelda 1'],
-  ['Metroid', 1986, 'aa,mv', 'nin', 'Nintendo', 'Nintendo', 'Metroid', 'side', 'e', 'Japan', 'Metroid (video game)'],
-  ['Final Fantasy', 1987, 'rpg', 'nin', 'Square', 'Square', 'Final Fantasy', 'top', 'e', 'Japan', 'Final Fantasy (video game)', 'Final Fantasy I'],
-  ['Mega Man 2', 1988, 'plat', 'nin', 'Capcom', 'Capcom', 'Mega Man', 'side', 'e', 'Japan'],
-  ['Super Mario Bros. 3', 1988, 'plat', 'nin', 'Nintendo', 'Nintendo', 'Super Mario', 'side', 'e', 'Japan'],
-  ['Prince of Persia', 1989, 'plat', 'pc', 'Brøderbund', 'Brøderbund', 'Prince of Persia', 'side', 'e', 'USA', 'Prince of Persia (1989 video game)'],
-  // 1990er
-  ['Super Mario World', 1990, 'plat', 'nin', 'Nintendo', 'Nintendo', 'Super Mario', 'side', 'e', 'Japan'],
-  ['The Secret of Monkey Island', 1990, 'adv', 'pc', 'Lucasfilm Games', 'Lucasfilm Games', 'Monkey Island', 'side', 'e', 'USA', '', 'Monkey Island'],
-  ['Sonic the Hedgehog', 1991, 'plat', 'sega', 'Sonic Team', 'Sega', 'Sonic', 'side', 'e', 'Japan', 'Sonic the Hedgehog (1991 video game)', 'Sonic 1'],
-  ['Street Fighter II', 1991, 'fig', 'arc', 'Capcom', 'Capcom', 'Street Fighter', 'side', 'e,m', 'Japan'],
-  ['The Legend of Zelda: A Link to the Past', 1991, 'aa', 'nin', 'Nintendo', 'Nintendo', 'The Legend of Zelda', 'top', 'e', 'Japan', '', 'Zelda: A Link to the Past|ALttP'],
-  ['Mortal Kombat', 1992, 'fig', 'arc', 'Midway', 'Midway', 'Mortal Kombat', 'side', 'e,m', 'USA', 'Mortal Kombat (1992 video game)'],
-  ['Super Mario Kart', 1992, 'rac', 'nin', 'Nintendo', 'Nintendo', 'Mario Kart', 'third', 'e,m', 'Japan'],
-  ['Doom', 1993, 'fps', 'pc', 'id Software', 'id Software', 'Doom', 'ego', 'e,m,k', 'USA', 'Doom (1993 video game)'],
-  ['Super Metroid', 1994, 'aa,mv', 'nin', 'Nintendo', 'Nintendo', 'Metroid', 'side', 'e', 'Japan'],
-  ['Donkey Kong Country', 1994, 'plat', 'nin', 'Rare', 'Nintendo', 'Donkey Kong', 'side', 'e,k', 'Großbritannien'],
-  ['Chrono Trigger', 1995, 'rpg', 'nin', 'Square', 'Square', 'Chrono', 'top', 'e', 'Japan'],
-  ['Command & Conquer', 1995, 'str', 'pc', 'Westwood Studios', 'Virgin Interactive', 'Command & Conquer', 'top', 'e,m', 'USA', 'Command & Conquer (1995 video game)', 'C&C|Command and Conquer'],
-  ['Warcraft II: Tides of Darkness', 1995, 'str', 'pc', 'Blizzard Entertainment', 'Davidson & Associates', 'Warcraft', 'top', 'e,m', 'USA', '', 'Warcraft II|Warcraft 2'],
-  ['Super Mario 64', 1996, 'plat', 'nin', 'Nintendo', 'Nintendo', 'Super Mario', 'third', 'e', 'Japan'],
-  ['Mario Kart 64', 1996, 'rac', 'nin', 'Nintendo', 'Nintendo', 'Mario Kart', 'third', 'e,m', 'Japan'],
-  ['Pokémon Red & Blue', 1996, 'rpg', 'nin', 'Game Freak', 'Nintendo', 'Pokémon', 'top', 'e,m', 'Japan', 'Pokémon Red, Blue, and Yellow', 'Pokémon Rot & Blau|Pokémon Rote Edition|Pokémon Blaue Edition'],
-  ['Resident Evil', 1996, 'hor', 'ps', 'Capcom', 'Capcom', 'Resident Evil', 'third', 'e', 'Japan', 'Resident Evil (1996 video game)', 'Biohazard'],
-  ['Tomb Raider', 1996, 'aa', 'sega,ps,pc', 'Core Design', 'Eidos Interactive', 'Tomb Raider', 'third', 'e', 'Großbritannien', 'Tomb Raider (1996 video game)'],
-  ['Crash Bandicoot', 1996, 'plat', 'ps', 'Naughty Dog', 'Sony Computer Entertainment', 'Crash Bandicoot', 'third', 'e', 'USA', 'Crash Bandicoot (video game)'],
-  ['Diablo', 1996, 'arpg,hns', 'pc', 'Blizzard North', 'Blizzard Entertainment', 'Diablo', 'top', 'e,m,k', 'USA', 'Diablo (video game)'],
-  ['Quake', 1996, 'fps', 'pc', 'id Software', 'GT Interactive', 'Quake', 'ego', 'e,m,k', 'USA', 'Quake (video game)'],
-  ['Final Fantasy VII', 1997, 'rpg', 'ps', 'Square', 'Square', 'Final Fantasy', 'third', 'e', 'Japan', '', 'FF7|FFVII'],
-  ['GoldenEye 007', 1997, 'fps', 'nin', 'Rare', 'Nintendo', 'James Bond', 'ego', 'e,m', 'Großbritannien', 'GoldenEye 007 (1997 video game)', 'GoldenEye'],
-  ['Age of Empires', 1997, 'str', 'pc', 'Ensemble Studios', 'Microsoft', 'Age of Empires', 'top', 'e,m', 'USA', 'Age of Empires (video game)'],
-  ['Gran Turismo', 1997, 'rac,sim', 'ps', 'Polyphony Digital', 'Sony Computer Entertainment', 'Gran Turismo', 'third', 'e,m', 'Japan', 'Gran Turismo (1997 video game)'],
-  ['Star Fox 64', 1997, 'shm', 'nin', 'Nintendo', 'Nintendo', 'Star Fox', 'third', 'e,m', 'Japan', '', 'Lylat Wars'],
-  ['Tekken 3', 1997, 'fig', 'arc', 'Namco', 'Namco', 'Tekken', 'side', 'e,m', 'Japan'],
-  ['The Legend of Zelda: Ocarina of Time', 1998, 'aa', 'nin', 'Nintendo', 'Nintendo', 'The Legend of Zelda', 'third', 'e', 'Japan', '', 'Zelda: Ocarina of Time|OoT'],
-  ['Half-Life', 1998, 'fps', 'pc', 'Valve', 'Sierra Studios', 'Half-Life', 'ego', 'e,m', 'USA', 'Half-Life (video game)'],
-  ['Metal Gear Solid', 1998, 'stl,aa', 'ps', 'Konami', 'Konami', 'Metal Gear', 'third', 'e', 'Japan', 'Metal Gear Solid (video game)', 'MGS'],
-  ['StarCraft', 1998, 'str', 'pc', 'Blizzard Entertainment', 'Blizzard Entertainment', 'StarCraft', 'top', 'e,m', 'USA', 'StarCraft (video game)'],
-  ['Banjo-Kazooie', 1998, 'plat', 'nin', 'Rare', 'Nintendo', 'Banjo-Kazooie', 'third', 'e', 'Großbritannien', 'Banjo-Kazooie (video game)'],
-  ['Spyro the Dragon', 1998, 'plat', 'ps', 'Insomniac Games', 'Sony Computer Entertainment', 'Spyro', 'third', 'e', 'USA', '', 'Spyro'],
-  ["Baldur's Gate", 1998, 'rpg', 'pc', 'BioWare', 'Interplay Entertainment', "Baldur's Gate", 'top', 'e,m,k', 'Kanada', "Baldur's Gate (video game)"],
-  ['Silent Hill', 1999, 'hor', 'ps', 'Konami', 'Konami', 'Silent Hill', 'third', 'e', 'Japan', 'Silent Hill (video game)'],
-  ['Age of Empires II', 1999, 'str', 'pc', 'Ensemble Studios', 'Microsoft', 'Age of Empires', 'top', 'e,m', 'USA', 'Age of Empires II: The Age of Kings', 'Age of Empires 2|AoE 2'],
-  ["Tony Hawk's Pro Skater", 1999, 'spo', 'ps', 'Neversoft', 'Activision', "Tony Hawk's", 'third', 'e,m', 'USA', "Tony Hawk's Pro Skater (video game)"],
-  ['Pokémon Gold & Silver', 1999, 'rpg', 'nin', 'Game Freak', 'Nintendo', 'Pokémon', 'top', 'e,m', 'Japan', 'Pokémon Gold and Silver', 'Pokémon Gold & Silber|Pokémon Goldene Edition'],
-  ['Super Smash Bros.', 1999, 'fig,par', 'nin', 'HAL Laboratory', 'Nintendo', 'Super Smash Bros.', 'side', 'e,m', 'Japan', 'Super Smash Bros. (video game)', 'Smash 64'],
-  ['Shenmue', 1999, 'aa', 'sega', 'Sega AM2', 'Sega', 'Shenmue', 'third', 'e', 'Japan', 'Shenmue (video game)'],
-  ['Crash Team Racing', 1999, 'rac', 'ps', 'Naughty Dog', 'Sony Computer Entertainment', 'Crash Bandicoot', 'third', 'e,m', 'USA', '', 'CTR'],
-  // 2000er
-  ['Counter-Strike', 2000, 'fps', 'pc', 'Valve', 'Valve', 'Counter-Strike', 'ego', 'm', 'USA', 'Counter-Strike (video game)', 'CS 1.6'],
-  ['Deus Ex', 2000, 'fps,rpg,stl', 'pc', 'Ion Storm', 'Eidos Interactive', 'Deus Ex', 'ego', 'e', 'USA', 'Deus Ex (video game)'],
-  ['The Sims', 2000, 'sim', 'pc', 'Maxis', 'Electronic Arts', 'The Sims', 'top', 'e', 'USA', 'The Sims (video game)', 'Die Sims'],
-  ['Diablo II', 2000, 'arpg,hns', 'pc', 'Blizzard North', 'Blizzard Entertainment', 'Diablo', 'top', 'e,m,k', 'USA', '', 'Diablo 2'],
-  ["The Legend of Zelda: Majora's Mask", 2000, 'aa', 'nin', 'Nintendo', 'Nintendo', 'The Legend of Zelda', 'third', 'e', 'Japan', '', "Zelda: Majora's Mask"],
-  ['Halo: Combat Evolved', 2001, 'fps', 'xb', 'Bungie', 'Microsoft Game Studios', 'Halo', 'ego', 'e,m,k', 'USA', '', 'Halo 1|Halo CE'],
-  ['Grand Theft Auto III', 2001, 'aa', 'ps', 'DMA Design', 'Rockstar Games', 'Grand Theft Auto', 'third', 'e', 'Großbritannien', '', 'GTA 3|GTA III'],
-  ['Metal Gear Solid 2: Sons of Liberty', 2001, 'stl,aa', 'ps', 'Konami', 'Konami', 'Metal Gear', 'third', 'e', 'Japan', '', 'MGS2|Metal Gear Solid 2'],
-  ['Super Smash Bros. Melee', 2001, 'fig,par', 'nin', 'HAL Laboratory', 'Nintendo', 'Super Smash Bros.', 'side', 'e,m', 'Japan'],
-  ['Max Payne', 2001, 'tps', 'pc', 'Remedy Entertainment', 'Gathering of Developers', 'Max Payne', 'third', 'e', 'Finnland', 'Max Payne (video game)'],
-  ['Gothic', 2001, 'arpg', 'pc', 'Piranha Bytes', 'Egmont Interactive', 'Gothic', 'third', 'e', 'Deutschland', 'Gothic (video game)'],
-  ["Luigi's Mansion", 2001, 'aa', 'nin', 'Nintendo', 'Nintendo', "Luigi's Mansion", 'third', 'e', 'Japan'],
-  ['Final Fantasy X', 2001, 'rpg', 'ps', 'Square', 'Square', 'Final Fantasy', 'third', 'e', 'Japan', '', 'FF10|FFX'],
-  ['Silent Hill 2', 2001, 'hor', 'ps', 'Konami', 'Konami', 'Silent Hill', 'third', 'e', 'Japan'],
-  ['Warcraft III: Reign of Chaos', 2002, 'str', 'pc', 'Blizzard Entertainment', 'Blizzard Entertainment', 'Warcraft', 'top', 'e,m', 'USA', '', 'Warcraft 3|Warcraft III'],
-  ['Metroid Prime', 2002, 'aa,fps', 'nin', 'Retro Studios', 'Nintendo', 'Metroid', 'ego', 'e', 'USA'],
-  ['Kingdom Hearts', 2002, 'arpg', 'ps', 'Square', 'Square', 'Kingdom Hearts', 'third', 'e', 'Japan', 'Kingdom Hearts (video game)'],
-  ['The Elder Scrolls III: Morrowind', 2002, 'rpg', 'pc,xb', 'Bethesda Game Studios', 'Bethesda Softworks', 'The Elder Scrolls', 'ego', 'e', 'USA', '', 'Morrowind'],
-  ['Grand Theft Auto: Vice City', 2002, 'aa', 'ps', 'Rockstar North', 'Rockstar Games', 'Grand Theft Auto', 'third', 'e', 'Großbritannien', '', 'GTA Vice City|GTA: Vice City'],
-  ['The Legend of Zelda: The Wind Waker', 2002, 'aa', 'nin', 'Nintendo', 'Nintendo', 'The Legend of Zelda', 'third', 'e', 'Japan', '', 'Zelda: The Wind Waker|Wind Waker'],
-  ['Gothic II', 2002, 'arpg', 'pc', 'Piranha Bytes', 'JoWooD Productions', 'Gothic', 'third', 'e', 'Deutschland', '', 'Gothic 2'],
-  ['Super Mario Sunshine', 2002, 'plat', 'nin', 'Nintendo', 'Nintendo', 'Super Mario', 'third', 'e', 'Japan'],
-  ['Star Wars: Knights of the Old Republic', 2003, 'rpg', 'xb', 'BioWare', 'LucasArts', 'Star Wars', 'third', 'e', 'Kanada', 'Star Wars: Knights of the Old Republic (video game)', 'KotOR'],
-  ['Prince of Persia: The Sands of Time', 2003, 'aa,plat', 'ps,xb,nin,pc', 'Ubisoft Montreal', 'Ubisoft', 'Prince of Persia', 'third', 'e', 'Kanada', '', 'Sands of Time'],
-  ['Call of Duty', 2003, 'fps', 'pc', 'Infinity Ward', 'Activision', 'Call of Duty', 'ego', 'e,m', 'USA', 'Call of Duty (video game)', 'CoD 1'],
-  ['Half-Life 2', 2004, 'fps', 'pc', 'Valve', 'Valve', 'Half-Life', 'ego', 'e', 'USA', '', 'HL2'],
-  ['World of Warcraft', 2004, 'mmo', 'pc', 'Blizzard Entertainment', 'Blizzard Entertainment', 'Warcraft', 'third', 'm,k', 'USA', '', 'WoW'],
-  ['Grand Theft Auto: San Andreas', 2004, 'aa', 'ps', 'Rockstar North', 'Rockstar Games', 'Grand Theft Auto', 'third', 'e,k', 'Großbritannien', '', 'GTA San Andreas|GTA: San Andreas|GTA SA'],
-  ['Halo 2', 2004, 'fps', 'xb', 'Bungie', 'Microsoft Game Studios', 'Halo', 'ego', 'e,m,k', 'USA'],
-  ['Metal Gear Solid 3: Snake Eater', 2004, 'stl,aa', 'ps', 'Konami', 'Konami', 'Metal Gear', 'third', 'e', 'Japan', '', 'MGS3|Metal Gear Solid 3'],
-  ['Resident Evil 4', 2005, 'hor,tps', 'nin', 'Capcom', 'Capcom', 'Resident Evil', 'third', 'e', 'Japan', '', 'RE4|Biohazard 4'],
-  ['Shadow of the Colossus', 2005, 'aa', 'ps', 'Team Ico', 'Sony Computer Entertainment', '', 'third', 'e', 'Japan'],
-  ['Need for Speed: Most Wanted', 2005, 'rac', 'pc,ps,xb,nin', 'EA Black Box', 'Electronic Arts', 'Need for Speed', 'third', 'e,m', 'Kanada', 'Need for Speed: Most Wanted (2005 video game)', 'NFS Most Wanted'],
-  ['The Elder Scrolls IV: Oblivion', 2006, 'rpg', 'pc,xb', 'Bethesda Game Studios', 'Bethesda Softworks', 'The Elder Scrolls', 'ego', 'e', 'USA', '', 'Oblivion'],
-  ['Wii Sports', 2006, 'spo,par', 'nin', 'Nintendo', 'Nintendo', '', 'mixed', 'e,m', 'Japan'],
-  ['Gears of War', 2006, 'tps', 'xb', 'Epic Games', 'Microsoft Game Studios', 'Gears of War', 'third', 'e,m,k', 'USA', 'Gears of War (video game)'],
-  ['Pro Evolution Soccer 6', 2006, 'spo', 'pc,ps,xb', 'Konami', 'Konami', 'Pro Evolution Soccer', 'third', 'e,m', 'Japan', '', 'PES 6|Winning Eleven 10'],
-  ['BioShock', 2007, 'fps', 'pc,xb', '2K Boston', '2K Games', 'BioShock', 'ego', 'e', 'USA', 'BioShock (video game)'],
-  ['Call of Duty 4: Modern Warfare', 2007, 'fps', 'pc,ps,xb', 'Infinity Ward', 'Activision', 'Call of Duty', 'ego', 'e,m', 'USA', '', 'CoD 4|Modern Warfare'],
-  ['Super Mario Galaxy', 2007, 'plat', 'nin', 'Nintendo', 'Nintendo', 'Super Mario', 'third', 'e,k', 'Japan'],
-  ['Portal', 2007, 'puz', 'pc,xb', 'Valve', 'Valve', 'Portal', 'ego', 'e', 'USA', 'Portal (video game)'],
-  ['Mass Effect', 2007, 'rpg,tps', 'xb', 'BioWare', 'Microsoft Game Studios', 'Mass Effect', 'third', 'e', 'Kanada', 'Mass Effect (video game)'],
-  ["Assassin's Creed", 2007, 'aa,stl', 'ps,xb', 'Ubisoft Montreal', 'Ubisoft', "Assassin's Creed", 'third', 'e', 'Kanada', "Assassin's Creed (video game)"],
-  ["Uncharted: Drake's Fortune", 2007, 'aa,tps', 'ps', 'Naughty Dog', 'Sony Computer Entertainment', 'Uncharted', 'third', 'e', 'USA', '', 'Uncharted 1'],
-  ['Halo 3', 2007, 'fps', 'xb', 'Bungie', 'Microsoft Game Studios', 'Halo', 'ego', 'e,m,k', 'USA'],
-  ['Crysis', 2007, 'fps', 'pc', 'Crytek', 'Electronic Arts', 'Crysis', 'ego', 'e,m', 'Deutschland', 'Crysis (video game)'],
-  ['Fallout 3', 2008, 'rpg', 'pc,ps,xb', 'Bethesda Game Studios', 'Bethesda Softworks', 'Fallout', 'ego', 'e', 'USA'],
-  ['Left 4 Dead', 2008, 'fps,hor', 'pc,xb', 'Valve', 'Valve', 'Left 4 Dead', 'ego', 'e,m,k', 'USA', '', 'L4D'],
-  ['Grand Theft Auto IV', 2008, 'aa', 'ps,xb', 'Rockstar North', 'Rockstar Games', 'Grand Theft Auto', 'third', 'e,m', 'Großbritannien', '', 'GTA 4|GTA IV'],
-  ['Mario Kart Wii', 2008, 'rac', 'nin', 'Nintendo', 'Nintendo', 'Mario Kart', 'third', 'e,m', 'Japan'],
-  ['Persona 4', 2008, 'rpg', 'ps', 'Atlus', 'Atlus', 'Persona', 'third', 'e', 'Japan', '', 'Persona 4 Golden'],
-  ["Assassin's Creed II", 2009, 'aa,stl', 'ps,xb', 'Ubisoft Montreal', 'Ubisoft', "Assassin's Creed", 'third', 'e', 'Kanada', '', "Assassin's Creed 2"],
-  ['Uncharted 2: Among Thieves', 2009, 'aa,tps', 'ps', 'Naughty Dog', 'Sony Computer Entertainment', 'Uncharted', 'third', 'e,m,k', 'USA', '', 'Uncharted 2'],
-  ['Batman: Arkham Asylum', 2009, 'aa,stl', 'ps,xb', 'Rocksteady Studios', 'Eidos Interactive', 'Batman: Arkham', 'third', 'e', 'Großbritannien'],
-  ["Demon's Souls", 2009, 'sou,arpg', 'ps', 'FromSoftware', 'Sony Computer Entertainment', '', 'third', 'e,m,k', 'Japan'],
-  ['League of Legends', 2009, 'moba', 'pc', 'Riot Games', 'Riot Games', '', 'top', 'm', 'USA', '', 'LoL'],
-  // 2010er
-  ['Mass Effect 2', 2010, 'rpg,tps', 'pc,xb', 'BioWare', 'Electronic Arts', 'Mass Effect', 'third', 'e', 'Kanada'],
-  ['Red Dead Redemption', 2010, 'aa', 'ps,xb', 'Rockstar San Diego', 'Rockstar Games', 'Red Dead', 'third', 'e,m', 'USA', '', 'RDR'],
-  ['StarCraft II: Wings of Liberty', 2010, 'str', 'pc', 'Blizzard Entertainment', 'Blizzard Entertainment', 'StarCraft', 'top', 'e,m', 'USA', '', 'StarCraft 2|StarCraft II'],
-  ['Fallout: New Vegas', 2010, 'rpg', 'pc,ps,xb', 'Obsidian Entertainment', 'Bethesda Softworks', 'Fallout', 'ego', 'e', 'USA', '', 'New Vegas'],
-  ['Halo: Reach', 2010, 'fps', 'xb', 'Bungie', 'Microsoft Game Studios', 'Halo', 'ego', 'e,m,k', 'USA'],
-  ['Limbo', 2010, 'plat,puz', 'xb', 'Playdead', 'Microsoft Game Studios', '', 'side', 'e', 'Dänemark', 'Limbo (video game)'],
-  ['The Elder Scrolls V: Skyrim', 2011, 'rpg', 'pc,ps,xb', 'Bethesda Game Studios', 'Bethesda Softworks', 'The Elder Scrolls', 'ego', 'e', 'USA', '', 'Skyrim'],
-  ['Dark Souls', 2011, 'sou,arpg', 'ps,xb', 'FromSoftware', 'Namco Bandai Games', 'Dark Souls', 'third', 'e,m,k', 'Japan', 'Dark Souls (video game)'],
-  ['Portal 2', 2011, 'puz', 'pc,ps,xb', 'Valve', 'Valve', 'Portal', 'ego', 'e,k', 'USA'],
-  ['Minecraft', 2011, 'sbx,surv', 'pc', 'Mojang', 'Mojang', '', 'ego', 'e,m,k', 'Schweden'],
-  ['Batman: Arkham City', 2011, 'aa', 'ps,xb', 'Rocksteady Studios', 'Warner Bros. Interactive Entertainment', 'Batman: Arkham', 'third', 'e', 'Großbritannien'],
-  ['The Witcher 2: Assassins of Kings', 2011, 'arpg', 'pc', 'CD Projekt Red', 'CD Projekt', 'The Witcher', 'third', 'e', 'Polen', '', 'The Witcher 2|Witcher 2'],
-  ['Terraria', 2011, 'sbx,aa', 'pc', 'Re-Logic', 'Re-Logic', '', 'side', 'e,m,k', 'USA'],
-  ['Journey', 2012, 'adv', 'ps', 'Thatgamecompany', 'Sony Computer Entertainment', '', 'third', 'e,k', 'USA', 'Journey (2012 video game)'],
-  ['Counter-Strike: Global Offensive', 2012, 'fps', 'pc,ps,xb', 'Valve', 'Valve', 'Counter-Strike', 'ego', 'm', 'USA', '', 'CS:GO|CSGO'],
-  ['Borderlands 2', 2012, 'fps,arpg', 'pc,ps,xb', 'Gearbox Software', '2K Games', 'Borderlands', 'ego', 'e,k', 'USA'],
-  ['Diablo III', 2012, 'arpg,hns', 'pc', 'Blizzard Entertainment', 'Blizzard Entertainment', 'Diablo', 'top', 'e,k', 'USA', '', 'Diablo 3'],
-  ['Far Cry 3', 2012, 'fps', 'pc,ps,xb', 'Ubisoft Montreal', 'Ubisoft', 'Far Cry', 'ego', 'e,m,k', 'Kanada'],
-  ['Dishonored', 2012, 'stl,aa', 'pc,ps,xb', 'Arkane Studios', 'Bethesda Softworks', 'Dishonored', 'ego', 'e', 'Frankreich'],
-  ['The Last of Us', 2013, 'aa,hor', 'ps', 'Naughty Dog', 'Sony Computer Entertainment', 'The Last of Us', 'third', 'e,m', 'USA', 'The Last of Us (video game)', 'TLOU'],
-  ['Grand Theft Auto V', 2013, 'aa', 'ps,xb', 'Rockstar North', 'Rockstar Games', 'Grand Theft Auto', 'third', 'e,m', 'Großbritannien', '', 'GTA 5|GTA V'],
-  ['BioShock Infinite', 2013, 'fps', 'pc,ps,xb', 'Irrational Games', '2K Games', 'BioShock', 'ego', 'e', 'USA'],
-  ["Assassin's Creed IV: Black Flag", 2013, 'aa', 'ps,xb', 'Ubisoft Montreal', 'Ubisoft', "Assassin's Creed", 'third', 'e,m', 'Kanada', '', 'Black Flag|AC4'],
-  ['Mario Kart 8', 2014, 'rac', 'nin', 'Nintendo', 'Nintendo', 'Mario Kart', 'third', 'e,m', 'Japan', '', 'Mario Kart 8 Deluxe'],
-  ['Bloodborne', 2015, 'sou,arpg', 'ps', 'FromSoftware', 'Sony Computer Entertainment', '', 'third', 'e,m,k', 'Japan'],
-  ['The Witcher 3: Wild Hunt', 2015, 'arpg', 'pc,ps,xb', 'CD Projekt Red', 'CD Projekt', 'The Witcher', 'third', 'e', 'Polen', '', 'The Witcher 3|Witcher 3'],
-  ['Metal Gear Solid V: The Phantom Pain', 2015, 'stl,aa', 'pc,ps,xb', 'Kojima Productions', 'Konami', 'Metal Gear', 'third', 'e,m', 'Japan', '', 'MGS5|Metal Gear Solid V|The Phantom Pain'],
-  ['Undertale', 2015, 'rpg', 'pc', 'Toby Fox', 'Toby Fox', '', 'top', 'e', 'USA'],
-  ['Rocket League', 2015, 'spo,rac', 'pc,ps', 'Psyonix', 'Psyonix', '', 'third', 'e,m', 'USA'],
-  ['Fallout 4', 2015, 'rpg', 'pc,ps,xb', 'Bethesda Game Studios', 'Bethesda Softworks', 'Fallout', 'ego', 'e', 'USA'],
-  ['Splatoon', 2015, 'tps', 'nin', 'Nintendo', 'Nintendo', 'Splatoon', 'third', 'e,m', 'Japan', 'Splatoon (video game)'],
-  ['Overwatch', 2016, 'fps', 'pc,ps,xb', 'Blizzard Entertainment', 'Blizzard Entertainment', 'Overwatch', 'ego', 'm', 'USA', 'Overwatch (2016 video game)'],
-  ['Dark Souls III', 2016, 'sou,arpg', 'pc,ps,xb', 'FromSoftware', 'Bandai Namco Entertainment', 'Dark Souls', 'third', 'e,m,k', 'Japan', '', 'Dark Souls 3'],
-  ['Doom (2016)', 2016, 'fps', 'pc,ps,xb', 'id Software', 'Bethesda Softworks', 'Doom', 'ego', 'e,m', 'USA', 'Doom (2016 video game)', 'Doom 2016'],
-  ["Uncharted 4: A Thief's End", 2016, 'aa,tps', 'ps', 'Naughty Dog', 'Sony Interactive Entertainment', 'Uncharted', 'third', 'e,m', 'USA', '', 'Uncharted 4'],
-  ['Stardew Valley', 2016, 'sim,rpg', 'pc', 'ConcernedApe', 'ConcernedApe', '', 'top', 'e,k', 'USA'],
-  ['Persona 5', 2016, 'rpg', 'ps', 'Atlus', 'Atlus', 'Persona', 'third', 'e', 'Japan', '', 'Persona 5 Royal'],
-  ['The Legend of Zelda: Breath of the Wild', 2017, 'aa', 'nin', 'Nintendo', 'Nintendo', 'The Legend of Zelda', 'third', 'e', 'Japan', '', 'Zelda: Breath of the Wild|BotW'],
-  ['Super Mario Odyssey', 2017, 'plat', 'nin', 'Nintendo', 'Nintendo', 'Super Mario', 'third', 'e,k', 'Japan'],
-  ['Hollow Knight', 2017, 'mv', 'pc', 'Team Cherry', 'Team Cherry', 'Hollow Knight', 'side', 'e', 'Australien'],
-  ['Horizon Zero Dawn', 2017, 'arpg,aa', 'ps', 'Guerrilla Games', 'Sony Interactive Entertainment', 'Horizon', 'third', 'e', 'Niederlande'],
-  ['Fortnite', 2017, 'br,tps', 'pc,ps,xb', 'Epic Games', 'Epic Games', '', 'third', 'm,k', 'USA'],
-  ['Cuphead', 2017, 'plat', 'pc,xb', 'Studio MDHR', 'Studio MDHR', '', 'side', 'e,k', 'Kanada'],
-  ['Resident Evil 7: Biohazard', 2017, 'hor', 'pc,ps,xb', 'Capcom', 'Capcom', 'Resident Evil', 'ego', 'e', 'Japan', '', 'Resident Evil 7|RE7'],
-  ['God of War (2018)', 2018, 'aa,hns', 'ps', 'Santa Monica Studio', 'Sony Interactive Entertainment', 'God of War', 'third', 'e', 'USA', 'God of War (2018 video game)', 'God of War 2018'],
-  ['Red Dead Redemption 2', 2018, 'aa', 'ps,xb', 'Rockstar Studios', 'Rockstar Games', 'Red Dead', 'third', 'e,m', 'USA', '', 'RDR2'],
-  ['Celeste', 2018, 'plat', 'pc,ps,xb,nin', 'Maddy Makes Games', 'Maddy Makes Games', '', 'side', 'e', 'Kanada', 'Celeste (video game)'],
-  ['Super Smash Bros. Ultimate', 2018, 'fig,par', 'nin', 'Bandai Namco Studios', 'Nintendo', 'Super Smash Bros.', 'side', 'e,m', 'Japan'],
-  ['Kingdom Come: Deliverance', 2018, 'rpg', 'pc,ps,xb', 'Warhorse Studios', 'Deep Silver', 'Kingdom Come', 'ego', 'e', 'Tschechien'],
-  ['Among Us', 2018, 'par', 'mob,pc', 'Innersloth', 'Innersloth', '', 'top', 'm', 'USA'],
-  ['Sea of Thieves', 2018, 'aa', 'pc,xb', 'Rare', 'Microsoft Studios', '', 'ego', 'm,k', 'Großbritannien'],
-  ['Monster Hunter: World', 2018, 'arpg', 'ps,xb', 'Capcom', 'Capcom', 'Monster Hunter', 'third', 'e,k', 'Japan', '', 'MHW'],
-  ["Marvel's Spider-Man", 2018, 'aa', 'ps', 'Insomniac Games', 'Sony Interactive Entertainment', "Marvel's Spider-Man", 'third', 'e', 'USA', "Spider-Man (2018 video game)", 'Spider-Man PS4'],
-  ['Forza Horizon 4', 2018, 'rac', 'pc,xb', 'Playground Games', 'Microsoft Studios', 'Forza', 'third', 'e,m', 'Großbritannien'],
-  ['Sekiro: Shadows Die Twice', 2019, 'sou,aa', 'pc,ps,xb', 'FromSoftware', 'Activision', '', 'third', 'e', 'Japan', '', 'Sekiro'],
-  ['Resident Evil 2 (Remake)', 2019, 'hor,tps', 'pc,ps,xb', 'Capcom', 'Capcom', 'Resident Evil', 'third', 'e', 'Japan', 'Resident Evil 2 (2019 video game)', 'Resident Evil 2 Remake|RE2'],
-  ['Disco Elysium', 2019, 'rpg', 'pc', 'ZA/UM', 'ZA/UM', '', 'top', 'e', 'Estland'],
-  ['Death Stranding', 2019, 'aa', 'ps', 'Kojima Productions', 'Sony Interactive Entertainment', 'Death Stranding', 'third', 'e', 'Japan'],
-  ['Apex Legends', 2019, 'br,fps', 'pc,ps,xb', 'Respawn Entertainment', 'Electronic Arts', '', 'ego', 'm,k', 'USA'],
-  ['Outer Wilds', 2019, 'adv', 'pc,xb', 'Mobius Digital', 'Annapurna Interactive', '', 'ego', 'e', 'USA'],
-  ['Pokémon Sword & Shield', 2019, 'rpg', 'nin', 'Game Freak', 'Nintendo', 'Pokémon', 'third', 'e,m,k', 'Japan', 'Pokémon Sword and Shield', 'Pokémon Schwert & Schild|Pokémon Schwert und Schild'],
-  // 2020er
-  ['Animal Crossing: New Horizons', 2020, 'sim', 'nin', 'Nintendo', 'Nintendo', 'Animal Crossing', 'third', 'e,m,k', 'Japan'],
-  ['Hades', 2020, 'rog,arpg', 'pc,nin', 'Supergiant Games', 'Supergiant Games', 'Hades', 'top', 'e', 'USA', 'Hades (video game)'],
-  ['The Last of Us Part II', 2020, 'aa,hor', 'ps', 'Naughty Dog', 'Sony Interactive Entertainment', 'The Last of Us', 'third', 'e', 'USA', '', 'TLOU 2|The Last of Us 2'],
-  ['Doom Eternal', 2020, 'fps', 'pc,ps,xb', 'id Software', 'Bethesda Softworks', 'Doom', 'ego', 'e,m', 'USA'],
-  ['Cyberpunk 2077', 2020, 'rpg,fps', 'pc,ps,xb', 'CD Projekt Red', 'CD Projekt', '', 'ego', 'e', 'Polen'],
-  ['Ghost of Tsushima', 2020, 'aa', 'ps', 'Sucker Punch Productions', 'Sony Interactive Entertainment', 'Ghost', 'third', 'e,k', 'USA'],
-  ['Half-Life: Alyx', 2020, 'fps', 'pc', 'Valve', 'Valve', 'Half-Life', 'ego', 'e', 'USA'],
-  ['It Takes Two', 2021, 'plat,adv', 'pc,ps,xb', 'Hazelight Studios', 'Electronic Arts', '', 'third', 'k', 'Schweden', 'It Takes Two (video game)'],
-  ['Resident Evil Village', 2021, 'hor', 'pc,ps,xb', 'Capcom', 'Capcom', 'Resident Evil', 'ego', 'e', 'Japan', '', 'Resident Evil 8|RE8'],
-  ['Elden Ring', 2022, 'sou,arpg', 'pc,ps,xb', 'FromSoftware', 'Bandai Namco Entertainment', '', 'third', 'e,m,k', 'Japan'],
-  ['God of War Ragnarök', 2022, 'aa,hns', 'ps', 'Santa Monica Studio', 'Sony Interactive Entertainment', 'God of War', 'third', 'e', 'USA', '', 'God of War Ragnarok'],
-  ['Horizon Forbidden West', 2022, 'arpg,aa', 'ps', 'Guerrilla Games', 'Sony Interactive Entertainment', 'Horizon', 'third', 'e', 'Niederlande'],
-  ['FIFA 23', 2022, 'spo', 'pc,ps,xb,nin', 'EA Vancouver', 'EA Sports', 'FIFA', 'third', 'e,m', 'Kanada'],
-  ['The Legend of Zelda: Tears of the Kingdom', 2023, 'aa', 'nin', 'Nintendo', 'Nintendo', 'The Legend of Zelda', 'third', 'e', 'Japan', '', 'Zelda: Tears of the Kingdom|TotK'],
-  ["Baldur's Gate 3", 2023, 'rpg', 'pc', 'Larian Studios', 'Larian Studios', "Baldur's Gate", 'top', 'e,k', 'Belgien', '', 'BG3'],
-  ['Hogwarts Legacy', 2023, 'arpg,aa', 'pc,ps,xb', 'Avalanche Software', 'Warner Bros. Games', '', 'third', 'e', 'USA'],
-  ['Resident Evil 4 (Remake)', 2023, 'hor,tps', 'pc,ps,xb', 'Capcom', 'Capcom', 'Resident Evil', 'third', 'e', 'Japan', 'Resident Evil 4 (2023 video game)', 'Resident Evil 4 Remake|RE4 Remake'],
-  ['Super Mario Bros. Wonder', 2023, 'plat', 'nin', 'Nintendo', 'Nintendo', 'Super Mario', 'side', 'e,m,k', 'Japan'],
-  ['Final Fantasy VII Rebirth', 2024, 'arpg', 'ps', 'Square Enix', 'Square Enix', 'Final Fantasy', 'third', 'e', 'Japan', '', 'FF7 Rebirth'],
-  ['Balatro', 2024, 'rog,card', 'pc,ps,xb,nin', 'LocalThunk', 'Playstack', '', 'top', 'e', 'Kanada', 'Balatro (video game)'],
-  ['Astro Bot', 2024, 'plat', 'ps', 'Team Asobi', 'Sony Interactive Entertainment', 'Astro Bot', 'third', 'e', 'Japan'],
-  ['Black Myth: Wukong', 2024, 'arpg,sou', 'pc,ps', 'Game Science', 'Game Science', '', 'third', 'e', 'China'],
-  ['Helldivers 2', 2024, 'tps', 'pc,ps', 'Arrowhead Game Studios', 'Sony Interactive Entertainment', 'Helldivers', 'third', 'e,k', 'Schweden'],
-  ['Metaphor: ReFantazio', 2024, 'rpg', 'pc,ps,xb', 'Studio Zero', 'Atlus', '', 'third', 'e', 'Japan'],
-  ['Hades II', 2025, 'rog,arpg', 'pc,nin', 'Supergiant Games', 'Supergiant Games', 'Hades', 'top', 'e', 'USA', '', 'Hades 2'],
-  ['Clair Obscur: Expedition 33', 2025, 'rpg', 'pc,ps,xb', 'Sandfall Interactive', 'Kepler Interactive', '', 'third', 'e', 'Frankreich', '', 'Expedition 33'],
-  ['Kingdom Come: Deliverance II', 2025, 'rpg', 'pc,ps,xb', 'Warhorse Studios', 'Deep Silver', 'Kingdom Come', 'ego', 'e', 'Tschechien', '', 'Kingdom Come 2'],
-  ['Hollow Knight: Silksong', 2025, 'mv', 'pc,ps,xb,nin', 'Team Cherry', 'Team Cherry', 'Hollow Knight', 'side', 'e', 'Australien', '', 'Silksong'],
-  ['Mario Kart World', 2025, 'rac', 'nin', 'Nintendo', 'Nintendo', 'Mario Kart', 'third', 'e,m', 'Japan'],
-  ['Death Stranding 2: On the Beach', 2025, 'aa', 'ps', 'Kojima Productions', 'Sony Interactive Entertainment', 'Death Stranding', 'third', 'e', 'Japan', '', 'Death Stranding 2'],
-  ['Ghost of Yōtei', 2025, 'aa', 'ps', 'Sucker Punch Productions', 'Sony Interactive Entertainment', 'Ghost', 'third', 'e', 'USA', '', 'Ghost of Yotei'],
-];
 
 /* ───────── Gamedle: Inhalte der Zusatz-Modi ─────────
    Emoji, Zitat und Szene. Schlüssel ist die Spiel-ID aus gamedle-data.js.
@@ -8115,6 +8024,7 @@ const Router = {
 
   show(view, sub) {
     if (this.current === 'gamedle' && view !== 'gamedle') Gamedle.close();
+    if (this.current && this.current !== view) closeAllModals(); // z. B. Zurück-Taste bei offenem Fenster
     this.current = view;
     const tierlyActive = !!App.state && !$('#app').hidden;
     $('#hub').hidden = view !== 'hub';

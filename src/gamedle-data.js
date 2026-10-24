@@ -1,4 +1,4 @@
-/* ───────── Gamedle: kuratierte Spieldaten ─────────
+/* ───────── Gamedle: kuratierte Spieldaten (Kern des Spielekatalogs, siehe catalog.js) ─────────
    Format: [Titel, Jahr, Genres, Plattformen bei Erstveröffentlichung, Entwickler, Publisher,
             Reihe, Perspektive, Spielmodi, Herkunftsland, Wikipedia-Artikel (falls abweichend), Alternativnamen]
    Mehrere Werte sind mit Komma getrennt. Ein leerer Wikipedia-Artikel heißt: wie der Titel.
