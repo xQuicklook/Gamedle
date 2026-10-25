@@ -12,8 +12,9 @@ const fileStamp = () => new Date().toISOString().slice(0, 10);
 function exportJson(s = App.state, code = Net.code) {
   if (!s) return;
   const players = Object.fromEntries(Object.values(s.players || {}).map(p => [p.id, { id: p.id, name: p.name, color: p.color }]));
+  // app: 'tierly' ist die interne Formatkennung (Tiercrew hieß früher Tierly) – nicht ändern, sonst passen ältere Exporte nicht mehr
   const data = { app: 'tierly', v: 1, version: APP_VERSION, exportedAt: new Date().toISOString(), tiers: s.tiers, items: s.items, order: s.order, rankings: s.rankings, players, assets: s.assets || {} };
-  downloadBlob(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }), `tierly-${(code || 'solo').toLowerCase()}-${fileStamp()}.json`);
+  downloadBlob(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }), `tiercrew-${(code || 'solo').toLowerCase()}-${fileStamp()}.json`);
 }
 
 function importJson() {
@@ -23,7 +24,7 @@ function importJson() {
     if (!file) return;
     let data;
     try { data = JSON.parse(await file.text()); } catch { toast('Die Datei ist kein gültiges JSON.'); return; }
-    if (data?.app !== 'tierly' || !data.items) { toast('Das ist keine Tierly-Exportdatei.'); return; }
+    if (data?.app !== 'tierly' || !data.items) { toast('Das ist keine Tiercrew-Exportdatei.'); return; }
     const ok = await confirmDialog('Raum ersetzen?', `Spiele, Stufen und Platzierungen werden durch den Inhalt von „${file.name}“ ersetzt.`, 'Importieren', true);
     if (ok && App.dispatch({ type: 'state/replace', data })) toast('Import abgeschlossen');
   };
@@ -90,7 +91,7 @@ async function exportPng() {
   ctx.fillStyle = col('--text');
   ctx.font = font(800, 28);
   ctx.textBaseline = 'alphabetic';
-  ctx.fillText(`Tierly · ${boardName}`, pad, 48);
+  ctx.fillText(`Tiercrew · ${boardName}`, pad, 48);
   ctx.fillStyle = col('--muted');
   ctx.font = font(500, 15);
   ctx.fillText(viewName, pad, 72);
@@ -133,7 +134,7 @@ async function exportPng() {
     ctx.textAlign = 'left';
   }
 
-  c.toBlob(blob => downloadBlob(blob, `tierly-${App.board}-${groupLike ? 'gruppe' : 'liste'}-${fileStamp()}.png`), 'image/png');
+  c.toBlob(blob => downloadBlob(blob, `tiercrew-${App.board}-${groupLike ? 'gruppe' : 'liste'}-${fileStamp()}.png`), 'image/png');
 }
 
 /* Zeichnet ein Bild wie object-fit: cover in das Rechteck */

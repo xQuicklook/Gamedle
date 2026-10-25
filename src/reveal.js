@@ -77,7 +77,7 @@ function playReveal(board) {
   $('#menu').hidden = true;
   // Gerade in Gamedle oder auf der Übersicht? Dann nur Bescheid geben statt die Seite zu überdecken
   if ($('#app').hidden) {
-    toast('Tierly: Die Listen wurden aufgedeckt!', 10000, { label: 'Ansehen', onClick: () => { location.hash = '#/tierly'; } });
+    toast('Tiercrew: Die Listen wurden aufgedeckt!', 10000, { label: 'Ansehen', onClick: () => { location.hash = '#/tiercrew'; } });
     return;
   }
   if (matchMedia('(prefers-reduced-motion: reduce)').matches || Drag.active) {

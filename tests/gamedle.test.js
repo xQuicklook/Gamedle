@@ -1,4 +1,4 @@
-// Tests für die Gamedle-Logik (Daten, Tagesrätsel, Vergleich, Suche, Teilen, Statistik).
+// Tests für die Gamedar-Logik (Daten, Tagesrätsel, Vergleich, Suche, Teilen, Statistik).
 // Ausführen: node --test "tests/*.test.js"
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -76,12 +76,12 @@ test('Teilen: Wordle-artiger Text', () => {
   const date = '2026-10-24';
   const answer = G.gdDaily('classic', date);
   const other = G.GD.find(g => g.id !== answer.id);
-  const txt = G.gdShareText('classic', date, [other.id, answer.id], 'https://example.org/#/gamedle', { hints: 1 });
+  const txt = G.gdShareText('classic', date, [other.id, answer.id], 'https://example.org/#/gamedar', { hints: 1 });
   const lines = txt.split('\n');
-  assert.equal(lines[0], 'Gamedle #1 · Klassik 🎮');
+  assert.equal(lines[0], 'Gamedar #1 · Klassik 🎮');
   assert.equal(lines[1], 'Gelöst mit 2 Versuchen · 💡 1 Tipp');
   assert.equal(lines[3], '🟩'.repeat(9));
-  assert.equal(lines.at(-1), 'https://example.org/#/gamedle');
+  assert.equal(lines.at(-1), 'https://example.org/#/gamedar');
 });
 
 test('Statistik: Serie zählt nur aufeinanderfolgende Tage', () => {
@@ -176,8 +176,8 @@ test('Teilen in den Zusatz-Modi: nur Fehlversuche und Treffer', () => {
   const date = '2026-10-24';
   const answer = G.gdDaily('emoji', date);
   const other = G.GD.find(g => g.id !== answer.id);
-  const txt = G.gdShareText('emoji', date, [other.id, answer.id], 'https://example.org/#/gamedle/emoji');
-  assert.equal(txt.split('\n')[0], 'Gamedle #1 · Emoji 😀');
+  const txt = G.gdShareText('emoji', date, [other.id, answer.id], 'https://example.org/#/gamedar/emoji');
+  assert.equal(txt.split('\n')[0], 'Gamedar #1 · Emoji 😀');
   assert.equal(txt.split('\n')[2], '🟥🟩');
 });
 

@@ -1,9 +1,13 @@
 /* ───────── Übersicht & Navigation ─────────
    #/            → Übersicht
-   #/gamedle     → Gamedle (…/cover, …/endless)
-   #/tierly      → Tierly
+   #/gamedar     → Gamedar (…/cover, …/endless)
+   #/tiercrew    → Tiercrew
    #/paket/…     → geteilte Spieleliste (siehe Share in export.js)
-   #ABC123       → Tierly-Einladungslink (Raum-Code) – bleibt wie bisher gültig */
+   #ABC123       → Tiercrew-Einladungslink (Raum-Code) – bleibt wie bisher gültig
+   Intern heißen die Module weiter „gamedle“ und „tierly“ (frühere Namen); deren alte
+   Adressen #/gamedle… und #/tierly leiten auf die neuen um, damit geteilte Links gültig bleiben. */
+const LEGACY_ROUTES = { gamedle: 'gamedar', tierly: 'tiercrew' };
+
 const Router = {
   current: null,
 
@@ -14,16 +18,21 @@ const Router = {
   },
 
   route() {
-    const hash = location.hash;
+    let hash = location.hash;
+    const legacy = hash.match(/^#\/(gamedle|tierly)(\/.*)?$/);
+    if (legacy) {
+      hash = '#/' + LEGACY_ROUTES[legacy[1]] + (legacy[2] || '');
+      history.replaceState(null, '', hash);
+    }
     if (/^#\/paket\//.test(hash)) {
-      // Geteilte Spieleliste: Adresse zurück auf Tierly bzw. den offenen Raum, dann anbieten
-      history.replaceState(null, '', App.state && Net.code ? '#' + Net.code : '#/tierly');
+      // Geteilte Spieleliste: Adresse zurück auf Tiercrew bzw. den offenen Raum, dann anbieten
+      history.replaceState(null, '', App.state && Net.code ? '#' + Net.code : '#/tiercrew');
       this.show('tierly');
       Share.receive(hash.slice('#/paket/'.length));
       return;
     }
-    if (/^#\/gamedle/.test(hash)) this.show('gamedle', hash.split('/')[2]);
-    else if (hash === '#/tierly' || /^#[A-Z0-9]{6}$/i.test(hash)) this.show('tierly');
+    if (/^#\/gamedar/.test(hash)) this.show('gamedle', hash.split('/')[2]);
+    else if (hash === '#/tiercrew' || /^#[A-Z0-9]{6}$/i.test(hash)) this.show('tierly');
     else this.show('hub');
   },
 
@@ -38,7 +47,7 @@ const Router = {
     $('#landing').hidden = view !== 'tierly' || !!App.state;
     $('#app').hidden = view !== 'tierly' || !App.state;
     if (view === 'tierly' && App.state && !tierlyActive) App.render();
-    document.title = { hub: 'Gamedle – Spiele-Rätsel & Tier-Listen', gamedle: 'Gamedle – Spiel des Tages', tierly: 'Tierly – Game Tierlist' }[view];
+    document.title = { hub: 'Gamedar – Spiele-Rätsel & Tier-Listen', gamedle: 'Gamedar – Spiel des Tages', tierly: 'Tiercrew – Tier-Listen mit Freunden' }[view];
     if (view === 'gamedle') Gamedle.open(sub);
     if (view === 'hub') this.renderHub();
     window.scrollTo(0, 0);

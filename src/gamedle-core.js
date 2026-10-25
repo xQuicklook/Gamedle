@@ -1,7 +1,7 @@
 /* ───────── Gamedle: Spiellogik (ohne Oberfläche, testbar) ─────────
    Das Tagesspiel ergibt sich allein aus dem Datum (deutsche Zeit) – alle bekommen
    dasselbe Rätsel, ganz ohne Server. */
-const GD_LAUNCH = '2026-10-24'; // Gamedle #1
+const GD_LAUNCH = '2026-10-24'; // Gamedar #1
 const GD_TZ = 'Europe/Berlin';
 
 const gdSlug = t => String(t).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -144,11 +144,11 @@ function gdShareText(mode, date, guesses, url, { answer = gdDaily(mode, date), h
   if (mode !== 'classic') {
     // Ohne Eigenschaften-Vergleich: nur Fehlversuche und Treffer (lange Serien gekürzt)
     const marks = n > 12 ? `${'🟥'.repeat(10)} … +${n - 11} 🟩` : guesses.map((id, i) => (i === n - 1 ? '🟩' : '🟥')).join('');
-    return `Gamedle #${no} · ${GD_SHARE_LABEL[mode]}\n${solved}\n${marks}\n${url}`;
+    return `Gamedar #${no} · ${GD_SHARE_LABEL[mode]}\n${solved}\n${marks}\n${url}`;
   }
   const rows = guesses.slice(-6).map(id => gdCompare(GD_BY_ID.get(id), answer).map(c => GD_EMOJI[c.state]).join(''));
   const more = n > 6 ? `… und ${n - 6} weitere Versuche davor\n` : '';
-  return `Gamedle #${no} · Klassik 🎮\n${solved}\n${more}${rows.join('\n')}\n${url}`;
+  return `Gamedar #${no} · Klassik 🎮\n${solved}\n${more}${rows.join('\n')}\n${url}`;
 }
 
 /* ── Statistik ── */

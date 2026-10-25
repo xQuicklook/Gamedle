@@ -1,4 +1,5 @@
-﻿# Baut src/* zu einer einzigen, teilbaren Datei: gamedle.html (Gamedle + Tierly)
+﻿# Baut src/* zu einer einzigen, teilbaren Datei: gamedar.html (Gamedar + Tiercrew)
+# Intern heißen die Module weiter „gamedle“ (Gamedar) und „tierly“ (Tiercrew) – daher die Dateinamen.
 # PeerJS (vendor/peerjs.min.js, MIT) wird mit eingebettet – die Datei braucht kein CDN.
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
@@ -23,7 +24,7 @@ if ($peer -match '</script') { throw 'vendor/peerjs.min.js enthält </script> �
 
 # PeerJS zuletzt einsetzen, damit seine Inhalte nie als Platzhalter gelesen werden
 $out = $html.Replace('/*@@CSS@@*/', $css).Replace('/*@@JS@@*/', $js).Replace('/*@@PEERJS@@*/', $peer)
-[IO.File]::WriteAllText((Join-Path $root 'gamedle.html'), $out, $utf8)
+[IO.File]::WriteAllText((Join-Path $root 'gamedar.html'), $out, $utf8)
 
 # Dieselbe Datei als docs/index.html – GitHub Pages veröffentlicht den Ordner /docs
 $site = Join-Path $root 'docs'
@@ -31,4 +32,4 @@ New-Item -ItemType Directory -Force $site | Out-Null
 [IO.File]::WriteAllText((Join-Path $site 'index.html'), $out, $utf8)
 [IO.File]::WriteAllText((Join-Path $site '.nojekyll'), '', $utf8) # Datei unverändert ausliefern
 Copy-Item (Join-Path (Join-Path $root 'assets') 'og.png') (Join-Path $site 'og.png') -Force # Link-Vorschaubild
-Write-Output ("gamedle.html gebaut ({0:N0} KB) – auch als docs/index.html" -f ((Get-Item (Join-Path $root 'gamedle.html')).Length / 1KB))
+Write-Output ("gamedar.html gebaut ({0:N0} KB) – auch als docs/index.html" -f ((Get-Item (Join-Path $root 'gamedar.html')).Length / 1KB))

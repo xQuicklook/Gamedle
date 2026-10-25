@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Gamedle – Spiele-Rätsel & Tier-Listen</title>
+<title>Gamedar – Spiele-Rätsel & Tier-Listen</title>
 <meta name="description" content="Errate täglich ein Videospiel und ranke Spiele gemeinsam mit Freunden – direkt im Browser.">
 <meta name="theme-color" content="#0d0e12">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='2' y='2' width='13' height='13' rx='3' fill='%232fbf71'/%3E%3Crect x='17' y='2' width='13' height='13' rx='3' fill='%23e7a93b'/%3E%3Crect x='2' y='17' width='13' height='13' rx='3' fill='%23e5484d'/%3E%3Crect x='17' y='17' width='13' height='13' rx='3' fill='%232fbf71'/%3E%3C/svg%3E">
 <!-- Link-Vorschau (WhatsApp, Discord, Telegram …) -->
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="Gamedle">
-<meta property="og:title" content="Gamedle – Errate das Spiel des Tages">
+<meta property="og:site_name" content="Gamedar">
+<meta property="og:title" content="Gamedar – Errate das Spiel des Tages">
 <meta property="og:description" content="Jeden Tag neue Videospiel-Rätsel – an Eigenschaften, Zitaten, Emojis, dem Cover oder einer Szene. Plus Tier-Listen mit Freunden.">
 <meta property="og:url" content="https://xquicklook.github.io/Gamedle/">
 <meta property="og:image" content="https://xquicklook.github.io/Gamedle/og.png">
@@ -1163,19 +1163,19 @@ button.gd-hint:hover { border-color: var(--accent); }
 <!-- ───────────── Übersicht ───────────── -->
 <section id="hub" class="hub">
   <div class="hub-inner">
-    <div class="brand brand-lg"><span class="logo gd-logo" aria-hidden="true"></span>Gamedle</div>
+    <div class="brand brand-lg"><span class="logo gd-logo" aria-hidden="true"></span>Gamedar</div>
     <h1>Videospiele erraten und ranken.</h1>
     <p class="muted">Jeden Tag ein neues Rätsel – und Tier-Listen mit deinen Freunden. Kostenlos, ohne Konto.</p>
     <div class="hub-tiles">
-      <a class="hub-tile" href="#/gamedle">
+      <a class="hub-tile" href="#/gamedar">
         <span class="hub-badge" id="hubBadge"></span>
-        <strong>Gamedle</strong>
+        <strong>Gamedar</strong>
         <span>Fünf tägliche Rätsel: Errate Spiele an ihren Eigenschaften, einem Zitat, Emojis, dem verpixelten Cover oder einer Szene.</span>
         <span class="hub-cta">Jetzt raten →</span>
       </a>
-      <a class="hub-tile" href="#/tierly">
+      <a class="hub-tile" href="#/tiercrew">
         <span class="hub-badge" id="hubTierlyBadge"></span>
-        <strong>Tierly</strong>
+        <strong>Tiercrew</strong>
         <span>Ranke Spiele und Franchises gemeinsam mit Freunden – verdeckt, mit großem Aufdecken.</span>
         <span class="hub-cta" id="hubTierlyCta">Tier-Liste starten →</span>
       </a>
@@ -1184,11 +1184,11 @@ button.gd-hint:hover { border-color: var(--accent); }
   </div>
 </section>
 
-<!-- ───────────── Gamedle ───────────── -->
+<!-- ───────────── Gamedar ───────────── -->
 <section id="gamedle" class="gd" hidden>
   <header class="gd-top">
     <a class="icon-btn" href="#/" aria-label="Zur Übersicht" id="gdBack"></a>
-    <a class="brand brand-link" href="#/" title="Zur Übersicht"><span class="logo gd-logo" aria-hidden="true"></span><span>Gamedle</span></a>
+    <a class="brand brand-link" href="#/" title="Zur Übersicht"><span class="logo gd-logo" aria-hidden="true"></span><span>Gamedar</span></a>
     <nav class="tabs" role="tablist" aria-label="Modus" id="gdTabs"></nav>
     <div class="gd-actions">
       <button class="icon-btn" id="gdStatsBtn" aria-label="Statistik"></button>
@@ -1198,11 +1198,11 @@ button.gd-hint:hover { border-color: var(--accent); }
   <main class="gd-main" id="gdMain"></main>
 </section>
 
-<!-- ───────────── Tierly: Startseite ───────────── -->
+<!-- ───────────── Tiercrew: Startseite ───────────── -->
 <section id="landing" class="landing" hidden>
   <div class="landing-card">
     <a class="linkish back-link" href="#/">← Übersicht</a>
-    <div class="brand brand-lg"><span class="logo" aria-hidden="true"></span>Tierly</div>
+    <div class="brand brand-lg"><span class="logo" aria-hidden="true"></span>Tiercrew</div>
     <h1>Ranke Videospiele gemeinsam mit deinen Freunden.</h1>
     <p class="muted">Direkt von Browser zu Browser – kein Server, kein Account, keine Installation.</p>
 
@@ -1239,7 +1239,7 @@ button.gd-hint:hover { border-color: var(--accent); }
 <!-- ───────────── App ───────────── -->
 <div id="app" class="app" hidden>
   <header class="topbar">
-    <a class="brand brand-link" href="#/" title="Zur Übersicht – dein Raum bleibt dabei offen"><span class="logo" aria-hidden="true"></span><span class="brand-text">Tierly</span></a>
+    <a class="brand brand-link" href="#/" title="Zur Übersicht – dein Raum bleibt dabei offen"><span class="logo" aria-hidden="true"></span><span class="brand-text">Tiercrew</span></a>
 
     <nav class="tabs" role="tablist" aria-label="Ranking-Typ">
       <button class="tab" role="tab" data-board="games">Spiele</button>
@@ -3840,7 +3840,7 @@ const App = {
     const box = $('#resumeBox');
     const last = Store.get('last');
     box.replaceChildren();
-    $('#appVersion').textContent = 'Tierly ' + APP_VERSION;
+    $('#appVersion').textContent = 'Tiercrew ' + APP_VERSION;
     const saved = Rooms.list().length;
     const link = $('#roomsLink');
     link.hidden = !saved;
@@ -3951,7 +3951,7 @@ const App = {
     btn.disabled = false;
     btn.textContent = 'Beitreten';
     this.drawResume();
-    history.replaceState(null, '', location.pathname + location.search + '#/tierly');
+    history.replaceState(null, '', location.pathname + location.search + '#/tiercrew');
   },
 
   enterApp() {
@@ -4011,13 +4011,13 @@ const App = {
     };
     Net.on.rejected = reason => {
       const msg = reason === 'outdated'
-        ? 'Deine Tierly-Datei ist veraltet. Hol dir die aktuelle Datei vom Host und versuch es nochmal.'
+        ? 'Deine Tiercrew-Datei ist veraltet. Hol dir die aktuelle Datei vom Host und versuch es nochmal.'
         : 'Beitritt abgelehnt: Diese Spieler-Identität gehört zu einem anderen Gerät.';
       Net.on.joinFailed(msg);
     };
-    Net.on.hostOutdated = app => toast(`Der Host nutzt eine ältere Tierly-Version${app ? ' (' + app + ')' : ''} – manche Funktionen fehlen.`, 6000);
+    Net.on.hostOutdated = app => toast(`Der Host nutzt eine ältere Tiercrew-Version${app ? ' (' + app + ')' : ''} – manche Funktionen fehlen.`, 6000);
     Net.on.hostReject = (name, reason) => toast(reason === 'outdated'
-      ? `${name} hat eine veraltete Tierly-Datei – bitte die aktuelle Datei schicken.`
+      ? `${name} hat eine veraltete Tiercrew-Datei – bitte die aktuelle Datei schicken.`
       : `Beitritt von „${name}“ abgelehnt (fremde Spieler-Identität).`, 6000);
     Net.on.hostJoin = p => {
       const s = this.state;
@@ -5218,7 +5218,7 @@ function roomsModal() {
                 'Löschen', true).then(ok => { if (ok) { Rooms.forget(r.key); draw(); App.drawResume?.(); } }),
             }, icon('trash'))));
       })) : h('p.help', 'Noch keine gespeicherten Räume.'),
-      h('p.help', 'Host-Räume bleiben, bis du sie löschst. Gast-Kopien werden nach 30 Tagen ohne Nutzung automatisch entfernt. Wird der Speicher knapp, räumt Tierly zuerst alte Gast-Kopien weg.'),
+      h('p.help', 'Host-Räume bleiben, bis du sie löschst. Gast-Kopien werden nach 30 Tagen ohne Nutzung automatisch entfernt. Wird der Speicher knapp, räumt Tiercrew zuerst alte Gast-Kopien weg.'),
     );
   };
   draw();
@@ -5321,7 +5321,7 @@ function playReveal(board) {
   $('#menu').hidden = true;
   // Gerade in Gamedle oder auf der Übersicht? Dann nur Bescheid geben statt die Seite zu überdecken
   if ($('#app').hidden) {
-    toast('Tierly: Die Listen wurden aufgedeckt!', 10000, { label: 'Ansehen', onClick: () => { location.hash = '#/tierly'; } });
+    toast('Tiercrew: Die Listen wurden aufgedeckt!', 10000, { label: 'Ansehen', onClick: () => { location.hash = '#/tiercrew'; } });
     return;
   }
   if (matchMedia('(prefers-reduced-motion: reduce)').matches || Drag.active) {
@@ -5473,7 +5473,7 @@ function showTips() {
     next.textContent = i < steps.length - 1 ? 'Weiter' : 'Los geht’s';
   };
   draw();
-  const m = openModal({ title: 'So funktioniert Tierly', width: 460, body, foot: [back, next], autofocus: false });
+  const m = openModal({ title: 'So funktioniert Tiercrew', width: 460, body, foot: [back, next], autofocus: false });
   Store.set('onboarded', true);
 }
 
@@ -5603,7 +5603,7 @@ function infoModal() {
     title: 'Datenschutz & Quellen', width: 560, autofocus: false,
     body: [
       section('Was wo gespeichert wird',
-        h('p.help', 'Es gibt kein Konto und keinen Tierly-Server. Räume, Listen, Name und Einstellungen liegen nur im Speicher deines Browsers (localStorage). Im Raum gehen Daten direkt an die anderen Mitspieler (WebRTC), nicht an Dritte.')),
+        h('p.help', 'Es gibt kein Konto und keinen eigenen Server. Räume, Listen, Name und Einstellungen liegen nur im Speicher deines Browsers (localStorage). Im Raum gehen Daten direkt an die anderen Mitspieler (WebRTC), nicht an Dritte.')),
       section('Welche Dienste angefragt werden',
         h('ul.info-list',
           li('PeerJS-Vermittlungsserver (0.peerjs.com)', 'nur zum Finden der Mitspieler über den Raum-Code; der Server sieht dabei deine IP-Adresse. Bei blockierten Direktverbindungen kann zusätzlich der PeerJS-Relay (TURN) genutzt werden.'),
@@ -5614,7 +5614,7 @@ function infoModal() {
           li('Cover-Bilder', 'stammen aus der englischsprachigen Wikipedia; die Rechte liegen bei den jeweiligen Publishern.'),
           li('Spieldaten', 'Wikidata (CC0) und Wikipedia.'),
           li('PeerJS 1.5.4', 'MIT-Lizenz, © Michelle Bu und Eric Zhang.'))),
-      h('p.help', 'Tierly ' + APP_VERSION),
+      h('p.help', 'Tiercrew ' + APP_VERSION),
     ],
   });
 }
@@ -5644,7 +5644,7 @@ function roomModal() {
           h('button.btn', { onclick: () => copyText(Net.code, 'Code kopiert') }, icon('copy'), 'Code kopieren'),
           isFile ? null : h('button.btn', { onclick: () => copyText(link, 'Einladungslink kopiert') }, icon('link'), 'Link kopieren')),
         h('p.help', isFile
-          ? 'So laden deine Freunde ein: Schick ihnen diese Tierly-HTML-Datei und den Code. Sie öffnen die Datei im Browser, geben ihren Namen und den Code ein – fertig. Der Raum bleibt online, solange der Host-Tab offen ist.'
+          ? 'So laden deine Freunde ein: Schick ihnen diese HTML-Datei und den Code. Sie öffnen die Datei im Browser, geben ihren Namen und den Code ein – fertig. Der Raum bleibt online, solange der Host-Tab offen ist.'
           : 'Schick deinen Freunden den Link oder den Code. Der Raum bleibt online, solange der Host-Tab offen ist.'),
         h('p.help', 'Fällt der Host aus, übernimmt automatisch der dienstälteste Gast. ',
           h('button.linkish', { type: 'button', onclick: () => diagModal() }, 'Verbindung testen')),
@@ -6383,8 +6383,9 @@ const fileStamp = () => new Date().toISOString().slice(0, 10);
 function exportJson(s = App.state, code = Net.code) {
   if (!s) return;
   const players = Object.fromEntries(Object.values(s.players || {}).map(p => [p.id, { id: p.id, name: p.name, color: p.color }]));
+  // app: 'tierly' ist die interne Formatkennung (Tiercrew hieß früher Tierly) – nicht ändern, sonst passen ältere Exporte nicht mehr
   const data = { app: 'tierly', v: 1, version: APP_VERSION, exportedAt: new Date().toISOString(), tiers: s.tiers, items: s.items, order: s.order, rankings: s.rankings, players, assets: s.assets || {} };
-  downloadBlob(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }), `tierly-${(code || 'solo').toLowerCase()}-${fileStamp()}.json`);
+  downloadBlob(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }), `tiercrew-${(code || 'solo').toLowerCase()}-${fileStamp()}.json`);
 }
 
 function importJson() {
@@ -6394,7 +6395,7 @@ function importJson() {
     if (!file) return;
     let data;
     try { data = JSON.parse(await file.text()); } catch { toast('Die Datei ist kein gültiges JSON.'); return; }
-    if (data?.app !== 'tierly' || !data.items) { toast('Das ist keine Tierly-Exportdatei.'); return; }
+    if (data?.app !== 'tierly' || !data.items) { toast('Das ist keine Tiercrew-Exportdatei.'); return; }
     const ok = await confirmDialog('Raum ersetzen?', `Spiele, Stufen und Platzierungen werden durch den Inhalt von „${file.name}“ ersetzt.`, 'Importieren', true);
     if (ok && App.dispatch({ type: 'state/replace', data })) toast('Import abgeschlossen');
   };
@@ -6461,7 +6462,7 @@ async function exportPng() {
   ctx.fillStyle = col('--text');
   ctx.font = font(800, 28);
   ctx.textBaseline = 'alphabetic';
-  ctx.fillText(`Tierly · ${boardName}`, pad, 48);
+  ctx.fillText(`Tiercrew · ${boardName}`, pad, 48);
   ctx.fillStyle = col('--muted');
   ctx.font = font(500, 15);
   ctx.fillText(viewName, pad, 72);
@@ -6504,7 +6505,7 @@ async function exportPng() {
     ctx.textAlign = 'left';
   }
 
-  c.toBlob(blob => downloadBlob(blob, `tierly-${App.board}-${groupLike ? 'gruppe' : 'liste'}-${fileStamp()}.png`), 'image/png');
+  c.toBlob(blob => downloadBlob(blob, `tiercrew-${App.board}-${groupLike ? 'gruppe' : 'liste'}-${fileStamp()}.png`), 'image/png');
 }
 
 /* Zeichnet ein Bild wie object-fit: cover in das Rechteck */
@@ -7402,7 +7403,7 @@ const GD_SCENES = {
 /* ───────── Gamedle: Spiellogik (ohne Oberfläche, testbar) ─────────
    Das Tagesspiel ergibt sich allein aus dem Datum (deutsche Zeit) – alle bekommen
    dasselbe Rätsel, ganz ohne Server. */
-const GD_LAUNCH = '2026-10-24'; // Gamedle #1
+const GD_LAUNCH = '2026-10-24'; // Gamedar #1
 const GD_TZ = 'Europe/Berlin';
 
 const gdSlug = t => String(t).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -7545,11 +7546,11 @@ function gdShareText(mode, date, guesses, url, { answer = gdDaily(mode, date), h
   if (mode !== 'classic') {
     // Ohne Eigenschaften-Vergleich: nur Fehlversuche und Treffer (lange Serien gekürzt)
     const marks = n > 12 ? `${'🟥'.repeat(10)} … +${n - 11} 🟩` : guesses.map((id, i) => (i === n - 1 ? '🟩' : '🟥')).join('');
-    return `Gamedle #${no} · ${GD_SHARE_LABEL[mode]}\n${solved}\n${marks}\n${url}`;
+    return `Gamedar #${no} · ${GD_SHARE_LABEL[mode]}\n${solved}\n${marks}\n${url}`;
   }
   const rows = guesses.slice(-6).map(id => gdCompare(GD_BY_ID.get(id), answer).map(c => GD_EMOJI[c.state]).join(''));
   const more = n > 6 ? `… und ${n - 6} weitere Versuche davor\n` : '';
-  return `Gamedle #${no} · Klassik 🎮\n${solved}\n${more}${rows.join('\n')}\n${url}`;
+  return `Gamedar #${no} · Klassik 🎮\n${solved}\n${more}${rows.join('\n')}\n${url}`;
 }
 
 /* ── Statistik ── */
@@ -8897,7 +8898,7 @@ const GD_MODE_UI = {
   scene: { label: 'Szene', title: 'Aus welchem Spiel stammt diese Szene?', sub: 'Mit jedem Fehlversuch zoomt das Bild weiter heraus.' },
   endless: { label: 'Endlos', title: 'Endlos-Modus', sub: 'Zum Üben – zählt nicht für die Statistik.' },
 };
-const gdModeHash = mode => (mode === 'classic' ? '#/gamedle' : '#/gamedle/' + mode);
+const gdModeHash = mode => (mode === 'classic' ? '#/gamedar' : '#/gamedar/' + mode);
 
 /* Tipps je Modus: [Art, freigeschaltet nach so vielen Fehlversuchen].
    Cover und Szene brauchen keine – dort wird das Bild von selbst deutlicher. */
@@ -9065,7 +9066,7 @@ const Gamedle = {
     const table = this.mode === 'classic' || this.mode === 'endless';
 
     main.replaceChildren(h('div.gd-wrap',
-      h('div.gd-head', h('h2', ui.title), h('p.muted', this.mode === 'endless' ? ui.sub : `Gamedle #${no} · ${ui.sub}`)),
+      h('div.gd-head', h('h2', ui.title), h('p.muted', this.mode === 'endless' ? ui.sub : `Gamedar #${no} · ${ui.sub}`)),
       this.stage(ans, p, wrong),
       p.done ? this.resultCard(ans, p) : this.searchBox(p),
       p.done ? null : this.hintBar(ans, p, wrong),
@@ -9251,7 +9252,7 @@ const Gamedle = {
     return h('div.gd-result',
       src ? h('img.gd-result-cover', { src, alt: '', referrerpolicy: 'no-referrer' }) : null,
       h('div.gd-result-body',
-        h('span.gd-result-kicker', this.mode === 'endless' ? 'Richtig!' : `Gamedle #${gdDayNumber(this.date)} gelöst!`),
+        h('span.gd-result-kicker', this.mode === 'endless' ? 'Richtig!' : `Gamedar #${gdDayNumber(this.date)} gelöst!`),
         h('h3', ans.title),
         h('p.muted', `${ans.year} · ${ans.dev} · ${n} ${n === 1 ? 'Versuch' : 'Versuche'}`),
         speaker ? h('p.muted', `Gesagt von ${speaker}`) : null,
@@ -9377,7 +9378,7 @@ function gdHelpModal() {
   const sub = text => h('h3', { style: { fontSize: '15px' } }, text);
   const [letterAfter, coverAfter] = GD_HINTS.classic.map(x => x[1]);
   const m = openModal({
-    title: 'So funktioniert Gamedle', width: 540, autofocus: false,
+    title: 'So funktioniert Gamedar', width: 540, autofocus: false,
     body: [
       h('p', `Jeden Tag warten ${GD_DAILY_MODES.length} neue Rätsel – für alle dieselben. Sie wechseln um Mitternacht (deutsche Zeit); darunter siehst du jeweils die Lösung von gestern.`),
       sub('Klassik'),
@@ -9408,10 +9409,14 @@ function gdHelpModal() {
 
 /* ───────── Übersicht & Navigation ─────────
    #/            → Übersicht
-   #/gamedle     → Gamedle (…/cover, …/endless)
-   #/tierly      → Tierly
+   #/gamedar     → Gamedar (…/cover, …/endless)
+   #/tiercrew    → Tiercrew
    #/paket/…     → geteilte Spieleliste (siehe Share in export.js)
-   #ABC123       → Tierly-Einladungslink (Raum-Code) – bleibt wie bisher gültig */
+   #ABC123       → Tiercrew-Einladungslink (Raum-Code) – bleibt wie bisher gültig
+   Intern heißen die Module weiter „gamedle“ und „tierly“ (frühere Namen); deren alte
+   Adressen #/gamedle… und #/tierly leiten auf die neuen um, damit geteilte Links gültig bleiben. */
+const LEGACY_ROUTES = { gamedle: 'gamedar', tierly: 'tiercrew' };
+
 const Router = {
   current: null,
 
@@ -9422,16 +9427,21 @@ const Router = {
   },
 
   route() {
-    const hash = location.hash;
+    let hash = location.hash;
+    const legacy = hash.match(/^#\/(gamedle|tierly)(\/.*)?$/);
+    if (legacy) {
+      hash = '#/' + LEGACY_ROUTES[legacy[1]] + (legacy[2] || '');
+      history.replaceState(null, '', hash);
+    }
     if (/^#\/paket\//.test(hash)) {
-      // Geteilte Spieleliste: Adresse zurück auf Tierly bzw. den offenen Raum, dann anbieten
-      history.replaceState(null, '', App.state && Net.code ? '#' + Net.code : '#/tierly');
+      // Geteilte Spieleliste: Adresse zurück auf Tiercrew bzw. den offenen Raum, dann anbieten
+      history.replaceState(null, '', App.state && Net.code ? '#' + Net.code : '#/tiercrew');
       this.show('tierly');
       Share.receive(hash.slice('#/paket/'.length));
       return;
     }
-    if (/^#\/gamedle/.test(hash)) this.show('gamedle', hash.split('/')[2]);
-    else if (hash === '#/tierly' || /^#[A-Z0-9]{6}$/i.test(hash)) this.show('tierly');
+    if (/^#\/gamedar/.test(hash)) this.show('gamedle', hash.split('/')[2]);
+    else if (hash === '#/tiercrew' || /^#[A-Z0-9]{6}$/i.test(hash)) this.show('tierly');
     else this.show('hub');
   },
 
@@ -9446,7 +9456,7 @@ const Router = {
     $('#landing').hidden = view !== 'tierly' || !!App.state;
     $('#app').hidden = view !== 'tierly' || !App.state;
     if (view === 'tierly' && App.state && !tierlyActive) App.render();
-    document.title = { hub: 'Gamedle – Spiele-Rätsel & Tier-Listen', gamedle: 'Gamedle – Spiel des Tages', tierly: 'Tierly – Game Tierlist' }[view];
+    document.title = { hub: 'Gamedar – Spiele-Rätsel & Tier-Listen', gamedle: 'Gamedar – Spiel des Tages', tierly: 'Tiercrew – Tier-Listen mit Freunden' }[view];
     if (view === 'gamedle') Gamedle.open(sub);
     if (view === 'hub') this.renderHub();
     window.scrollTo(0, 0);

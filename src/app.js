@@ -82,7 +82,7 @@ const App = {
     const box = $('#resumeBox');
     const last = Store.get('last');
     box.replaceChildren();
-    $('#appVersion').textContent = 'Tierly ' + APP_VERSION;
+    $('#appVersion').textContent = 'Tiercrew ' + APP_VERSION;
     const saved = Rooms.list().length;
     const link = $('#roomsLink');
     link.hidden = !saved;
@@ -193,7 +193,7 @@ const App = {
     btn.disabled = false;
     btn.textContent = 'Beitreten';
     this.drawResume();
-    history.replaceState(null, '', location.pathname + location.search + '#/tierly');
+    history.replaceState(null, '', location.pathname + location.search + '#/tiercrew');
   },
 
   enterApp() {
@@ -253,13 +253,13 @@ const App = {
     };
     Net.on.rejected = reason => {
       const msg = reason === 'outdated'
-        ? 'Deine Tierly-Datei ist veraltet. Hol dir die aktuelle Datei vom Host und versuch es nochmal.'
+        ? 'Deine Tiercrew-Datei ist veraltet. Hol dir die aktuelle Datei vom Host und versuch es nochmal.'
         : 'Beitritt abgelehnt: Diese Spieler-Identität gehört zu einem anderen Gerät.';
       Net.on.joinFailed(msg);
     };
-    Net.on.hostOutdated = app => toast(`Der Host nutzt eine ältere Tierly-Version${app ? ' (' + app + ')' : ''} – manche Funktionen fehlen.`, 6000);
+    Net.on.hostOutdated = app => toast(`Der Host nutzt eine ältere Tiercrew-Version${app ? ' (' + app + ')' : ''} – manche Funktionen fehlen.`, 6000);
     Net.on.hostReject = (name, reason) => toast(reason === 'outdated'
-      ? `${name} hat eine veraltete Tierly-Datei – bitte die aktuelle Datei schicken.`
+      ? `${name} hat eine veraltete Tiercrew-Datei – bitte die aktuelle Datei schicken.`
       : `Beitritt von „${name}“ abgelehnt (fremde Spieler-Identität).`, 6000);
     Net.on.hostJoin = p => {
       const s = this.state;

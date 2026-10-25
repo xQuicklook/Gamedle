@@ -16,7 +16,7 @@ const GD_MODE_UI = {
   scene: { label: 'Szene', title: 'Aus welchem Spiel stammt diese Szene?', sub: 'Mit jedem Fehlversuch zoomt das Bild weiter heraus.' },
   endless: { label: 'Endlos', title: 'Endlos-Modus', sub: 'Zum Üben – zählt nicht für die Statistik.' },
 };
-const gdModeHash = mode => (mode === 'classic' ? '#/gamedle' : '#/gamedle/' + mode);
+const gdModeHash = mode => (mode === 'classic' ? '#/gamedar' : '#/gamedar/' + mode);
 
 /* Tipps je Modus: [Art, freigeschaltet nach so vielen Fehlversuchen].
    Cover und Szene brauchen keine – dort wird das Bild von selbst deutlicher. */
@@ -184,7 +184,7 @@ const Gamedle = {
     const table = this.mode === 'classic' || this.mode === 'endless';
 
     main.replaceChildren(h('div.gd-wrap',
-      h('div.gd-head', h('h2', ui.title), h('p.muted', this.mode === 'endless' ? ui.sub : `Gamedle #${no} · ${ui.sub}`)),
+      h('div.gd-head', h('h2', ui.title), h('p.muted', this.mode === 'endless' ? ui.sub : `Gamedar #${no} · ${ui.sub}`)),
       this.stage(ans, p, wrong),
       p.done ? this.resultCard(ans, p) : this.searchBox(p),
       p.done ? null : this.hintBar(ans, p, wrong),
@@ -370,7 +370,7 @@ const Gamedle = {
     return h('div.gd-result',
       src ? h('img.gd-result-cover', { src, alt: '', referrerpolicy: 'no-referrer' }) : null,
       h('div.gd-result-body',
-        h('span.gd-result-kicker', this.mode === 'endless' ? 'Richtig!' : `Gamedle #${gdDayNumber(this.date)} gelöst!`),
+        h('span.gd-result-kicker', this.mode === 'endless' ? 'Richtig!' : `Gamedar #${gdDayNumber(this.date)} gelöst!`),
         h('h3', ans.title),
         h('p.muted', `${ans.year} · ${ans.dev} · ${n} ${n === 1 ? 'Versuch' : 'Versuche'}`),
         speaker ? h('p.muted', `Gesagt von ${speaker}`) : null,
@@ -496,7 +496,7 @@ function gdHelpModal() {
   const sub = text => h('h3', { style: { fontSize: '15px' } }, text);
   const [letterAfter, coverAfter] = GD_HINTS.classic.map(x => x[1]);
   const m = openModal({
-    title: 'So funktioniert Gamedle', width: 540, autofocus: false,
+    title: 'So funktioniert Gamedar', width: 540, autofocus: false,
     body: [
       h('p', `Jeden Tag warten ${GD_DAILY_MODES.length} neue Rätsel – für alle dieselben. Sie wechseln um Mitternacht (deutsche Zeit); darunter siehst du jeweils die Lösung von gestern.`),
       sub('Klassik'),

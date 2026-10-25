@@ -124,7 +124,7 @@ function infoModal() {
     title: 'Datenschutz & Quellen', width: 560, autofocus: false,
     body: [
       section('Was wo gespeichert wird',
-        h('p.help', 'Es gibt kein Konto und keinen Tierly-Server. Räume, Listen, Name und Einstellungen liegen nur im Speicher deines Browsers (localStorage). Im Raum gehen Daten direkt an die anderen Mitspieler (WebRTC), nicht an Dritte.')),
+        h('p.help', 'Es gibt kein Konto und keinen eigenen Server. Räume, Listen, Name und Einstellungen liegen nur im Speicher deines Browsers (localStorage). Im Raum gehen Daten direkt an die anderen Mitspieler (WebRTC), nicht an Dritte.')),
       section('Welche Dienste angefragt werden',
         h('ul.info-list',
           li('PeerJS-Vermittlungsserver (0.peerjs.com)', 'nur zum Finden der Mitspieler über den Raum-Code; der Server sieht dabei deine IP-Adresse. Bei blockierten Direktverbindungen kann zusätzlich der PeerJS-Relay (TURN) genutzt werden.'),
@@ -135,7 +135,7 @@ function infoModal() {
           li('Cover-Bilder', 'stammen aus der englischsprachigen Wikipedia; die Rechte liegen bei den jeweiligen Publishern.'),
           li('Spieldaten', 'Wikidata (CC0) und Wikipedia.'),
           li('PeerJS 1.5.4', 'MIT-Lizenz, © Michelle Bu und Eric Zhang.'))),
-      h('p.help', 'Tierly ' + APP_VERSION),
+      h('p.help', 'Tiercrew ' + APP_VERSION),
     ],
   });
 }
@@ -165,7 +165,7 @@ function roomModal() {
           h('button.btn', { onclick: () => copyText(Net.code, 'Code kopiert') }, icon('copy'), 'Code kopieren'),
           isFile ? null : h('button.btn', { onclick: () => copyText(link, 'Einladungslink kopiert') }, icon('link'), 'Link kopieren')),
         h('p.help', isFile
-          ? 'So laden deine Freunde ein: Schick ihnen diese Tierly-HTML-Datei und den Code. Sie öffnen die Datei im Browser, geben ihren Namen und den Code ein – fertig. Der Raum bleibt online, solange der Host-Tab offen ist.'
+          ? 'So laden deine Freunde ein: Schick ihnen diese HTML-Datei und den Code. Sie öffnen die Datei im Browser, geben ihren Namen und den Code ein – fertig. Der Raum bleibt online, solange der Host-Tab offen ist.'
           : 'Schick deinen Freunden den Link oder den Code. Der Raum bleibt online, solange der Host-Tab offen ist.'),
         h('p.help', 'Fällt der Host aus, übernimmt automatisch der dienstälteste Gast. ',
           h('button.linkish', { type: 'button', onclick: () => diagModal() }, 'Verbindung testen')),

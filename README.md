@@ -1,16 +1,18 @@
-# Gamedle – Spiele erraten & ranken
+# Gamedar – Spiele erraten & ranken
 
 Zwei Module in einer Seite, ohne Server und ohne Konto:
 
-- **Gamedle** – das tägliche Spiele-Rätsel (wie Loldle/Wordle) mit fünf Tagesmodi: Klassik (Eigenschaften vergleichen), Zitat, Emoji, Cover (verpixelt) und Szene (Bildausschnitt, der herauszoomt) – dazu Endlos zum Üben. Unter jedem Rätsel steht die Lösung von gestern.
-- **Tierly** – Tier-Listen für Spiele und Franchises, gemeinsam mit Freunden direkt von Browser zu Browser (WebRTC). Mehrere Spiele lassen sich auf einmal einsortieren (Strg-/Umschalt-Klick oder „Mehrere“), die Spieleliste lässt sich nach Jahrzehnt und Genre filtern. Unter „Reihe“ lädt man eine ganze Spielereihe von Wikidata (Ableger und Neuauflagen sind abwählbar). Die Spiele eines Raums lassen sich als Link teilen (`#/paket/…`, komprimiert im Link – kein Server); wer ihn öffnet, kann sie in seinen eigenen Raum übernehmen. Stufen mit „Nicht werten“ (z. B. „Nicht gespielt“) zählen nicht fürs Gruppenergebnis und die Statistik.
+- **Gamedar** – das tägliche Spiele-Rätsel (wie Loldle/Wordle) mit fünf Tagesmodi: Klassik (Eigenschaften vergleichen), Zitat, Emoji, Cover (verpixelt) und Szene (Bildausschnitt, der herauszoomt) – dazu Endlos zum Üben. Unter jedem Rätsel steht die Lösung von gestern.
+- **Tiercrew** – Tier-Listen für Spiele und Franchises, gemeinsam mit Freunden direkt von Browser zu Browser (WebRTC). Mehrere Spiele lassen sich auf einmal einsortieren (Strg-/Umschalt-Klick oder „Mehrere“), die Spieleliste lässt sich nach Jahrzehnt und Genre filtern. Unter „Reihe“ lädt man eine ganze Spielereihe von Wikidata (Ableger und Neuauflagen sind abwählbar). Die Spiele eines Raums lassen sich als Link teilen (`#/paket/…`, komprimiert im Link – kein Server); wer ihn öffnet, kann sie in seinen eigenen Raum übernehmen. Stufen mit „Nicht werten“ (z. B. „Nicht gespielt“) zählen nicht fürs Gruppenergebnis und die Statistik.
 
 **Live:** https://xquicklook.github.io/Gamedle/
 
+> **Frühere Namen:** Gamedar hieß bis Oktober 2026 „Gamedle“, Tiercrew „Tierly“. Intern (Dateinamen, Code, Speicherschlüssel `tierly.*`/`gd.*`, PeerJS-Präfix, Repository und Adresse) bleiben die alten Namen – so bleiben Statistiken, Räume und geteilte Links gültig. Die alten Adressen `#/gamedle…` und `#/tierly` leiten auf `#/gamedar…` bzw. `#/tiercrew` um.
+
 ## Benutzen
 
-- **Als Link (empfohlen):** https://xquicklook.github.io/Gamedle/ – Tierly-Einladungen sehen aus wie `…/Gamedle/#ABC123`.
-- **Als Datei:** `gamedle.html` im Browser öffnen (enthält beide Module).
+- **Als Link (empfohlen):** https://xquicklook.github.io/Gamedle/ – Tiercrew-Einladungen sehen aus wie `…/Gamedle/#ABC123`.
+- **Als Datei:** `gamedar.html` im Browser öffnen (enthält beide Module).
 
 ## Bauen & Testen
 
@@ -22,9 +24,9 @@ powershell -ExecutionPolicy Bypass -File build.ps1
 node --test "tests/*.test.js"
 ```
 
-`build.ps1` setzt `src/*` und `vendor/peerjs.min.js` zu einer einzigen Datei zusammen (`gamedle.html` und `docs/index.html`).
+`build.ps1` setzt `src/*` und `vendor/peerjs.min.js` zu einer einzigen Datei zusammen (`gamedar.html` und `docs/index.html`).
 
-Gamedle-Daten gegen die Wikipedia-Infoboxen prüfen – inklusive Zitate (müssen wörtlich auf ihrer Wikiquote-Seite stehen) und Szenen-Bilder (braucht Internet):
+Gamedar-Daten gegen die Wikipedia-Infoboxen prüfen – inklusive Zitate (müssen wörtlich auf ihrer Wikiquote-Seite stehen) und Szenen-Bilder (braucht Internet):
 
 ```bash
 node tools/verify-gamedle.js
@@ -34,11 +36,11 @@ node tools/verify-gamedle.js
 
 Beide Module nutzen einen gemeinsamen Katalog (`src/catalog.js`):
 
-- **Gamedle-Spiele** (`src/gamedle-data.js`) – vollständig gegen Wikipedia geprüft. Sie sind zugleich Tierly-Startspiele.
-- **Nur für Tierly** (`CATALOG_EXTRA` in `src/catalog.js`) – Basisdaten genügen (Jahr, Genres, Plattform, Reihe, Spielmodi). Sobald ein Spiel mit allen Rätsel-Angaben geprüft ist, zieht es nach `gamedle-data.js` um (der Test meldet doppelte Einträge).
-- **Kurznamen** (`CATALOG_SHORT`) – kürzere bzw. deutsche Namen für Tierly, z. B. „Zelda: Ocarina of Time“. Jeder Kurzname muss ein Alternativname des Spiels sein.
+- **Gamedar-Spiele** (`src/gamedle-data.js`) – vollständig gegen Wikipedia geprüft. Sie sind zugleich Tiercrew-Startspiele.
+- **Nur für Tiercrew** (`CATALOG_EXTRA` in `src/catalog.js`) – Basisdaten genügen (Jahr, Genres, Plattform, Reihe, Spielmodi). Sobald ein Spiel mit allen Rätsel-Angaben geprüft ist, zieht es nach `gamedle-data.js` um (der Test meldet doppelte Einträge).
+- **Kurznamen** (`CATALOG_SHORT`) – kürzere bzw. deutsche Namen für Tiercrew, z. B. „Zelda: Ocarina of Time“. Jeder Kurzname muss ein Alternativname des Spiels sein.
 
-Die Tierly-Pakete (`src/presets.js`) sind Filter über den Katalog – nach Jahrzehnt, Genre, Plattform, Spielweise und Reihe. Ein neues Spiel landet so automatisch in allen passenden Paketen; Pakete unter 12 Spielen (Jahrzehnte und Reihen: unter 5) bleiben ausgeblendet, bis der Katalog groß genug ist.
+Die Tiercrew-Pakete (`src/presets.js`) sind Filter über den Katalog – nach Jahrzehnt, Genre, Plattform, Spielweise und Reihe. Ein neues Spiel landet so automatisch in allen passenden Paketen; Pakete unter 12 Spielen (Jahrzehnte und Reihen: unter 5) bleiben ausgeblendet, bis der Katalog groß genug ist.
 
 ### Katalog erweitern
 
@@ -58,11 +60,11 @@ Die Tierly-Pakete (`src/presets.js`) sind Filter über den Katalog – nach Jahr
    node tools/catalog-apply.js katalog-entscheidungen.json
    ```
 
-Plattformen meinen wie bei Gamedle die Plattformen *zum Start* – sie entscheiden über die Exklusiv-Pakete (Nintendo, PlayStation …).
+Plattformen meinen wie bei Gamedar die Plattformen *zum Start* – sie entscheiden über die Exklusiv-Pakete (Nintendo, PlayStation …).
 
-### Katalog-Spiele nach Gamedle holen
+### Katalog-Spiele nach Gamedar holen
 
-Bekannte Tierly-Spiele bekommen die vollen Rätsel-Angaben und ziehen nach `gamedle-data.js` um:
+Bekannte Tiercrew-Spiele bekommen die vollen Rätsel-Angaben und ziehen nach `gamedle-data.js` um:
 
 ```bash
 node tools/promote-games.js 100
@@ -76,7 +78,7 @@ node tools/promote-games.js --apply tools/out/promote-draft.js
 
 Danach wie bei neuen Spielen `node tools/verify-gamedle.js` und `node tools/gamedle-schedule.js` – die Spiele werden ans Ende des Spielplans gehängt, bestehende Tage bleiben gleich.
 
-## Neue Spiele für Gamedle
+## Neue Spiele für Gamedar
 
 1. Entwürfe aus Wikipedia erzeugen lassen (mit `PRÜFEN` markierte Felder von Hand kontrollieren – vor allem die Plattform *bei Erstveröffentlichung* und die Perspektive):
 
@@ -123,7 +125,7 @@ git add -A
 ```
 
 ```bash
-git commit -m "Gamedle aktualisiert"
+git commit -m "Gamedar aktualisiert"
 ```
 
 ```bash
@@ -136,21 +138,21 @@ Nach ein bis zwei Minuten ist die neue Version online.
 
 | Datei | Inhalt |
 | --- | --- |
-| `src/hub.js` | Übersicht & Navigation (`#/`, `#/gamedle`, `#/tierly`, Raum-Codes) |
-| `src/catalog.js` | Gemeinsamer Spielekatalog (Gamedle-Spiele + Tierly-Extras, Kurznamen) |
-| `src/presets.js` | Tierly-Pakete (Filter über den Katalog) und Stufen-Vorlagen |
+| `src/hub.js` | Übersicht & Navigation (`#/`, `#/gamedar`, `#/tiercrew`, Raum-Codes; alte Adressen leiten um) |
+| `src/catalog.js` | Gemeinsamer Spielekatalog (Gamedar-Spiele + Tiercrew-Extras, Kurznamen) |
+| `src/presets.js` | Tiercrew-Pakete (Filter über den Katalog) und Stufen-Vorlagen |
 | `src/gamedle-data.js` | Kuratierte Spieldaten (≈300 Spiele, geprüft gegen Wikipedia) |
 | `src/gamedle-content.js` | Emojis, Zitate (geprüft gegen Wikiquote) und Szenen-Bilder |
 | `src/gamedle-core.js` | Tagesrätsel, Vergleich, Suche, Teilen, Statistik |
-| `src/gamedle.js` | Gamedle-Oberfläche (Klassik, Zitat, Emoji, Cover, Szene, Endlos) |
-| `src/core.js` | Tierly: Zustand, Aktionen (Reducer), Auswertung, Statistik |
-| `src/net.js` | Tierly: P2P, Spieler-Schlüssel, Delta-Sync, Verbindungsdiagnose |
-| `src/migration.js` | Tierly: automatische Raum-Übernahme |
-| `src/app.js` | Tierly: App-Ablauf, Rendering, Tastatur |
-| `src/wiki.js` | Cover, Jahr, Reihe und Genres über Wikipedia/Wikidata (Genres zuerst aus den Gamedle-Daten) |
-| `tests/` | Tests für Tierly- und Gamedle-Logik |
+| `src/gamedle.js` | Gamedar-Oberfläche (Klassik, Zitat, Emoji, Cover, Szene, Endlos) |
+| `src/core.js` | Tiercrew: Zustand, Aktionen (Reducer), Auswertung, Statistik |
+| `src/net.js` | Tiercrew: P2P, Spieler-Schlüssel, Delta-Sync, Verbindungsdiagnose |
+| `src/migration.js` | Tiercrew: automatische Raum-Übernahme |
+| `src/app.js` | Tiercrew: App-Ablauf, Rendering, Tastatur |
+| `src/wiki.js` | Cover, Jahr, Reihe und Genres über Wikipedia/Wikidata (Genres zuerst aus den Gamedar-Daten) |
+| `tests/` | Tests für Tiercrew- und Gamedar-Logik |
 | `tools/verify-gamedle.js` | Datenprüfung gegen Wikipedia |
 | `tools/catalog-candidates.js`, `catalog-review.html`, `catalog-apply.js` | Katalog erweitern: Vorschläge, Prüfseite, Übernahme |
-| `tools/promote-games.js` | Katalog-Spiele mit vollen Rätsel-Angaben nach Gamedle holen |
+| `tools/promote-games.js` | Katalog-Spiele mit vollen Rätsel-Angaben nach Gamedar holen |
 
 PeerJS 1.5.4 (MIT-Lizenz) liegt unter `vendor/`. Cover- und Szenen-Bilder stammen aus der englischsprachigen Wikipedia bzw. Wikimedia Commons, die Rechte liegen bei den Publishern. Zitate sind kurze Auszüge aus den Spielen, belegt über Wikiquote.

@@ -98,7 +98,7 @@ function roomsModal() {
                 'Löschen', true).then(ok => { if (ok) { Rooms.forget(r.key); draw(); App.drawResume?.(); } }),
             }, icon('trash'))));
       })) : h('p.help', 'Noch keine gespeicherten Räume.'),
-      h('p.help', 'Host-Räume bleiben, bis du sie löschst. Gast-Kopien werden nach 30 Tagen ohne Nutzung automatisch entfernt. Wird der Speicher knapp, räumt Tierly zuerst alte Gast-Kopien weg.'),
+      h('p.help', 'Host-Räume bleiben, bis du sie löschst. Gast-Kopien werden nach 30 Tagen ohne Nutzung automatisch entfernt. Wird der Speicher knapp, räumt Tiercrew zuerst alte Gast-Kopien weg.'),
     );
   };
   draw();

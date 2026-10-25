@@ -1,4 +1,4 @@
-# Testet und baut Tierly/Gamedle bei jedem Push auf main und veröffentlicht erst dann auf GitHub Pages.
+# Testet und baut Gamedar/Tiercrew bei jedem Push auf main und veröffentlicht erst dann auf GitHub Pages.
 # Voraussetzung: Settings → Pages → Source = „GitHub Actions“.
 name: Test & Veröffentlichen
 

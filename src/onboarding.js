@@ -41,6 +41,6 @@ function showTips() {
     next.textContent = i < steps.length - 1 ? 'Weiter' : 'Los geht’s';
   };
   draw();
-  const m = openModal({ title: 'So funktioniert Tierly', width: 460, body, foot: [back, next], autofocus: false });
+  const m = openModal({ title: 'So funktioniert Tiercrew', width: 460, body, foot: [back, next], autofocus: false });
   Store.set('onboarded', true);
 }
