@@ -209,6 +209,7 @@ button.gd-hint:hover { border-color: var(--accent); }
 
 /* ───────── Duell ───────── */
 .gd-live { color: var(--ok); animation: pulse 1.6s infinite; }
+.gd-new { margin-left: 6px; padding: 1px 6px; border-radius: 999px; background: var(--accent); color: var(--accent-text); font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; vertical-align: 1px; }
 .duel { gap: 14px; }
 .duel-body { display: flex; flex-direction: column; gap: 16px; }
 .duel-card {

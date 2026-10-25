@@ -33,6 +33,10 @@ if ($peer -match '</script') { throw 'vendor/peerjs.min.js enthält </script> �
 $out = $html.Replace('/*@@CSS@@*/', $css).Replace('/*@@JS@@*/', $js).Replace('/*@@PEERJS@@*/', $peer)
 [IO.File]::WriteAllText((Join-Path $root 'gamedar.html'), $out, $utf8)
 
+# Stehen Lösungen im Klartext in der Seite? Dann abbrechen – docs/ (die Live-Seite) bleibt unverändert
+& node (Join-Path (Join-Path $root 'tools') 'check-bundle.js') 'gamedar.html'
+if ($LASTEXITCODE -ne 0) { throw 'Die gebaute Seite enthält Lösungen im Klartext (tools/check-bundle.js).' }
+
 # Dieselbe Datei als docs/index.html – GitHub Pages veröffentlicht den Ordner /docs
 $site = Join-Path $root 'docs'
 New-Item -ItemType Directory -Force $site | Out-Null

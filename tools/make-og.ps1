@@ -53,7 +53,7 @@ $muted = New-Object System.Drawing.SolidBrush ([System.Drawing.Color]::FromArgb(
 $accent = New-Object System.Drawing.SolidBrush ([System.Drawing.Color]::FromArgb(255, 165, 148, 255))
 $g.DrawString('Gamedar', (New-Object System.Drawing.Font 'Segoe UI', 96, ([System.Drawing.FontStyle]::Bold), ([System.Drawing.GraphicsUnit]::Pixel)), $white, 70, 236)
 $g.DrawString('Errate jeden Tag ein Videospiel', (New-Object System.Drawing.Font 'Segoe UI', 38, ([System.Drawing.FontStyle]::Regular), ([System.Drawing.GraphicsUnit]::Pixel)), $muted, 78, 362)
-$g.DrawString('+ Tier-Listen mit Freunden', (New-Object System.Drawing.Font 'Segoe UI', 34, ([System.Drawing.FontStyle]::Bold), ([System.Drawing.GraphicsUnit]::Pixel)), $accent, 78, 420)
+$g.DrawString('+ Duelle & Tier-Listen mit Freunden', (New-Object System.Drawing.Font 'Segoe UI', 34, ([System.Drawing.FontStyle]::Bold), ([System.Drawing.GraphicsUnit]::Pixel)), $accent, 78, 420)
 $g.DrawString('xquicklook.github.io/Gamedle', (New-Object System.Drawing.Font 'Segoe UI', 26, ([System.Drawing.FontStyle]::Regular), ([System.Drawing.GraphicsUnit]::Pixel)), $muted, 78, 540)
 
 $bmp.Save($out, [System.Drawing.Imaging.ImageFormat]::Png)

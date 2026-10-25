@@ -452,6 +452,16 @@ const GD_QUOTES = {
   'detroit-become-human': ["My name is Connor. I'm the android sent by CyberLife.", 'Connor', 'Detroit: Become Human'],
   'far-cry-5': ['Montana... Big Sky Country... The Treasure State... People got a lot of names for it. I just call it home.', 'Mary May Fairgrave', 'Far Cry'],
   'far-cry-6': ['They will hate you, Diego. Everything you say, do, believe, will be wrong.', 'Antón Castillo', 'Far Cry 6'],
+  // Nachgelegt (Oktober 2026) – für die übrigen Spiele hat Wikiquote keine passende Seite
+  'final-fantasy': ['No one touches my princess!! LIGHT WARRIORS?? You impertinent fools. I, Garland, will knock you all down!!', 'Garland', 'Final Fantasy (video game)'],
+  'tomb-raider': ['How quickly can you get to Peru?', 'Jacqueline Natla', 'Tomb Raider'],
+  'spyro-the-dragon': ['Bring him on! I think I smell a barbecue!', 'Spyro', 'Spyro the Dragon'],
+  'call-of-duty-4-modern-warfare': ["Look at this place. 50 000 people used to live here… now it's a ghost town. I've never seen anything like it.", 'Captain MacMillan', 'Call of Duty'],
+  'persona-4': ["Shut it. There's eight of us, and it's a tiny frickin' TV.", 'Kanji Tatsumi', 'Persona 4'],
+  'starcraft-ii-wings-of-liberty': ['Tychus Findlay. Nice suit.', 'Jim Raynor', 'StarCraft'],
+  'marvel-s-spider-man': ["Morning guys! Who's ready for their hot fresh cup of bodily harm?", 'Spider-Man', 'Spider-Man (2018 video game)'],
+  'half-life-alyx': ["I'm afraid you misunderstand the situation, Ms. Vance.", 'G-Man', 'Half-Life'],
+  'need-for-speed-carbon': ["It's been a long time kid.", 'Darius', 'Need for Speed: Carbon'],
 };
 
 /* Szene: Bild aus dem Wikipedia-Artikel (Dateiname auf en.wikipedia.org bzw. Commons), optional der
@@ -718,4 +728,11 @@ const GD_SCENES = {
   'valorant': ['Valorant gameplay.jpg'],
   'far-cry-6': ['Far Cry 6 gameplay screenshot.jpg'],
   'counter-strike-2': ['CS2 Gameplay.png'],
+  // Nachgelegt (Oktober 2026) – die übrigen Artikel zeigen nur Verpackungen, Logos oder Fotos
+  'pac-man': ['Pac-Man gameplay (1x pixel-perfect recreation).png'],
+  'call-of-duty': ['CallDuty1PC.jpg'],
+  'portal-2': ['Portal 2 paint.jpg'],
+  'diablo-iii': ['D3-inventory-smaller.jpg'],
+  'tetris': ['Tetris (Elektronika 60) screenshot.png'],
+  'call-of-duty-black-ops-ii': ['Call of Duty Black Ops II screenshot.jpg'],
 };

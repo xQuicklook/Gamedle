@@ -69,13 +69,14 @@ const Gamedle = {
   open(mode = 'classic', code = '') {
     this.mode = [...GD_DAILY_MODES, 'endless', 'duell'].includes(mode) ? mode : 'classic';
     this.date = gdToday();
-    if (this.mode === 'duell') Duel.open(code);
+    if (this.mode === 'duell') { Store.set('gd.duelSeen', true); Duel.open(code); } // „neu“ am Tab verschwindet
     this.renderTabs();
     this.render();
     this.loadCovers();
     clearInterval(this.timer);
     this.timer = setInterval(() => this.tick(), 1000);
-    if (!Store.get('gd.seenHelp')) { Store.set('gd.seenHelp', true); setTimeout(gdHelpModal, 300); }
+    // Anleitung beim ersten Besuch – nicht über einer Duell-Einladung (dort gibt es „Regeln“)
+    if (this.mode !== 'duell' && !Store.get('gd.seenHelp')) { Store.set('gd.seenHelp', true); setTimeout(gdHelpModal, 300); }
   },
 
   close() { clearInterval(this.timer); }, // ein laufendes Duell geht im Hintergrund weiter
@@ -187,7 +188,8 @@ const Gamedle = {
       role: 'tab', 'aria-selected': String(this.mode === mode),
       onclick: () => { location.hash = gdModeHash(mode); },
     }, GD_MODE_UI[mode].label, today[mode]?.done ? h('span.gd-done', ' ✓') : null,
-    mode === 'duell' && Duel.session ? h('span.gd-live', { title: 'Duell läuft' }, ' ●') : null);
+    mode === 'duell' && Duel.session ? h('span.gd-live', { title: 'Duell läuft' }, ' ●') : null,
+    mode === 'duell' && !Duel.session && !Store.get('gd.duelSeen') ? h('span.gd-new', 'neu') : null);
     $('#gdTabs').replaceChildren(...GD_DAILY_MODES.map(tab), tab('endless'), tab('duell'));
     $('#gdTabs [aria-selected="true"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   },

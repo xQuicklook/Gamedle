@@ -24,7 +24,9 @@ powershell -ExecutionPolicy Bypass -File build.ps1
 node --test "tests/*.test.js"
 ```
 
-`build.ps1` setzt `src/*` und `vendor/peerjs.min.js` zu einer einzigen Datei zusammen (`gamedar.html` und `docs/index.html`). Dafür braucht es Node.js: Die Rätsel-Inhalte werden dabei versiegelt (siehe [Lösungen verschleiern](#lösungen-verschleiern)).
+`build.ps1` setzt `src/*` und `vendor/peerjs.min.js` zu einer einzigen Datei zusammen (`gamedar.html` und `docs/index.html`). Dafür braucht es Node.js: Die Rätsel-Inhalte werden dabei versiegelt (siehe [Lösungen verschleiern](#lösungen-verschleiern)), und `tools/check-bundle.js` prüft danach, dass keine Lösung im Klartext in der Seite steht – sonst bricht der Build ab und nichts wird veröffentlicht.
+
+Lokal ansehen: `node tools/serve.js`, dann http://localhost:5180/.
 
 Gamedar-Daten gegen die Wikipedia-Infoboxen prüfen – inklusive Zitate (müssen wörtlich auf ihrer Wikiquote-Seite stehen) und Szenen-Bilder (braucht Internet):
 
@@ -139,7 +141,21 @@ Zwei Spieler, ein Spiel je Runde, wer zuerst trifft, gewinnt. Ohne eigenen Serve
 
 Was bleibt: Der Ersteller könnte mit Entwicklerwerkzeugen die Lösung sehen, und eine Rangliste für alle braucht einen Server. Beides löst später ein Server, der den Platz des Erstellers einnimmt.
 
-Lokal testen: zwei Browser – oder dieselbe Seite einmal über `localhost` und einmal über `127.0.0.1` öffnen (zwei Adressen, zwei getrennte Spieler).
+### Duell lokal testen
+
+```bash
+node tools/serve.js
+```
+
+Dann http://localhost:5180/ und http://127.0.0.1:5180/ öffnen – zwei Adressen haben getrennten Speicher und sind damit zwei Spieler (im selben Browser unter derselben Adresse gilt man als derselbe Spieler).
+
+Um eine Runde gezielt zu gewinnen, gibt es eine Debug-Kopie, in der alles über die Browser-Konsole erreichbar ist (landet in `tools/out`, nicht im Git):
+
+```bash
+node tools/make-debug.js
+```
+
+Sie liegt dann unter `…:5180/tools/out/gamedar-debug.html`; beim Ersteller verrät `Duel.session.room.state.round.gameId` die Lösung der laufenden Runde.
 
 ## Veröffentlichen (GitHub Pages)
 
@@ -162,6 +178,8 @@ git push
 ```
 
 Nach ein bis zwei Minuten ist die neue Version online.
+
+Zusätzlich prüft jeden Montag eine zweite Action (`.github/workflows/media-check.yml`), ob Cover, Szenen-Bilder und Zitate auf Wikipedia/Wikiquote noch da sind (`node tools/verify-gamedle.js --media`). Fehlt etwas, schlägt sie fehl und GitHub schickt eine Mail – dann das betroffene Bild bzw. Zitat in `src/gamedle-content.js` ersetzen.
 
 ## Aufbau
 
@@ -187,6 +205,8 @@ Nach ein bis zwei Minuten ist die neue Version online.
 | `tests/` | Tests für Tiercrew-, Gamedar- und Duell-Logik |
 | `tools/verify-gamedle.js` | Datenprüfung gegen Wikipedia |
 | `tools/gamedle-schedule.js`, `seal-content.js` | Spielplan pflegen (versiegelt), Inhalte beim Bauen versiegeln |
+| `tools/check-bundle.js` | Prüft die gebaute Seite auf Lösungen im Klartext (Teil von `build.ps1`) |
+| `tools/serve.js`, `make-debug.js` | Lokaler Webserver; Debug-Kopie fürs Testen des Duells |
 | `tools/catalog-candidates.js`, `catalog-review.html`, `catalog-apply.js` | Katalog erweitern: Vorschläge, Prüfseite, Übernahme |
 | `tools/promote-games.js` | Katalog-Spiele mit vollen Rätsel-Angaben nach Gamedar holen |
 

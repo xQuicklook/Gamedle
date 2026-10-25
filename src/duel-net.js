@@ -12,7 +12,7 @@
    Laufzeit unterwegs – darum zählt ein Tipp des Gasts um die volle Laufzeit (höchstens DUEL_MAX_LAG) früher. */
 const DUEL_PROTOCOL = 1;
 const DUEL_PEER_PREFIX = 'gamedar-duel-v1-';
-const DUEL_TICK_MS = 100;    // so oft schreibt der Host die Zeit fort
+const DUEL_TICK_MS = 1000;   // Sicherheitsnetz – eigentlich weckt der Wecker den Host genau zum nächsten Ereignis
 const DUEL_PING_MS = 2000;   // Laufzeitmessung
 const DUEL_GRACE_MS = 15000; // so lange darf die Verbindung weg sein, danach gilt das Duell als aufgegeben
 const DUEL_MAX_LAG = 300;    // höchstens so viel Laufzeit wird einem Tipp gutgeschrieben
@@ -63,6 +63,7 @@ function duelRoom({ settings, host, today, now = () => Date.now(), seed = () => 
     settings, host, guest: null, state: null,
     online: false, lostAt: null, rtt: 0,
     send() {}, onView() {}, onMedia() {}, onGuest() {}, onRematch() {},
+    wake() {},                                 // wake(Zeitpunkt): Wecker für das nächste Ereignis stellen
     keys: { local: '', remote: '' },          // zuletzt gezeigte bzw. verschickte Ansicht
     shown: { local: new Set(), remote: new Set() },
     images: new Map(),                         // Bild-Schlüssel → Promise<Daten-URL | null>
@@ -161,6 +162,10 @@ function duelRoom({ settings, host, today, now = () => Date.now(), seed = () => 
       }
       room.deliver(at, host.id, 'local');
       if (room.online) room.deliver(at, room.guest.id, 'remote');
+      // Nächstes Ereignis: Rundenstart, Hinweis-Stufe, Rundenende, nächste Runde – oder Ende der Gnadenfrist
+      const grace = !room.online && room.lostAt != null && !s.over ? room.lostAt + DUEL_GRACE_MS : null;
+      const next = [duelNextEvent(s, at), grace].filter(x => x != null);
+      if (next.length) room.wake(Math.min(...next));
     },
 
     deliver(at, pid, to) {
@@ -242,6 +247,28 @@ function duelClient({ me, now = () => Date.now() }) {
 }
 
 /* ───────── Ab hier nur im Browser ───────── */
+
+/* Wecker für den Host: Timer verdeckter Tabs drosselt der Browser (mindestens auf 1 s), ein Worker weckt
+   pünktlicher. Ohne Worker (z. B. als Datei geöffnet) übernimmt setTimeout. */
+function duelAlarm(onWake) {
+  let pending = null, worker = null, timer = null;
+  const fire = () => { pending = null; onWake(); };
+  try {
+    worker = new Worker(URL.createObjectURL(new Blob(['onmessage = e => setTimeout(() => postMessage(0), e.data);'], { type: 'text/javascript' })));
+    worker.onmessage = fire;
+  } catch { worker = null; }
+  return {
+    at(time) {
+      if (pending != null && pending < Date.now() - 100) pending = null; // verpasster Wecker
+      if (pending != null && pending <= time) return; // früherer Wecker steht schon
+      pending = time;
+      const ms = Math.max(0, time - Date.now()) + 1;
+      if (worker) worker.postMessage(ms);
+      else { clearTimeout(timer); timer = setTimeout(fire, ms); }
+    },
+    stop() { worker?.terminate(); clearTimeout(timer); },
+  };
+}
 
 /* Bildadressen (Wikipedia), je Spiel einmal geholt */
 const duelUrls = new Map();
@@ -381,6 +408,8 @@ function duelHostSession({ settings, me, handlers }) {
     error: text => handlers.error(text),
   });
   room.send = msg => net.send(msg);
+  const alarm = duelAlarm(() => room.tick());
+  room.wake = at => alarm.at(at);
   const timers = [setInterval(() => room.tick(), DUEL_TICK_MS), setInterval(() => room.ping(), DUEL_PING_MS)];
   return {
     role: 'host', me, room,
@@ -392,7 +421,7 @@ function duelHostSession({ settings, me, handlers }) {
     start: () => room.start(),
     rematch: () => room.rematch(),
     leave: () => room.leave(me.id),
-    close() { timers.forEach(clearInterval); setTimeout(() => net.close(), 300); },
+    close() { timers.forEach(clearInterval); alarm.stop(); setTimeout(() => net.close(), 300); },
   };
 }
 

@@ -11,8 +11,8 @@ const files = ['gamedle-seal.js', 'gamedle-data.js', 'gamedle-content.js', 'game
 const D = vm.runInNewContext(`${files.map(src).join('\n')}\n;({
   GD_BY_ID, GD_DAILY_MODES, GD_NO_COVER, gdDaily, gdShiftDate, gdPool,
   DUEL_ROUND_MS, DUEL_STEP_MS, DUEL_LOCK_MS, DUEL_COUNTDOWN_MS, DUEL_BREAK_MS, DUEL_POINT_ROUNDS, DUEL_HISTORY_MAX,
-  duelPoints, duelCreate, duelStart, duelTick, duelGuess, duelForfeit, duelSkipGame, duelView,
-  duelRecord, duelAddRecord, duelStats,
+  duelPoints, duelCreate, duelStart, duelTick, duelGuess, duelForfeit, duelSkipGame, duelView, duelNextEvent,
+  duelRecord, duelAddRecord, duelStats, DUEL_MAX_TRIES,
 })`, { Intl, Date, Map, Set, TextEncoder, TextDecoder, btoa, atob });
 
 const TODAY = '2026-10-25';
@@ -228,6 +228,41 @@ test('Duell: Aufgabe und Ersatzspiel', () => {
   assert.equal(k.round.startAt, T0 + 2000 + D.DUEL_COUNTDOWN_MS, 'Countdown von vorn');
   while (!k.over) timeout(k);
   assert.ok(!k.rounds.some(r => r.gameId === first), 'das ausgelassene Spiel kommt nicht wieder');
+});
+
+test('Duell: Lädt kein Bild, wird nach wenigen Versuchen ohne Bild gespielt – nie eine Endlosschleife', () => {
+  const s = duel({ kind: 'bestof', bestOf: 3, mode: 'cover' });
+  const first = s.round.mode;
+  assert.equal(first, 'cover');
+  for (let i = 1; i < D.DUEL_MAX_TRIES; i++) {
+    D.duelSkipGame(s, T0 + i);
+    assert.equal(s.round.mode, 'cover', `Versuch ${i + 1}: noch ein Cover`);
+  }
+  D.duelSkipGame(s, T0 + 10);
+  assert.ok(['emoji', 'quote', 'classic'].includes(s.round.mode), `danach ohne Bild (${s.round.mode})`);
+  assert.equal(s.skipped.length, D.DUEL_MAX_TRIES);
+  // Im Punkte-Duell bevorzugt ein Modus, der noch nicht dran war
+  const p = duel();
+  while (!['cover', 'scene'].includes(p.round.mode)) solve(p, 'host', 1000);
+  const played = new Set(p.rounds.map(r => r.mode));
+  for (let i = 0; i < D.DUEL_MAX_TRIES; i++) D.duelSkipGame(p, T0);
+  if (!['emoji', 'quote', 'classic'].every(m => played.has(m))) assert.ok(!played.has(p.round.mode), 'noch nicht gespielter Modus');
+  // Erschöpfter Pool bricht nicht ab
+  const e = duel({ kind: 'bestof', bestOf: 3, mode: 'quote' });
+  e.excluded = D.gdPool('quote').map(g => g.id);
+  D.duelSkipGame(e, T0);
+  assert.equal(e.round.mode, 'classic', 'ohne passende Spiele geht es mit Klassik weiter');
+});
+
+test('Duell: nächster Zeitpunkt für den Wecker des Hosts', () => {
+  const s = duel();
+  assert.equal(D.duelNextEvent(s, T0), start(s), 'Countdown → Rundenstart');
+  assert.equal(D.duelNextEvent(s, start(s) + 1), start(s) + D.DUEL_STEP_MS, 'nächste Hinweis-Stufe');
+  assert.equal(D.duelNextEvent(s, start(s) + 85000), start(s) + D.DUEL_ROUND_MS, 'Rundenende');
+  D.duelGuess(s, 'host', 1, s.round.gameId, start(s) + 5000);
+  assert.equal(D.duelNextEvent(s, start(s) + 6000), start(s) + 5000 + D.DUEL_BREAK_MS, 'nach der Auflösung die nächste Runde');
+  D.duelForfeit(s, 'gast', start(s) + 6000);
+  assert.equal(D.duelNextEvent(s, start(s) + 6000), null, 'Duell vorbei');
 });
 
 test('Historie: Eintrag aus einem beendeten Duell – aus Sicht beider Spieler', () => {

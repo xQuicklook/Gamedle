@@ -2,6 +2,8 @@
 // Ausführen: node tools/verify-gamedle.js   (braucht Internet)
 // Meldet Abweichungen bei Jahr, Entwickler, Publisher und Plattformen, fehlende Cover,
 // Zitate, die nicht (mehr) auf ihrer Wikiquote-Seite stehen, und fehlende Szenen-Bilder.
+// Mit --media nur Cover, Zitate und Szenen (das, was ein Rätsel kaputt machen kann) – so läuft es wöchentlich
+// als GitHub Action (.github/workflows/media-check.yml); bei Problemen endet es mit Fehler und GitHub schickt eine Mail.
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
@@ -20,6 +22,8 @@ const ACCEPTED = new Set([
   'RuneScape|kein Cover', 'Roblox|kein Cover', 'Geometry Dash|kein Cover',
 ]);
 
+const mediaOnly = process.argv.includes('--media');
+
 (async () => {
   const rows = GD_GAMES.map(g => ({ title: g[0], year: g[1], plats: g[3].split(','), dev: g[4], pub: g[5], wiki: g[10] || g[0] }));
   const pages = await fetchPages(rows.map(r => r.wiki));
@@ -29,6 +33,7 @@ const ACCEPTED = new Set([
     const p = pages.get(r.wiki);
     if (!p || p.missing) { issues.push([r.title, 'Artikel fehlt', r.wiki]); continue; }
     if (!p.thumbnail) issues.push([r.title, 'kein Cover', '']);
+    if (mediaOnly) continue;
     const box = infobox(p.revisions?.[0]?.slots?.main?.content || '');
     if (!box) { issues.push([r.title, 'keine Infobox', '']); continue; }
     const ys = years(box.released || box.release);

@@ -16,6 +16,8 @@ const DUEL_POINT_ROUNDS = 5;
 const DUEL_BEST_OF = [3, 5, 7];
 const DUEL_SKIP_DAYS = 7;        // Tagesrätsel von heute und den nächsten 7 Tagen kommen im Duell nicht dran
 const DUEL_ALL = 99;             // Hinweis-Stufe „alles aufgedeckt“ (nach Rundenende)
+const DUEL_MAX_TRIES = 3;        // so oft wird ein Spiel ersetzt, dessen Bild nicht lädt – danach ohne Bild
+const DUEL_TEXT_MODES = ['emoji', 'quote', 'classic']; // Modi ohne Bild
 
 /* Tipps je Modus: [Art, ab Hinweis-Stufe] – anders als im Tagesrätsel nach Zeit, nicht nach Fehlversuchen.
    Emojis, Cover und Szene werden zusätzlich mit jeder Stufe deutlicher (siehe duelClue). */
@@ -66,20 +68,22 @@ function duelCreate({ kind = 'points', bestOf = 3, mode = 'mixed', players, seed
   };
 }
 
-/* Modus und Spiel für Runde n – zufällig, aber durch seed festgelegt; nie ein Tagesrätsel, nie doppelt */
-function duelPick(s, n) {
-  const mode = s.mode !== 'mixed' ? s.mode : duelShuffle(GD_DAILY_MODES, `${s.seed}:modes`)[(n - 1) % GD_DAILY_MODES.length];
+/* Modus und Spiel für Runde n – zufällig, aber durch seed festgelegt; nie ein Tagesrätsel, nie doppelt.
+   force: Modus vorgeben (Ersatz ohne Bild). Ist ein Pool erschöpft, geht es mit Klassik weiter statt abzubrechen. */
+function duelPick(s, n, force = null) {
+  let mode = force || (s.mode !== 'mixed' ? s.mode : duelShuffle(GD_DAILY_MODES, `${s.seed}:modes`)[(n - 1) % GD_DAILY_MODES.length]);
   const used = new Set([...s.excluded, ...s.skipped, ...s.rounds.map(r => r.gameId)]);
-  const pool = gdPool(mode).filter(g => !used.has(g.id));
-  if (!pool.length) throw new Error(`Keine Spiele mehr für ${mode} übrig.`);
+  let pool = gdPool(mode).filter(g => !used.has(g.id));
+  if (!pool.length) { mode = 'classic'; pool = gdPool('classic').filter(g => !used.has(g.id)); }
+  if (!pool.length) pool = gdPool('classic');
   const rnd = gdRng(gdHash(`${s.seed}:${n}:${s.skipped.length}`));
   return { mode, gameId: pool[Math.floor(rnd() * pool.length)].id };
 }
 
-function duelStartRound(s, now) {
+function duelStartRound(s, now, { mode = null, tries = 0 } = {}) {
   const n = s.rounds.length + 1;
   s.round = {
-    n, ...duelPick(s, n), startAt: now + DUEL_COUNTDOWN_MS, endedAt: null,
+    n, ...duelPick(s, n, mode), tries, startAt: now + DUEL_COUNTDOWN_MS, endedAt: null,
     guesses: Object.fromEntries(s.players.map(p => [p, []])), lockUntil: {},
   };
   return s;
@@ -90,12 +94,18 @@ function duelStart(s, now) {
   return s.round || s.over ? s : duelStartRound(s, now);
 }
 
-/* Das Spiel der Runde taugt nicht (z. B. Bild lädt nicht) → anderes Spiel, Countdown von vorn */
+/* Das Spiel der Runde taugt nicht (z. B. Bild lädt nicht) → anderes Spiel, Countdown von vorn.
+   Nach DUEL_MAX_TRIES Fehlschlägen (Wikipedia nicht erreichbar?) läuft die Runde ohne Bild:
+   als Emoji, Zitat oder Klassik – bevorzugt ein Modus, der im Duell noch nicht dran war. */
 function duelSkipGame(s, now) {
   const r = s.round;
   if (!r || r.endedAt || s.over) return s;
   s.skipped.push(r.gameId);
-  return duelStartRound(s, now);
+  const tries = (r.tries || 0) + 1;
+  if (tries < DUEL_MAX_TRIES) return duelStartRound(s, now, { mode: r.mode, tries });
+  const played = new Set(s.rounds.map(x => x.mode));
+  const text = DUEL_TEXT_MODES.find(m => !played.has(m)) || DUEL_TEXT_MODES[0];
+  return duelStartRound(s, now, { mode: text, tries });
 }
 
 function duelScore(s) {
@@ -130,6 +140,17 @@ function duelEndRound(s, at, winner) {
   const ms = winner ? at - r.startAt : null;
   s.rounds.push({ n: r.n, mode: r.mode, gameId: r.gameId, winner, ms, points: winner && s.kind === 'points' ? duelPoints(ms) : 0 });
   s.over = duelOutcome(s);
+}
+
+/* Nächster Zeitpunkt, an dem sich die Ansicht von selbst ändert (Rundenstart, neue Hinweis-Stufe, Rundenende,
+   nächste Runde) – der Host stellt seinen Wecker genau darauf, statt ständig nachzusehen. null = nichts geplant */
+function duelNextEvent(s, now) {
+  const r = s.round;
+  if (!r || s.over) return null;
+  if (r.endedAt) return r.endedAt + DUEL_BREAK_MS;
+  if (now < r.startAt) return r.startAt;
+  const next = r.startAt + (Math.floor((now - r.startAt) / DUEL_STEP_MS) + 1) * DUEL_STEP_MS;
+  return Math.min(next, r.startAt + DUEL_ROUND_MS);
 }
 
 /* Zeit fortschreiben: Die Runde läuft ab, nach der Auflösung beginnt die nächste */

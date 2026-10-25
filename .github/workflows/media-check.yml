@@ -1,0 +1,26 @@
+# Prüft jede Woche, ob Cover, Szenen-Bilder und Zitate auf Wikipedia/Wikiquote noch da sind.
+# Nicht freie Bilder werden auf Wikipedia gelöscht, sobald sie aus dem Artikel fliegen – dann wäre das
+# Rätsel an dem Tag kaputt. Schlägt die Prüfung fehl, schickt GitHub eine Mail (Benachrichtigungen für Actions).
+# Hinweis: GitHub pausiert geplante Abläufe, wenn im Repository 60 Tage lang nichts passiert.
+name: Bilder & Zitate prüfen
+
+on:
+  schedule:
+    - cron: '0 6 * * 1' # montags 6 Uhr UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Cover, Szenen und Zitate prüfen
+        run: node tools/verify-gamedle.js --media

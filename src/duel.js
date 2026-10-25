@@ -40,10 +40,24 @@ const Duel = {
   /* Vom Router: #/gamedar/duell[/CODE] */
   open(code = '') {
     code = String(code || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
-    if (!code || this.session) return;
+    if (!code) return;
+    if (this.session) {
+      if (code !== this.session.code) this.switchTo(code); // eine andere Einladung, während ein Duell läuft
+      return;
+    }
     this.code = code;
     // Einladung angeklickt und Name schon bekannt → gleich beitreten (auch nach Neuladen: derselbe Spieler darf zurück)
     if (App.me.name) this.join(code);
+  },
+
+  async switchTo(code) {
+    const back = '#/gamedar/duell' + (this.session.role === 'guest' ? '/' + this.session.code : '');
+    const ok = await confirmDialog('Anderem Duell beitreten?',
+      `Du bist gerade in einem Duell. Trittst du dem Duell ${code} bei, verlässt du es – ein laufendes Duell zählt dann als verloren.`, 'Beitreten', true);
+    if (!ok) { history.replaceState(null, '', back); return; }
+    this.session?.leave();
+    this.end();
+    this.join(code);
   },
 
   needName() {
@@ -174,6 +188,11 @@ const Duel = {
       if (screen === 'match') { this.guessed.clear(); v.me.guesses.forEach(g => this.guessed.add(g)); }
       const names = screen === 'match' ? ['bar', 'timer', 'stage', 'hints', 'search', 'status', 'guesses', 'foot'] : ['body'];
       this.slots = Object.fromEntries(names.map(n => [n, h('div.duel-' + n)]));
+      // Screenreader: neue Hinweise, Countdown, Auflösung und Meldungen ansagen
+      if (screen === 'match') {
+        this.slots.stage.setAttribute('aria-live', 'polite');
+        this.slots.status.setAttribute('role', 'status');
+      } else this.slots.body.setAttribute('aria-live', 'polite');
       main.replaceChildren(h('div.gd-wrap.duel', Object.values(this.slots)));
     }
     if (screen === 'lobby') this.paint('body', [this.error, this.code, this.settings(), Store.get('gd.duels', []).length, Store.get('gd.duels', [])[0]?.at], () => this.lobbyView());
@@ -182,7 +201,7 @@ const Duel = {
     else if (screen === 'over') this.paint('body', [v.over, v.rounds, this.online, this.rematchFrom, this.rematchAsked, this.recorded], () => this.overView(v));
     else this.matchView(v);
     this.tickLive();
-    this.startLoop();
+    if (screen === 'match') this.startLoop(); // nur dort läuft eine Uhr
   },
 
   /* Teil neu zeichnen, wenn sich sein Inhalt (key) geändert hat */
@@ -299,6 +318,11 @@ const Duel = {
         h('p.muted', 'Schick ihm diesen Code oder den Link:'),
         h('div.duel-code', s.code || '······'),
         h('div.duel-actions',
+          // Am Handy direkt ins Teilen-Menü (WhatsApp, Signal …)
+          navigator.share ? h('button.btn.primary', {
+            type: 'button', disabled: !s.code,
+            onclick: () => navigator.share({ title: 'Gamedar-Duell', text: `Duell bei Gamedar? Code ${s.code}`, url: link }).catch(() => {}),
+          }, icon('upload'), 'Einladung teilen') : null,
           h('button.btn', { type: 'button', disabled: !s.code, onclick: () => copyText(s.code, 'Code kopiert') }, icon('copy'), 'Code kopieren'),
           h('button.btn', { type: 'button', disabled: !s.code, onclick: () => copyText(link, 'Einladungslink kopiert') }, icon('link'), 'Link kopieren')),
         h('p.muted.small', this.settingsText(s.room.settings)),
@@ -341,9 +365,10 @@ const Duel = {
     ]);
     this.paint('timer', [v.phase], () => {
       this.live.bar = h('i');
-      this.live.time = h('span.duel-time');
+      this.live.track = h('div.duel-track', { role: 'progressbar', 'aria-label': 'Verbleibende Zeit in Sekunden', 'aria-valuemin': '0', 'aria-valuemax': String(DUEL_ROUND_MS / 1000) }, this.live.bar);
+      this.live.time = h('span.duel-time', { 'aria-hidden': 'true' });
       this.live.worth = h('span.duel-worth');
-      return [h('div.duel-track', this.live.bar), h('div.duel-clock', this.live.time, this.live.worth)];
+      return [this.live.track, h('div.duel-clock', this.live.time, this.live.worth)];
     });
     this.paint('stage', this.stageKey(v), () => this.stageView(v));
     this.paint('hints', [v.phase, v.clue?.hints, this.hintBlur(v)], () => (v.phase === 'play'
@@ -456,12 +481,15 @@ const Duel = {
     ];
   },
 
-  /* ── Uhr: Countdown, Zeitbalken, Punkte, Sperre ── */
+  /* ── Uhr: Countdown, Zeitbalken, Punkte, Sperre ──
+     Nur während einer Runde, höchstens zehnmal pro Sekunde, und es wird nur geschrieben, was sich geändert hat
+     (schont den Akku am Handy). Im verdeckten Tab hält der Browser die Schleife ohnehin an. */
   startLoop() {
     if (this.loop || !this.session) return;
-    const frame = () => {
-      if (!this.session || Gamedle.mode !== 'duell' || $('#gamedle').hidden) { this.loop = 0; return; }
-      this.tickLive();
+    let last = 0;
+    const frame = time => {
+      if (!this.session || !this.screen.startsWith('match') || Gamedle.mode !== 'duell' || $('#gamedle').hidden) { this.loop = 0; return; }
+      if (time - last >= 100) { last = time; this.tickLive(); }
       this.loop = requestAnimationFrame(frame);
     };
     this.loop = requestAnimationFrame(frame);
@@ -471,16 +499,24 @@ const Duel = {
     const v = this.session?.current();
     if (!v?.me) return;
     const L = this.live;
-    if (L.count) L.count.textContent = String(Math.max(1, Math.ceil(v.startsIn / 1000)));
+    const set = (el, prop, value) => { if (el && el[prop] !== value) el[prop] = value; };
+    set(L.count, 'textContent', String(Math.max(1, Math.ceil(v.startsIn / 1000))));
     if (L.bar) {
-      L.bar.style.width = `${(v.timeLeft / DUEL_ROUND_MS) * 100}%`;
+      const width = `${((v.timeLeft / DUEL_ROUND_MS) * 100).toFixed(1)}%`;
+      if (L.width !== width) { L.width = width; L.bar.style.width = width; } // der Browser schreibt „50%“ statt „50.0%“ zurück
       L.bar.classList.toggle('low', v.timeLeft < 15000);
     }
-    if (L.time) L.time.textContent = v.phase === 'countdown' ? '' : duelClock(v.timeLeft);
-    if (L.worth) L.worth.textContent = v.worth != null ? `Treffer jetzt: ${v.worth} Punkte` : '';
-    if (L.next) L.next.textContent = v.nextIn != null ? `Nächste Runde in ${Math.ceil(v.nextIn / 1000)} s` : '';
+    if (L.track) {
+      const seconds = String(Math.ceil(v.timeLeft / 1000));
+      if (L.track.getAttribute('aria-valuenow') !== seconds) L.track.setAttribute('aria-valuenow', seconds);
+    }
+    set(L.time, 'textContent', v.phase === 'countdown' ? '' : duelClock(v.timeLeft));
+    set(L.worth, 'textContent', v.worth != null ? `Treffer jetzt: ${v.worth} Punkte` : '');
+    set(L.next, 'textContent', v.nextIn != null ? `Nächste Runde in ${Math.ceil(v.nextIn / 1000)} s` : '');
     const locked = v.phase === 'play' && v.me.lockedFor > 0;
-    if (L.lock) { L.lock.hidden = !locked; L.lock.textContent = locked ? `Gesperrt: ${duelSeconds(v.me.lockedFor)}` : ''; }
-    if (L.input) { L.input.readOnly = locked; L.input.classList.toggle('locked', locked); }
+    set(L.lock, 'hidden', !locked);
+    set(L.lock, 'textContent', locked ? `Gesperrt: ${duelSeconds(v.me.lockedFor)}` : '');
+    set(L.input, 'readOnly', locked);
+    L.input?.classList.toggle('locked', locked);
   },
 };

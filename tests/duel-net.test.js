@@ -187,6 +187,33 @@ test('Verbindung: Bilder – nur Daten-URLs der aktuellen Stufe; lädt das Start
   assert.ok(!l.client.media.has('x'));
 });
 
+test('Verbindung: Der Host stellt seinen Wecker genau auf das nächste Ereignis', async () => {
+  const l = link();
+  const wakes = [];
+  l.room.wake = t => wakes.push(t);
+  await join(l);
+  l.room.start();
+  const start = l.room.state.round.startAt;
+  assert.equal(wakes.at(-1), start, 'Rundenstart');
+  await l.advance(start - l.now() + 50);
+  assert.equal(wakes.at(-1), start + D.DUEL_STEP_MS, 'nächste Hinweis-Stufe');
+  l.room.lost(l.now());
+  l.room.tick();
+  assert.equal(wakes.at(-1), Math.min(start + D.DUEL_STEP_MS, l.now() + D.DUEL_GRACE_MS), 'Gnadenfrist zählt mit');
+});
+
+test('Verbindung: Ist Wikipedia nicht erreichbar, bleibt es bei wenigen Versuchen und die Runde läuft ohne Bild', async () => {
+  const asked = [];
+  const l = link({ settings: { kind: 'bestof', bestOf: 3, mode: 'scene' }, media: async job => { asked.push(job.key); return null; } });
+  await join(l);
+  l.room.start();
+  await l.advance(5000);
+  assert.ok(asked.length <= 6, `nur wenige Bildanfragen (${asked.length})`);
+  assert.ok(['emoji', 'quote', 'classic'].includes(l.room.state.round.mode), `Runde ohne Bild (${l.room.state.round.mode})`);
+  await l.advance(3000);
+  assert.equal(l.client.current().phase, 'play', 'das Duell geht weiter');
+});
+
 test('Verbindung: Revanche und Verlassen', async () => {
   const l = link();
   await join(l);
