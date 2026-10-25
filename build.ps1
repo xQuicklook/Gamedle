@@ -13,10 +13,17 @@ $jsFiles = @(
   'presets.js', 'core.js', 'wiki.js', 'net.js', 'migration.js', 'diag.js', 'app.js', 'undo.js', 'dnd.js', 'layout.js',
   'rooms.js', 'reveal.js', 'stats.js', 'onboarding.js', 'modals.js', 'editors.js', 'export.js',
   # Gamedle + Übersicht (startet die Navigation, muss zuletzt kommen)
-  'gamedle-content.js', 'gamedle-core.js', 'gamedle-schedule.js', 'gamedle.js', 'hub.js'
+  'gamedle-seal.js', 'gamedle-content.js', 'gamedle-core.js', 'gamedle-schedule.js', 'duel-core.js', 'duel-net.js', 'duel-history.js', 'gamedle.js', 'duel.js', 'hub.js'
 )
 $cssFiles = 'styles.css', 'gamedle.css'
-$js = "'use strict';`n" + (($jsFiles | ForEach-Object { [IO.File]::ReadAllText((Join-Path $src $_), $utf8) }) -join "`n")
+
+# Rätsel-Inhalte versiegelt einsetzen (src/gamedle-seal.js) – die Quelldatei bleibt lesbar
+$sealed = (& node (Join-Path (Join-Path $root 'tools') 'seal-content.js')) -join "`n"
+if ($LASTEXITCODE -ne 0 -or -not $sealed) { throw 'tools/seal-content.js ist fehlgeschlagen.' }
+
+# Alles in einem eigenen Gültigkeitsbereich – so sind Daten und Funktionen nicht über die Browser-Konsole abrufbar
+$parts = $jsFiles | ForEach-Object { if ($_ -eq 'gamedle-content.js') { $sealed } else { [IO.File]::ReadAllText((Join-Path $src $_), $utf8) } }
+$js = "(() => {`n'use strict';`n" + ($parts -join "`n") + "`n})();"
 $css = ($cssFiles | ForEach-Object { [IO.File]::ReadAllText((Join-Path $src $_), $utf8) }) -join "`n"
 $html = [IO.File]::ReadAllText((Join-Path $src 'index.html'), $utf8)
 $peer = [IO.File]::ReadAllText((Join-Path (Join-Path $root 'vendor') 'peerjs.min.js'), $utf8)

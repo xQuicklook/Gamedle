@@ -2,7 +2,7 @@
 
 Zwei Module in einer Seite, ohne Server und ohne Konto:
 
-- **Gamedar** – das tägliche Spiele-Rätsel (wie Loldle/Wordle) mit fünf Tagesmodi: Klassik (Eigenschaften vergleichen), Zitat, Emoji, Cover (verpixelt) und Szene (Bildausschnitt, der herauszoomt) – dazu Endlos zum Üben. Unter jedem Rätsel steht die Lösung von gestern.
+- **Gamedar** – das tägliche Spiele-Rätsel (wie Loldle/Wordle) mit fünf Tagesmodi: Klassik (Eigenschaften vergleichen), Zitat, Emoji, Cover (verpixelt) und Szene (Bildausschnitt, der herauszoomt) – dazu Endlos zum Üben. Unter jedem Rätsel steht die Lösung von gestern. Im **Duell** raten zwei Spieler gleichzeitig dasselbe Spiel: als Punkte-Duell (5 Runden, je schneller, desto mehr Punkte) oder Best-of 3/5/7; Bilanz gegen Freunde und eine kleine Bestenliste bleiben im eigenen Browser.
 - **Tiercrew** – Tier-Listen für Spiele und Franchises, gemeinsam mit Freunden direkt von Browser zu Browser (WebRTC). Mehrere Spiele lassen sich auf einmal einsortieren (Strg-/Umschalt-Klick oder „Mehrere“), die Spieleliste lässt sich nach Jahrzehnt und Genre filtern. Unter „Reihe“ lädt man eine ganze Spielereihe von Wikidata (Ableger und Neuauflagen sind abwählbar). Die Spiele eines Raums lassen sich als Link teilen (`#/paket/…`, komprimiert im Link – kein Server); wer ihn öffnet, kann sie in seinen eigenen Raum übernehmen. Stufen mit „Nicht werten“ (z. B. „Nicht gespielt“) zählen nicht fürs Gruppenergebnis und die Statistik.
 
 **Live:** https://xquicklook.github.io/Gamedle/
@@ -11,7 +11,7 @@ Zwei Module in einer Seite, ohne Server und ohne Konto:
 
 ## Benutzen
 
-- **Als Link (empfohlen):** https://xquicklook.github.io/Gamedle/ – Tiercrew-Einladungen sehen aus wie `…/Gamedle/#ABC123`.
+- **Als Link (empfohlen):** https://xquicklook.github.io/Gamedle/ – Tiercrew-Einladungen sehen aus wie `…/Gamedle/#ABC123`, Duell-Einladungen wie `…/Gamedle/#/gamedar/duell/ABC123`. Für ein Duell braucht es zwei Geräte oder zwei verschiedene Browser (im selben Browser gilt man als derselbe Spieler).
 - **Als Datei:** `gamedar.html` im Browser öffnen (enthält beide Module).
 
 ## Bauen & Testen
@@ -24,7 +24,7 @@ powershell -ExecutionPolicy Bypass -File build.ps1
 node --test "tests/*.test.js"
 ```
 
-`build.ps1` setzt `src/*` und `vendor/peerjs.min.js` zu einer einzigen Datei zusammen (`gamedar.html` und `docs/index.html`).
+`build.ps1` setzt `src/*` und `vendor/peerjs.min.js` zu einer einzigen Datei zusammen (`gamedar.html` und `docs/index.html`). Dafür braucht es Node.js: Die Rätsel-Inhalte werden dabei versiegelt (siehe [Lösungen verschleiern](#lösungen-verschleiern)).
 
 Gamedar-Daten gegen die Wikipedia-Infoboxen prüfen – inklusive Zitate (müssen wörtlich auf ihrer Wikiquote-Seite stehen) und Szenen-Bilder (braucht Internet):
 
@@ -100,6 +100,12 @@ Danach wie bei neuen Spielen `node tools/verify-gamedle.js` und `node tools/game
 
 Spiele nie löschen oder umbenennen (die ID entsteht aus dem Titel) – nur Daten korrigieren. Fehlt der Schritt 3, schlägt der Test fehl und nichts wird veröffentlicht.
 
+Der Spielplan ist versiegelt. Im Klartext ansehen (verrät die kommenden Lösungen!):
+
+```bash
+node tools/gamedle-schedule.js --show quote
+```
+
 ### Inhalte für Zitat, Emoji und Szene
 
 Liegen in `src/gamedle-content.js` (Schlüssel ist die Spiel-ID). Ein Spiel taucht in einem Modus nur auf, wenn es dort einen Eintrag hat:
@@ -110,7 +116,30 @@ Liegen in `src/gamedle-content.js` (Schlüssel ist die Spiel-ID). Ein Spiel tauc
 
 Danach wie oben `node tools/gamedle-schedule.js` – neue Einträge werden an den Plan des Modus angehängt.
 
+### Lösungen verschleiern
+
+Damit niemand kommende Lösungen im Quelltext nachliest oder per Strg+F den angezeigten Hinweis findet (`src/gamedle-seal.js`):
+
+- **Spielplan:** liegt auch im Repository nur versiegelt vor; `tools/gamedle-schedule.js` pflegt ihn. Die Tests prüfen Fingerabdrücke statt Lösungen.
+- **Zitate, Emojis, Szenen:** bleiben in `src/gamedle-content.js` lesbar und werden beim Bauen versiegelt (`tools/seal-content.js`).
+- **Seite:** Der ganze Code läuft in einem eigenen Gültigkeitsbereich – nichts davon ist über die Browser-Konsole abrufbar.
+- **Browser-Speicher:** Die Lösung eines angefangenen Rätsels und die Szenen-Adressen werden versiegelt gespeichert.
+
+Das ist Verschleierung, kein echtes Geheimnis: Wer den Code liest und ausführt, kommt an alles heran, und Bildadressen sind in den Entwicklerwerkzeugen sichtbar. Das geht nur mit einem Server.
+
 Das Vorschaubild für Link-Vorschauen (`assets/og.png`) erzeugt `tools/make-og.ps1`.
+
+## Duell
+
+Zwei Spieler, ein Spiel je Runde, wer zuerst trifft, gewinnt. Ohne eigenen Server – aber so gebaut, dass später einer den Schiedsrichter übernehmen kann:
+
+- **Schiedsrichter** (`src/duel-core.js`): wählt Modus und Spiel (nie ein Tagesrätsel von heute bis in 7 Tagen, nie doppelt), gibt die Hinweise nach Zeit frei (alle 12 s eine Stufe), prüft Tipps (2 s Sperre nach Fehltipp) und vergibt Punkte bzw. Rundensiege. Reiner JSON-Zustand, Zeit und Zufall kommen von außen – deshalb gründlich testbar und auf einem Server unverändert lauffähig.
+- **Verbindung** (`src/duel-net.js`): Der Browser des Erstellers führt den Schiedsrichter, der Gast ist per PeerJS verbunden (eigenes Präfix `gamedar-duel-v1-`). Beide bekommen Ansichten (`duelView`) – die Lösung erst nach Rundenende. Bilder schickt der Ersteller als fertige Stufe (verpixeltes Cover, Szenen-Ausschnitt), nie die Adresse. Tipps des Gasts werden um die gemessene Laufzeit (höchstens 300 ms) früher gewertet; nach einem Abbruch bleiben 15 s zum Wiederverbinden.
+- **Oberfläche** (`src/duel.js`) und **Historie** (`src/duel-history.js`): Lobby, Runde, Auflösung, Ergebnis, Revanche; Bilanz gegen Freunde und Bestenliste nur im eigenen Browser.
+
+Was bleibt: Der Ersteller könnte mit Entwicklerwerkzeugen die Lösung sehen, und eine Rangliste für alle braucht einen Server. Beides löst später ein Server, der den Platz des Erstellers einnimmt.
+
+Lokal testen: zwei Browser – oder dieselbe Seite einmal über `localhost` und einmal über `127.0.0.1` öffnen (zwei Adressen, zwei getrennte Spieler).
 
 ## Veröffentlichen (GitHub Pages)
 
@@ -143,15 +172,21 @@ Nach ein bis zwei Minuten ist die neue Version online.
 | `src/presets.js` | Tiercrew-Pakete (Filter über den Katalog) und Stufen-Vorlagen |
 | `src/gamedle-data.js` | Kuratierte Spieldaten (≈300 Spiele, geprüft gegen Wikipedia) |
 | `src/gamedle-content.js` | Emojis, Zitate (geprüft gegen Wikiquote) und Szenen-Bilder |
+| `src/gamedle-seal.js` | Versiegeln von Spielplan und Rätsel-Inhalten |
 | `src/gamedle-core.js` | Tagesrätsel, Vergleich, Suche, Teilen, Statistik |
+| `src/duel-core.js` | Gamedar-Duell: Schiedsrichter (Spielauswahl, Hinweise nach Zeit, Tipps, Punkte, Best-of) – ohne Oberfläche und Netz, später auch auf einem Server lauffähig |
+| `src/duel-net.js` | Gamedar-Duell: Verbindung (PeerJS), Host führt den Schiedsrichter, Laufzeitausgleich, Wiederverbinden, Bilder nur als fertige Stufe |
 | `src/gamedle.js` | Gamedar-Oberfläche (Klassik, Zitat, Emoji, Cover, Szene, Endlos) |
+| `src/duel-history.js` | Gamedar-Duell: eigene Historie (nur im Browser) – Bilanz je Gegner, Punkte im Monat, Bestenliste der Punkte-Duelle |
+| `src/duel.js` | Gamedar-Duell: Oberfläche (Lobby mit Historie, Warten, Runde mit Uhr, Auflösung, Ergebnis, Revanche) unter `#/gamedar/duell[/CODE]` |
 | `src/core.js` | Tiercrew: Zustand, Aktionen (Reducer), Auswertung, Statistik |
 | `src/net.js` | Tiercrew: P2P, Spieler-Schlüssel, Delta-Sync, Verbindungsdiagnose |
 | `src/migration.js` | Tiercrew: automatische Raum-Übernahme |
 | `src/app.js` | Tiercrew: App-Ablauf, Rendering, Tastatur |
 | `src/wiki.js` | Cover, Jahr, Reihe und Genres über Wikipedia/Wikidata (Genres zuerst aus den Gamedar-Daten) |
-| `tests/` | Tests für Tiercrew- und Gamedar-Logik |
+| `tests/` | Tests für Tiercrew-, Gamedar- und Duell-Logik |
 | `tools/verify-gamedle.js` | Datenprüfung gegen Wikipedia |
+| `tools/gamedle-schedule.js`, `seal-content.js` | Spielplan pflegen (versiegelt), Inhalte beim Bauen versiegeln |
 | `tools/catalog-candidates.js`, `catalog-review.html`, `catalog-apply.js` | Katalog erweitern: Vorschläge, Prüfseite, Übernahme |
 | `tools/promote-games.js` | Katalog-Spiele mit vollen Rätsel-Angaben nach Gamedar holen |
 

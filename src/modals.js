@@ -14,7 +14,6 @@ function openModal({ title, body, foot, width, tabs, autofocus = true }) {
     h('div.modal-body', body),
     foot ? h('div.modal-foot', foot) : null,
   );
-  if (width) box.style.setProperty('--modal-w', width + 'px');
   backdrop.append(box);
   let downOnBackdrop = false;
   backdrop.addEventListener('pointerdown', e => { downOnBackdrop = e.target === backdrop; });
@@ -124,15 +123,17 @@ function infoModal() {
     title: 'Datenschutz & Quellen', width: 560, autofocus: false,
     body: [
       section('Was wo gespeichert wird',
-        h('p.help', 'Es gibt kein Konto und keinen eigenen Server. Räume, Listen, Name und Einstellungen liegen nur im Speicher deines Browsers (localStorage). Im Raum gehen Daten direkt an die anderen Mitspieler (WebRTC), nicht an Dritte.')),
+        h('p.help', 'Es gibt kein Konto und keinen eigenen Server. Name, Farbe, Einstellungen, Tiercrew-Räume und Listen, Gamedar-Spielstände und -Statistik sowie deine Duell-Historie (Bilanz gegen Freunde) liegen nur im Speicher deines Browsers (localStorage).'),
+        h('p.help', 'Mitspielen geht direkt von Browser zu Browser (WebRTC), nicht über Dritte: Im Tiercrew-Raum teilt ihr eure Listen, im Duell bekommt dein Gegner Name, Farbe und deine Tipps.')),
       section('Welche Dienste angefragt werden',
         h('ul.info-list',
-          li('PeerJS-Vermittlungsserver (0.peerjs.com)', 'nur zum Finden der Mitspieler über den Raum-Code; der Server sieht dabei deine IP-Adresse. Bei blockierten Direktverbindungen kann zusätzlich der PeerJS-Relay (TURN) genutzt werden.'),
-          li('Wikipedia & Wikidata (Wikimedia Foundation)', 'für die Spielesuche, Cover, Erscheinungsjahr und Reihe. Cover werden direkt von upload.wikimedia.org geladen.'),
+          li('PeerJS-Vermittlungsserver (0.peerjs.com)', 'nur zum Finden der Mitspieler über den Raum- bzw. Duell-Code; der Server sieht dabei deine IP-Adresse. Bei blockierten Direktverbindungen kann zusätzlich der PeerJS-Relay (TURN) genutzt werden.'),
+          li('Wikipedia & Wikidata (Wikimedia Foundation)', 'für die Spielesuche, Cover, Szenen, Erscheinungsjahr und Reihe. Bilder werden direkt von upload.wikimedia.org geladen. Im Duell lädt sie der Browser des Erstellers und schickt dem Gegner nur den gerade sichtbaren Ausschnitt.'),
           li('Google STUN-Server', 'hilft beim Aufbau der Direktverbindung (ermittelt die öffentliche Adresse).'))),
       section('Quellen & Lizenzen',
         h('ul.info-list',
-          li('Cover-Bilder', 'stammen aus der englischsprachigen Wikipedia; die Rechte liegen bei den jeweiligen Publishern.'),
+          li('Cover- und Szenen-Bilder', 'stammen aus der englischsprachigen Wikipedia bzw. Wikimedia Commons; die Rechte liegen bei den jeweiligen Publishern.'),
+          li('Zitate', 'kurze Auszüge aus den Spielen, belegt über Wikiquote.'),
           li('Spieldaten', 'Wikidata (CC0) und Wikipedia.'),
           li('PeerJS 1.5.4', 'MIT-Lizenz, © Michelle Bu und Eric Zhang.'))),
       h('p.help', 'Tiercrew ' + APP_VERSION),

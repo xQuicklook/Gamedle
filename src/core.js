@@ -39,7 +39,10 @@ function h(tag, attrs, ...kids) {
   for (const [k, v] of Object.entries(attrs || {})) {
     if (v == null || v === false) continue;
     if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
-    else if (k === 'style' && typeof v === 'object') Object.assign(el.style, v);
+    else if (k === 'style' && typeof v === 'object') {
+      // CSS-Variablen (--x) lassen sich nur über setProperty setzen
+      for (const [p, val] of Object.entries(v)) p.startsWith('--') ? el.style.setProperty(p, val) : (el.style[p] = val);
+    }
     else if (k === 'html') el.innerHTML = v;
     else if (k in el && k !== 'list' && typeof v !== 'string') el[k] = v;
     else el.setAttribute(k, v === true ? '' : v);

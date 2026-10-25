@@ -6,12 +6,16 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
+const crypto = require('node:crypto');
+const { sealContent, NAMES: SEALED_NAMES } = require('../tools/seal-content.js');
+
 const src = f => fs.readFileSync(path.join(__dirname, '..', 'src', f), 'utf8');
-const G = vm.runInNewContext(`${src('gamedle-data.js')}\n${src('gamedle-content.js')}\n${src('gamedle-core.js')}\n${src('gamedle-schedule.js')}\n;({
+const sandbox = () => ({ Intl, Date, Map, Set, TextEncoder, TextDecoder, btoa, atob });
+const G = vm.runInNewContext(`${src('gamedle-seal.js')}\n${src('gamedle-data.js')}\n${src('gamedle-content.js')}\n${src('gamedle-core.js')}\n${src('gamedle-schedule.js')}\n;({
   GD, GD_BY_ID, GD_GENRES, GD_PLATFORMS, GD_PERSP, GD_MODES, GD_NO_COVER, GD_LAUNCH, GD_SCHEDULE, GD_DAILY_MODES,
-  GD_QUOTES, GD_EMOJI_HINTS, GD_SCENES,
-  gdToday, gdDayNumber, gdShiftDate, gdMsUntilNext, gdDaily, gdPool, gdCompare, gdSearch, gdNorm, gdShareText, gdRecordWin, gdCurrentStreak, gdHintLetter,
-})`, { Intl, Date, Map, Set });
+  GD_QUOTES, GD_EMOJI_HINTS, GD_SCENES, gdSeal, gdUnseal,
+  gdToday, gdDayNumber, gdShiftDate, gdMsUntilNext, gdDaily, gdPool, gdCompare, gdSearch, gdNorm, gdShareText, gdRecordWin, gdCurrentStreak, gdHintLetter, gdHintValue,
+})`, sandbox());
 
 test('Daten: eindeutige IDs und nur bekannte Kategorien', () => {
   const ids = G.GD.map(g => g.id);
@@ -99,28 +103,21 @@ test('Statistik: Serie zählt nur aufeinanderfolgende Tage', () => {
   assert.equal(G.gdCurrentStreak(s, 'classic', '2026-10-31'), 0);
 });
 
-test('Spielplan ist festgeschrieben: bekannte Antworten bleiben, jedes Spiel genau einmal', () => {
-  // Stichproben aus dem veröffentlichten Plan – ändert sich hier etwas, wurde der Plan versehentlich umsortiert
-  const golden = [
-    ['2026-10-24', 'super-mario-galaxy', 'dark-souls-iii'],
-    ['2026-10-25', 'fifa-23', 'tony-hawk-s-pro-skater'],
-    ['2026-10-26', 'clair-obscur-expedition-33', 'mass-effect'],
-    ['2026-11-23', 'halo-combat-evolved', 'final-fantasy-vii-rebirth'],
-    ['2027-02-01', 'hogwarts-legacy', 'mario-kart-64'],
-  ];
-  for (const [d, classic, cover] of golden) {
-    assert.equal(G.gdDaily('classic', d).id, classic, `Klassik ${d}`);
-    assert.equal(G.gdDaily('cover', d).id, cover, `Cover ${d}`);
-  }
-  const goldenExtra = [
-    ['2026-10-24', 'super-mario-64', 'diablo-ii', 'persona-4'],
-    ['2026-10-25', 'super-mario-bros', 'gran-turismo', 'super-mario-odyssey'],
-    ['2027-02-01', 'uncharted-drake-s-fortune', 'mega-man-2', 'kingdom-come-deliverance'],
-  ];
-  for (const [d, quote, emoji, scene] of goldenExtra) {
-    assert.equal(G.gdDaily('quote', d).id, quote, `Zitat ${d}`);
-    assert.equal(G.gdDaily('emoji', d).id, emoji, `Emoji ${d}`);
-    assert.equal(G.gdDaily('scene', d).id, scene, `Szene ${d}`);
+test('Spielplan ist festgeschrieben: veröffentlichte Tage bleiben, jedes Spiel genau einmal', () => {
+  // Fingerabdrücke (SHA-256) der ersten n Tage je Modus – ändert sich einer, wurde der Plan versehentlich
+  // umsortiert. Bewusst keine Spiel-IDs, damit hier keine kommenden Lösungen im Klartext stehen.
+  // Neue Spiele werden nur angehängt; nach dem Anhängen dürfen hier neue Stände dazukommen.
+  const locks = {
+    classic: [298, '54ede6f83a78029c'],
+    quote: [143, 'e55426e898912e62'],
+    emoji: [298, '1d18babf417e7795'],
+    cover: [292, '2b6f020717958449'],
+    scene: [259, 'd80986a327d536fd'],
+  };
+  const fingerprint = ids => crypto.createHash('sha256').update(ids.join(',')).digest('hex').slice(0, 16);
+  for (const [mode, [n, hash]] of Object.entries(locks)) {
+    assert.ok(G.GD_SCHEDULE[mode].length >= n, `${mode}: Plan ist kürzer geworden`);
+    assert.equal(fingerprint(G.GD_SCHEDULE[mode].slice(0, n)), hash, `${mode}: die ersten ${n} Tage haben sich geändert`);
   }
   for (const mode of G.GD_DAILY_MODES) {
     const plan = G.GD_SCHEDULE[mode];
@@ -130,6 +127,26 @@ test('Spielplan ist festgeschrieben: bekannte Antworten bleiben, jedes Spiel gen
     assert.equal(plan.length, pool.length, `${mode}: alle Spiele im Plan – nach neuen Spielen tools/gamedle-schedule.js ausführen`);
     for (const id of plan) assert.ok(G.GD_BY_ID.has(id), `${mode}: ${id} existiert`);
   }
+});
+
+test('Verschleiern: versiegelte Daten lassen sich verlustfrei öffnen, Lösungen stehen nicht im Klartext', () => {
+  const sample = { text: 'Zitat „äöü“ – 🎮 👻', list: [1, 'a', null] };
+  assert.equal(JSON.stringify(G.gdUnseal(G.gdSeal(sample, 'x'), 'x')), JSON.stringify(sample));
+  assert.notEqual(G.gdSeal('gleich', 'a'), G.gdSeal('gleich', 'b'), 'das Salz verändert das Ergebnis');
+  const ids = G.GD.map(g => g.id).filter(id => id.length >= 6);
+
+  // Spielplan: auch im Repository versiegelt
+  const plan = src('gamedle-schedule.js');
+  for (const id of ids) assert.ok(!plan.includes(id), `Spielplan enthält „${id}“ im Klartext – tools/gamedle-schedule.js ausführen`);
+
+  // Inhalte: beim Bauen versiegelt (tools/seal-content.js), Ergebnis identisch mit der Quelle
+  const sealed = sealContent();
+  assert.ok(/^[\x20-\x7E\n]*$/.test(sealed), 'nur ASCII (geht unbeschadet durch PowerShell)');
+  const C = vm.runInNewContext(`${src('gamedle-seal.js')}\n${sealed}\n;({ ${SEALED_NAMES.join(', ')} })`, sandbox());
+  for (const n of SEALED_NAMES) assert.equal(JSON.stringify(C[n]), JSON.stringify(G[n]), `${n} unverändert`);
+  for (const id of ids) assert.ok(!sealed.includes(id), `versiegelte Inhalte enthalten „${id}“`);
+  for (const [q] of Object.values(G.GD_QUOTES)) assert.ok(!sealed.includes(q.slice(0, 16)), `Zitat im Klartext: ${q}`);
+  for (const [f] of Object.values(G.GD_SCENES)) assert.ok(!sealed.includes(f), `Szene im Klartext: ${f}`);
 });
 
 test('Firmen: Umbenennung zählt als richtig, Studio-Familie als teilweise', () => {
@@ -186,4 +203,14 @@ test('Tipp-Buchstabe überspringt Artikel', () => {
   assert.equal(G.gdHintLetter('The Legend of Zelda').skipped, 'The');
   assert.equal(G.gdHintLetter('Doom').letter, 'D');
   assert.equal(G.gdHintLetter('Theme Hospital').letter, 'T');
+});
+
+test('Tipp-Inhalte: Buchstabe, Jahr und Sprecher kommen aus den Spieldaten', () => {
+  const [id, [, speaker]] = Object.entries(G.GD_QUOTES)[0];
+  const g = G.GD_BY_ID.get(id);
+  assert.equal(G.gdHintValue('letter', g).letter, G.gdHintLetter(g.title).letter);
+  assert.equal(G.gdHintValue('year', g), g.year);
+  assert.equal(G.gdHintValue('speaker', g), speaker);
+  assert.equal(G.gdHintValue('speaker', G.GD.find(x => !G.GD_QUOTES[x.id])), '?', 'ohne Zitat kein Sprecher');
+  assert.equal(G.gdHintValue('cover', g), null, 'das Cover liefert die Oberfläche');
 });

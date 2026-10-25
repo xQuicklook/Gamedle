@@ -51,6 +51,10 @@ function gdHash(s) {
 /* Tagesrätsel-Modi (jeder mit eigenem Spielplan); „endless“ ist Übung mit dem Klassik-Pool */
 const GD_DAILY_MODES = ['classic', 'quote', 'emoji', 'cover', 'scene'];
 
+/* Bild-Stufen: Cover werden schärfer, Szenen zoomen heraus (Tagesrätsel: je Fehlversuch, Duell: nach Zeit) */
+const GD_COVER_LEVELS = [7, 11, 16, 24, 36, 56]; // Pixelbreite pro Stufe, danach scharf
+const GD_SCENE_ZOOM = [3.4, 2.6, 2, 1.6, 1.3];   // Vergrößerung pro Stufe, danach das ganze Bild
+
 /* Welche Spiele ein Modus kennt: Zitat, Emoji und Szene nur, wo es Inhalte gibt (gamedle-content.js) */
 function gdPool(mode) {
   if (mode === 'cover') return GD.filter(g => !GD_NO_COVER.has(g.title));
@@ -111,6 +115,15 @@ function gdCompare(guess, answer) {
 function gdHintLetter(title) {
   const m = title.match(/^(?:the|a|an|die|der|das)\s+(.)/i);
   return { letter: (m ? m[1] : title[0]).toUpperCase(), skipped: m ? title.split(' ')[0] : '' };
+}
+
+/* Inhalt eines Tipps zu einem Spiel – fürs Tagesrätsel und für den Schiedsrichter im Duell.
+   Das verschwommene Cover ('cover') ist ein Bild und kommt von der Oberfläche. */
+function gdHintValue(kind, g) {
+  if (kind === 'letter') return gdHintLetter(g.title);
+  if (kind === 'year') return g.year;
+  if (kind === 'speaker') return GD_QUOTES[g.id]?.[1] || '?';
+  return null;
 }
 
 /* ── Suche (Titel & Alternativnamen) ── */

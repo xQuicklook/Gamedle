@@ -1,8 +1,6 @@
 /* ───────── Gamedle: Oberfläche ─────────
    Tagesmodi: Klassik (Eigenschaften vergleichen), Zitat, Emoji, Cover (verpixelt) und Szene
    (Bildausschnitt) – dazu Endlos zum Üben (zählt nicht). */
-const GD_COVER_LEVELS = [7, 11, 16, 24, 36, 56]; // Pixelbreite pro Stufe, danach scharf
-const GD_SCENE_ZOOM = [3.4, 2.6, 2, 1.6, 1.3];   // Vergrößerung pro Stufe, danach das ganze Bild
 const GD_URL = () => location.href.split('#')[0];
 const GD_ISSUES = 'https://github.com/xQuicklook/Gamedle/issues/new';
 const GD_STATE_LABEL = { ok: 'richtig', partial: 'teilweise richtig', no: 'falsch', up: 'Lösung ist neuer', down: 'Lösung ist älter' };
@@ -15,6 +13,7 @@ const GD_MODE_UI = {
   cover: { label: 'Cover', title: 'Welches Spiel versteckt sich hinter dem Cover?', sub: 'Mit jedem Fehlversuch wird das Bild schärfer.' },
   scene: { label: 'Szene', title: 'Aus welchem Spiel stammt diese Szene?', sub: 'Mit jedem Fehlversuch zoomt das Bild weiter heraus.' },
   endless: { label: 'Endlos', title: 'Endlos-Modus', sub: 'Zum Üben – zählt nicht für die Statistik.' },
+  duell: { label: 'Duell', title: 'Duell', sub: 'Zu zweit dasselbe Spiel raten – wer zuerst trifft, gewinnt die Runde.' },
 };
 const gdModeHash = mode => (mode === 'classic' ? '#/gamedar' : '#/gamedar/' + mode);
 
@@ -46,15 +45,31 @@ const Gamedle = {
     const fresh = c => c && Date.now() - c.at < 7 * 86400000;
     const cached = Store.get('gd.covers');
     if (fresh(cached)) this.covers = cached.map;
+    // Szenen-Adressen verraten oft das Spiel – darum versiegelt gespeichert (ältere Fassung: Klartext, wird verworfen)
     const scenes = Store.get('gd.scenes');
-    if (fresh(scenes)) this.scenes = scenes.map;
+    if (fresh(scenes) && scenes.v) this.scenes = gdUnseal(scenes.v, 'scenes');
+    else if (scenes?.map) Store.del('gd.scenes');
+    this.sealProgress();
     document.body.classList.toggle('gd-cb', !!Store.get('gd.colorblind'));
   },
 
-  /* Wird vom Router aufgerufen */
-  open(mode = 'classic') {
-    this.mode = [...GD_DAILY_MODES, 'endless'].includes(mode) ? mode : 'classic';
+  /* Ältere Spielstände enthalten die Lösung des Tages im Klartext → versiegeln */
+  sealProgress() {
+    const all = Store.get('gd.progress', {});
+    let changed = false;
+    for (const [date, modes] of Object.entries(all)) {
+      for (const [mode, p] of Object.entries(modes)) {
+        if (GD_BY_ID.has(p.answer)) { p.answer = gdSeal(p.answer, `${mode}:${date}`); changed = true; }
+      }
+    }
+    if (changed) Store.set('gd.progress', all);
+  },
+
+  /* Wird vom Router aufgerufen; code nur beim Duell (Einladungslink #/gamedar/duell/CODE) */
+  open(mode = 'classic', code = '') {
+    this.mode = [...GD_DAILY_MODES, 'endless', 'duell'].includes(mode) ? mode : 'classic';
     this.date = gdToday();
+    if (this.mode === 'duell') Duel.open(code);
     this.renderTabs();
     this.render();
     this.loadCovers();
@@ -63,7 +78,7 @@ const Gamedle = {
     if (!Store.get('gd.seenHelp')) { Store.set('gd.seenHelp', true); setTimeout(gdHelpModal, 300); }
   },
 
-  close() { clearInterval(this.timer); },
+  close() { clearInterval(this.timer); }, // ein laufendes Duell geht im Hintergrund weiter
 
   tick() {
     if (gdToday() !== this.date) { this.date = gdToday(); this.render(); return; } // neuer Tag → neues Rätsel
@@ -96,7 +111,7 @@ const Gamedle = {
       const info = data.query?.pages?.[0]?.imageinfo?.[0];
       if (!info) throw new Error('Bild nicht gefunden: ' + file);
       this.scenes[g.id] = (info.thumburl || info.url).replace(/\?utm_[^#]*$/, '');
-      Store.set('gd.scenes', { at: Date.now(), map: this.scenes });
+      Store.set('gd.scenes', { at: Date.now(), v: gdSeal(this.scenes, 'scenes') });
       this.sceneError = false;
     } catch (e) {
       console.warn('Szene nicht geladen', e);
@@ -120,7 +135,8 @@ const Gamedle = {
   },
   save(p) {
     if (this.mode === 'endless') { this.endless = p; return; }
-    p.answer = this.answer().id; // die Lösung des Tages mitspeichern (falls sich Daten später ändern)
+    // Die Lösung des Tages mitspeichern (falls sich Daten später ändern) – versiegelt, nicht im Klartext
+    p.answer = gdSeal(this.answer().id, `${this.mode}:${this.date}`);
     const all = Store.get('gd.progress', {});
     // Nur die letzten 30 Tage aufheben
     for (const d of Object.keys(all)) if (gdDays(d, this.date) > 30) delete all[d];
@@ -130,7 +146,9 @@ const Gamedle = {
   /* Lösung eines Tages – wer schon angefangen hat, behält seine (auch wenn sich der Plan ändern sollte) */
   answerOf(mode, date) {
     const stored = Store.get('gd.progress', {})[date]?.[mode]?.answer;
-    return (stored && GD_BY_ID.get(stored)) || gdDaily(mode, date);
+    let id = null;
+    try { id = stored && gdUnseal(stored, `${mode}:${date}`); } catch { /* unlesbar → Spielplan */ }
+    return GD_BY_ID.get(id) || gdDaily(mode, date);
   },
   answer() {
     if (this.mode === 'endless') {
@@ -168,13 +186,15 @@ const Gamedle = {
     const tab = mode => h('button.tab', {
       role: 'tab', 'aria-selected': String(this.mode === mode),
       onclick: () => { location.hash = gdModeHash(mode); },
-    }, GD_MODE_UI[mode].label, today[mode]?.done ? h('span.gd-done', ' ✓') : null);
-    $('#gdTabs').replaceChildren(...GD_DAILY_MODES.map(tab), tab('endless'));
+    }, GD_MODE_UI[mode].label, today[mode]?.done ? h('span.gd-done', ' ✓') : null,
+    mode === 'duell' && Duel.session ? h('span.gd-live', { title: 'Duell läuft' }, ' ●') : null);
+    $('#gdTabs').replaceChildren(...GD_DAILY_MODES.map(tab), tab('endless'), tab('duell'));
     $('#gdTabs [aria-selected="true"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   },
 
   render() {
     this.renderTabs();
+    if (this.mode === 'duell') { Duel.render(); return; }
     const main = $('#gdMain');
     const p = this.progress();
     const ans = this.answer();
@@ -194,48 +214,36 @@ const Gamedle = {
     this.animateLast = false;
   },
 
+  /* Hinweis des Modus – die Anzeige selbst übernehmen die gd…View-Funktionen unten (auch fürs Duell) */
   stage(ans, p, wrong) {
-    if (this.mode === 'quote') return this.quoteStage(ans);
-    if (this.mode === 'emoji') return this.emojiStage(ans, p, wrong);
-    if (this.mode === 'cover') return this.coverStage(ans, p, wrong);
-    if (this.mode === 'scene') return this.sceneStage(ans, p, wrong);
+    const offline = navigator.onLine === false;
+    if (this.mode === 'quote') return gdQuoteView(GD_QUOTES[ans.id]?.[0]);
+    if (this.mode === 'emoji') {
+      const list = (GD_EMOJI_HINTS[ans.id] || '').split(' ');
+      return gdEmojiView(list.slice(0, p.done ? list.length : 1 + wrong), list.length, { fresh: this.animateLast && !p.done });
+    }
+    if (this.mode === 'cover') {
+      const src = this.cover(ans);
+      return gdCoverView({
+        src, step: p.done ? GD_COVER_LEVELS.length : wrong,
+        message: !src && (offline || this.coverError) ? 'Die Cover kommen von Wikipedia – die ist gerade nicht erreichbar. Prüf deine Internetverbindung oder spiel solange Klassik.' : '',
+      });
+    }
+    if (this.mode === 'scene') {
+      const src = this.scenes[ans.id];
+      const down = !src && (offline || this.sceneError);
+      if (!src && !down) this.loadScene(ans);
+      const [, fx = 50, fy = 50] = GD_SCENES[ans.id] || [];
+      return gdSceneView({
+        src, step: p.done ? GD_SCENE_ZOOM.length : wrong, focus: [fx, fy],
+        message: down ? 'Die Szenen kommen von Wikipedia – die ist gerade nicht erreichbar. Prüf deine Internetverbindung oder spiel solange Klassik.' : '',
+      });
+    }
     return null;
   },
 
   searchBox(p) {
-    const input = h('input.gd-input', { type: 'search', placeholder: 'Spiel eintippen …', autocomplete: 'off', spellcheck: 'false', 'aria-label': 'Spiel raten' });
-    const list = h('div.gd-suggest', { role: 'listbox', hidden: true });
-    let items = [], active = 0;
-    const draw = () => {
-      // Kein Treffer: erklären statt stumm bleiben
-      const noHit = !items.length && gdNorm(input.value).length >= 2;
-      list.hidden = !items.length && !noHit;
-      if (noHit) {
-        const already = gdSearch(input.value, new Set(), 1)[0];
-        list.replaceChildren(h('div.gd-sug-empty', already && p.guesses.includes(already.id)
-          ? `„${already.title}“ hast du schon geraten.`
-          : `Kein Treffer im Spiele-Pool (${GD.length} bekannte Spiele). Probier den Originaltitel oder eine Abkürzung.`));
-        return;
-      }
-      list.replaceChildren(...items.map((g, i) => {
-        const src = this.cover(g);
-        return h('button.gd-sug' + (i === active ? '.active' : ''), { type: 'button', role: 'option', onmousedown: e => e.preventDefault(), onclick: () => pick(g) },
-          src ? h('img', { src, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }) : h('span.gd-sug-ph', g.title.slice(0, 1)),
-          h('span', h('strong', g.title), h('small', ` ${g.year}`)));
-      }));
-    };
-    const pick = g => { input.value = ''; items = []; draw(); this.guess(g.id); setTimeout(() => $('.gd-input')?.focus(), 30); };
-    input.addEventListener('input', () => { items = gdSearch(input.value, new Set(p.guesses)); active = 0; draw(); });
-    input.addEventListener('keydown', e => {
-      if (e.key === 'ArrowDown') { active = Math.min(items.length - 1, active + 1); draw(); e.preventDefault(); }
-      else if (e.key === 'ArrowUp') { active = Math.max(0, active - 1); draw(); e.preventDefault(); }
-      else if (e.key === 'Enter' && items[active]) { e.preventDefault(); pick(items[active]); }
-      else if (e.key === 'Escape') { items = []; draw(); }
-    });
-    input.addEventListener('blur', () => setTimeout(() => { items = []; draw(); }, 150));
-    if (!matchMedia('(pointer: coarse)').matches) setTimeout(() => input.focus({ preventScroll: true }), 50);
-    return h('div.gd-search', icon('search'), input, list,
-      h('span.gd-count', p.guesses.length ? `${p.guesses.length} ${p.guesses.length === 1 ? 'Versuch' : 'Versuche'}` : ''));
+    return gdSearchBox({ exclude: new Set(p.guesses), onPick: id => this.guess(id), count: p.guesses.length, cover: g => this.cover(g) });
   },
 
   /* Tipps: immer nur der nächste ist sichtbar (gesperrt oder abrufbar), genutzte bleiben offen */
@@ -250,103 +258,19 @@ const Gamedle = {
     const control = !next ? null
       : wrong < next[1] ? h('span.gd-hint.gd-hint-locked', icon('lock'), `${label(next[0])} in ${next[1] - wrong}`)
         : h('button.gd-hint', { onclick: () => { p.hints = used + 1; this.save(p); this.render(); } }, '💡 ', label(next[0]));
-    return h('div.gd-hints', control, hints.slice(0, used).map(([k]) => this.hintBox(kindOf(k), ans)));
-  },
-
-  hintBox(kind, ans) {
-    if (kind === 'letter') {
-      const { letter, skipped } = gdHintLetter(ans.title);
-      return h('div.gd-hint-box', 'Anfangsbuchstabe: ', h('strong', letter), skipped ? h('span.muted', ` (ohne „${skipped}“)`) : null);
-    }
-    if (kind === 'year') return h('div.gd-hint-box', 'Erscheinungsjahr: ', h('strong', ans.year));
-    if (kind === 'speaker') return h('div.gd-hint-box', 'Gesagt von: ', h('strong', GD_QUOTES[ans.id]?.[1] || '?'));
-    const src = this.cover(ans);
-    return h('div.gd-hint-box', 'Verschwommenes Cover:', src ? gdBlurCanvas(src) : h('span.muted', ' (wird geladen …)'));
+    return h('div.gd-hints', control, hints.slice(0, used).map(([k]) => {
+      const kind = kindOf(k);
+      return gdHintBox(kind, kind === 'cover' ? this.cover(ans) : gdHintValue(kind, ans));
+    }));
   },
 
   table(ans, p) {
-    if (!p.guesses.length) return h('p.gd-empty.muted', 'Noch kein Versuch. Tipp los – jedes Spiel verrät etwas über die Lösung.');
-    const head = h('div.gd-row.gd-headrow', h('div.gd-cell.gd-name', 'Spiel'), GD_COLUMNS.map(c => h('div.gd-cell.head', { title: c.title || c.label }, c.label)));
-    const rows = [...p.guesses].reverse().map((id, idx) => {
-      const g = GD_BY_ID.get(id);
-      const anim = this.animateLast && idx === 0;
-      const src = this.cover(g);
-      return h('div.gd-row' + (anim ? '.anim' : ''),
-        h('div.gd-cell.gd-name', src ? h('img', { src, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }) : null, h('span', g.title)),
-        gdCompare(g, ans).map((c, i) => {
-          const state = c.near ? `${GD_STATE_LABEL[c.state]}, höchstens 3 Jahre daneben` : GD_STATE_LABEL[c.state];
-          return h(`div.gd-cell.${c.state}${c.near ? '.near' : ''}`, {
-            style: { '--i': i }, role: 'cell', 'aria-label': `${c.label}: ${c.text} – ${state}`, title: c.note || state,
-          },
-          // Symbol zusätzlich zur Farbe (hilft bei Farbschwäche); beim Jahr als deutlicher Pfeil
-          c.key === 'year' && c.state !== 'ok'
-            ? h('span.gd-year', h('b.gd-arrow', GD_STATE_ICON[c.state]), c.text)
-            : h('span', c.text),
-          c.key === 'year' && c.state !== 'ok' ? null : h('i.gd-mark', { 'aria-hidden': 'true' }, GD_STATE_ICON[c.state]));
-        }));
-    });
-    return h('div.gd-table-wrap', h('div.gd-table', { role: 'table', 'aria-label': 'Deine Versuche' }, head, rows), h('p.gd-legend.muted',
-      h('i.sw.ok', '✓'), 'richtig ', h('i.sw.partial', '~'), 'teilweise ', h('i.sw.no', '✕'), 'falsch · ▲▼ Lösung ist neuer/älter (gelb: höchstens 3 Jahre)'));
-  },
-
-  quoteStage(ans) {
-    return h('figure.gd-quote',
-      h('span.gd-quote-mark', { 'aria-hidden': 'true' }, '“'),
-      h('blockquote', GD_QUOTES[ans.id]?.[0] || '…'));
-  },
-
-  /* Emojis: zu Beginn eins, jeder Fehlversuch deckt ein weiteres auf */
-  emojiStage(ans, p, wrong) {
-    const list = (GD_EMOJI_HINTS[ans.id] || '').split(' ');
-    const shown = p.done ? list.length : Math.min(list.length, 1 + wrong);
-    return h('div.gd-emoji', { role: 'img', 'aria-label': `${shown} von ${list.length} Emojis aufgedeckt: ${list.slice(0, shown).join(' ')}` },
-      list.map((e, i) => (i < shown
-        ? h('span.gd-emoji-slot.on' + (this.animateLast && !p.done && i === shown - 1 ? '.new' : ''), e)
-        : h('span.gd-emoji-slot', '?'))));
-  },
-
-  coverStage(ans, p, wrong) {
-    const level = p.done ? 0 : GD_COVER_LEVELS[wrong] || 0;
-    const stage = h('div.gd-cover-stage', h('div.gd-cover-msg.muted', 'Cover wird geladen …'));
-    const src = this.cover(ans);
-    if (src) {
-      const img = new Image();
-      img.referrerPolicy = 'no-referrer';
-      img.onload = () => stage.replaceChildren(gdPixelate(img, level), h('span.gd-cover-level', level ? `Schärfe ${GD_COVER_LEVELS.indexOf(level) + 1}/${GD_COVER_LEVELS.length + 1}` : 'Volle Schärfe'));
-      img.onerror = () => stage.replaceChildren(h('div.gd-cover-msg', 'Das Cover konnte nicht geladen werden. Probier den Klassik-Modus.'));
-      img.src = src;
-    } else if (navigator.onLine === false || this.coverError) {
-      stage.replaceChildren(h('div.gd-cover-msg', 'Die Cover kommen von Wikipedia – die ist gerade nicht erreichbar. Prüf deine Internetverbindung oder spiel solange Klassik.'));
-    }
-    return stage;
-  },
-
-  /* Szene: stark vergrößerter Ausschnitt, der mit jedem Fehlversuch weiter herauszoomt */
-  sceneStage(ans, p, wrong) {
-    const step = p.done ? GD_SCENE_ZOOM.length : Math.min(wrong, GD_SCENE_ZOOM.length);
-    const zoom = GD_SCENE_ZOOM[step] || 1;
-    const [, fx = 50, fy = 50] = GD_SCENES[ans.id] || [];
-    const stage = h('div.gd-scene-stage', h('div.gd-cover-msg.muted', 'Szene wird geladen …'));
-    const src = this.scenes[ans.id];
-    if (src) {
-      const img = new Image();
-      img.referrerPolicy = 'no-referrer';
-      img.onload = () => {
-        stage.style.aspectRatio = `${img.naturalWidth} / ${img.naturalHeight}`;
-        stage.replaceChildren(gdZoom(img, zoom, fx, fy),
-          h('span.gd-cover-level', zoom > 1 ? `Ausschnitt ${step + 1}/${GD_SCENE_ZOOM.length + 1}` : 'Ganzes Bild'));
-      };
-      img.onerror = () => stage.replaceChildren(h('div.gd-cover-msg', 'Die Szene konnte nicht geladen werden. Probier es gleich noch einmal.'));
-      img.src = src;
-    } else if (navigator.onLine === false || this.sceneError) {
-      stage.replaceChildren(h('div.gd-cover-msg', 'Die Szenen kommen von Wikipedia – die ist gerade nicht erreichbar. Prüf deine Internetverbindung oder spiel solange Klassik.'));
-    } else this.loadScene(ans);
-    return stage;
+    const rows = [...p.guesses].reverse().map(id => { const game = GD_BY_ID.get(id); return { game, cells: gdCompare(game, ans) }; });
+    return gdGuessTable(rows, { animateFirst: this.animateLast, cover: g => this.cover(g) });
   },
 
   guessChips(ans, p) {
-    const wrong = p.guesses.filter(id => id !== ans.id);
-    return wrong.length ? h('div.gd-chips', wrong.reverse().map(id => h('span.gd-chip', '✕ ', GD_BY_ID.get(id).title))) : null;
+    return gdWrongChips(p.guesses.filter(id => id !== ans.id).reverse().map(id => GD_BY_ID.get(id)));
   },
 
   /* Wie bei Loldle: die Lösung von gestern */
@@ -386,6 +310,134 @@ const Gamedle = {
         h('a.gd-report', { href: gdReportUrl(ans, this.mode), target: '_blank', rel: 'noopener' }, 'Daten zu diesem Spiel falsch? Melden')));
   },
 };
+
+/* ───────── Anzeige-Bausteine ─────────
+   Zeigen nur, was sie übergeben bekommen – sie schlagen keine Lösung nach. Das Tagesrätsel füttert sie
+   aus den eigenen Daten, das Duell später mit dem, was der Schiedsrichter gerade freigibt. */
+
+function gdQuoteView(text) {
+  return h('figure.gd-quote',
+    h('span.gd-quote-mark', { 'aria-hidden': 'true' }, '“'),
+    h('blockquote', text || '…'));
+}
+
+/* Emojis: shown = schon aufgedeckte, der Rest bis total als „?“; fresh blendet das zuletzt aufgedeckte ein */
+function gdEmojiView(shown, total, { fresh = false } = {}) {
+  return h('div.gd-emoji', { role: 'img', 'aria-label': `${shown.length} von ${total} Emojis aufgedeckt: ${shown.join(' ')}` },
+    Array.from({ length: total }, (_, i) => (i < shown.length
+      ? h('span.gd-emoji-slot.on' + (fresh && i === shown.length - 1 ? '.new' : ''), shown[i])
+      : h('span.gd-emoji-slot', '?'))));
+}
+
+/* Bild laden und über draw(img, stage) in die Bühne setzen – bis dahin Lade-, bei Fehler Problemhinweis */
+function gdImageStage(cls, src, loading, failText, draw) {
+  const stage = h('div.' + cls, h('div.gd-cover-msg.muted', loading));
+  if (!src) return stage;
+  const img = new Image();
+  img.referrerPolicy = 'no-referrer';
+  img.onload = () => draw(img, stage);
+  img.onerror = () => stage.replaceChildren(h('div.gd-cover-msg', failText));
+  img.src = src;
+  return stage;
+}
+
+/* Cover: step = Zahl der Aufdeckungen (0 = gröbste Stufe, ab GD_COVER_LEVELS.length scharf);
+   message ersetzt das Bild (z. B. Wikipedia nicht erreichbar) */
+function gdCoverView({ src, step, message = '', failText = 'Das Cover konnte nicht geladen werden. Probier den Klassik-Modus.' }) {
+  if (message) return h('div.gd-cover-stage', h('div.gd-cover-msg', message));
+  const level = GD_COVER_LEVELS[step] || 0;
+  return gdImageStage('gd-cover-stage', src, 'Cover wird geladen …', failText, (img, stage) => stage.replaceChildren(gdPixelate(img, level),
+    h('span.gd-cover-level', level ? `Schärfe ${step + 1}/${GD_COVER_LEVELS.length + 1}` : 'Volle Schärfe')));
+}
+
+/* Szene: stark vergrößerter Ausschnitt um focus (Prozent), der mit jedem step weiter herauszoomt.
+   precut: Das Bild ist schon der fertige Ausschnitt (Duell – der Schiedsrichter gibt nie das ganze Bild heraus) */
+function gdSceneView({ src, step, focus = [50, 50], precut = false, message = '', failText = 'Die Szene konnte nicht geladen werden. Probier es gleich noch einmal.' }) {
+  if (message) return h('div.gd-scene-stage', h('div.gd-cover-msg', message));
+  step = Math.min(step, GD_SCENE_ZOOM.length);
+  const zoom = GD_SCENE_ZOOM[step] || 1;
+  return gdImageStage('gd-scene-stage', src, 'Szene wird geladen …', failText, (img, stage) => {
+    stage.style.aspectRatio = `${img.naturalWidth} / ${img.naturalHeight}`;
+    stage.replaceChildren(gdZoom(img, precut ? 1 : zoom, ...focus),
+      h('span.gd-cover-level', zoom > 1 ? `Ausschnitt ${step + 1}/${GD_SCENE_ZOOM.length + 1}` : 'Ganzes Bild'));
+  });
+}
+
+/* Ein aufgedeckter Tipp; value wie von gdHintValue (beim Cover: Adresse des Bildes) */
+function gdHintBox(kind, value) {
+  if (kind === 'letter') {
+    return h('div.gd-hint-box', 'Anfangsbuchstabe: ', h('strong', value.letter), value.skipped ? h('span.muted', ` (ohne „${value.skipped}“)`) : null);
+  }
+  if (kind === 'year') return h('div.gd-hint-box', 'Erscheinungsjahr: ', h('strong', value));
+  if (kind === 'speaker') return h('div.gd-hint-box', 'Gesagt von: ', h('strong', value));
+  return h('div.gd-hint-box', 'Verschwommenes Cover:', value ? gdBlurCanvas(value) : h('span.muted', ' (wird geladen …)'));
+}
+
+/* Klassik-Tabelle: rows = [{ game, cells }], neuester Tipp zuerst; cells wie von gdCompare */
+function gdGuessTable(rows, { animateFirst = false, cover = () => '' } = {}) {
+  if (!rows.length) return h('p.gd-empty.muted', 'Noch kein Versuch. Tipp los – jedes Spiel verrät etwas über die Lösung.');
+  const head = h('div.gd-row.gd-headrow', h('div.gd-cell.gd-name', 'Spiel'), GD_COLUMNS.map(c => h('div.gd-cell.head', { title: c.title || c.label }, c.label)));
+  const body = rows.map(({ game: g, cells }, idx) => {
+    const src = cover(g);
+    return h('div.gd-row' + (animateFirst && idx === 0 ? '.anim' : ''),
+      h('div.gd-cell.gd-name', src ? h('img', { src, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }) : null, h('span', g.title)),
+      cells.map((c, i) => {
+        const state = c.near ? `${GD_STATE_LABEL[c.state]}, höchstens 3 Jahre daneben` : GD_STATE_LABEL[c.state];
+        return h(`div.gd-cell.${c.state}${c.near ? '.near' : ''}`, {
+          style: { '--i': i }, role: 'cell', 'aria-label': `${c.label}: ${c.text} – ${state}`, title: c.note || state,
+        },
+        // Symbol zusätzlich zur Farbe (hilft bei Farbschwäche); beim Jahr als deutlicher Pfeil
+        c.key === 'year' && c.state !== 'ok'
+          ? h('span.gd-year', h('b.gd-arrow', GD_STATE_ICON[c.state]), c.text)
+          : h('span', c.text),
+        c.key === 'year' && c.state !== 'ok' ? null : h('i.gd-mark', { 'aria-hidden': 'true' }, GD_STATE_ICON[c.state]));
+      }));
+  });
+  return h('div.gd-table-wrap', h('div.gd-table', { role: 'table', 'aria-label': 'Deine Versuche' }, head, body), h('p.gd-legend.muted',
+    h('i.sw.ok', '✓'), 'richtig ', h('i.sw.partial', '~'), 'teilweise ', h('i.sw.no', '✕'), 'falsch · ▲▼ Lösung ist neuer/älter (gelb: höchstens 3 Jahre)'));
+}
+
+/* Falsche Tipps der Zusatz-Modi (neueste zuerst) */
+function gdWrongChips(games) {
+  return games.length ? h('div.gd-chips', games.map(g => h('span.gd-chip', '✕ ', g.title))) : null;
+}
+
+/* Suchfeld mit Vorschlägen: exclude = schon geratene IDs, onPick(id) bei Auswahl, count = bisherige Versuche */
+function gdSearchBox({ exclude = new Set(), onPick, count = 0, cover = () => '' }) {
+  const input = h('input.gd-input', { type: 'search', placeholder: 'Spiel eintippen …', autocomplete: 'off', spellcheck: 'false', 'aria-label': 'Spiel raten' });
+  const list = h('div.gd-suggest', { role: 'listbox', hidden: true });
+  let items = [], active = 0;
+  const draw = () => {
+    // Kein Treffer: erklären statt stumm bleiben
+    const noHit = !items.length && gdNorm(input.value).length >= 2;
+    list.hidden = !items.length && !noHit;
+    if (noHit) {
+      const already = gdSearch(input.value, new Set(), 1)[0];
+      list.replaceChildren(h('div.gd-sug-empty', already && exclude.has(already.id)
+        ? `„${already.title}“ hast du schon geraten.`
+        : `Kein Treffer im Spiele-Pool (${GD.length} bekannte Spiele). Probier den Originaltitel oder eine Abkürzung.`));
+      return;
+    }
+    list.replaceChildren(...items.map((g, i) => {
+      const src = cover(g);
+      return h('button.gd-sug' + (i === active ? '.active' : ''), { type: 'button', role: 'option', onmousedown: e => e.preventDefault(), onclick: () => pick(g) },
+        src ? h('img', { src, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }) : h('span.gd-sug-ph', g.title.slice(0, 1)),
+        h('span', h('strong', g.title), h('small', ` ${g.year}`)));
+    }));
+  };
+  const pick = g => { input.value = ''; items = []; draw(); onPick(g.id); setTimeout(() => $('.gd-input')?.focus(), 30); };
+  input.addEventListener('input', () => { items = gdSearch(input.value, exclude); active = 0; draw(); });
+  input.addEventListener('keydown', e => {
+    if (e.key === 'ArrowDown') { active = Math.min(items.length - 1, active + 1); draw(); e.preventDefault(); }
+    else if (e.key === 'ArrowUp') { active = Math.max(0, active - 1); draw(); e.preventDefault(); }
+    else if (e.key === 'Enter' && items[active]) { e.preventDefault(); pick(items[active]); }
+    else if (e.key === 'Escape') { items = []; draw(); }
+  });
+  input.addEventListener('blur', () => setTimeout(() => { items = []; draw(); }, 150));
+  if (!matchMedia('(pointer: coarse)').matches) setTimeout(() => input.focus({ preventScroll: true }), 50);
+  return h('div.gd-search', icon('search'), input, list,
+    h('span.gd-count', count ? `${count} ${count === 1 ? 'Versuch' : 'Versuche'}` : ''));
+}
 
 /* Bild verpixeln: klein zeichnen, groß ohne Glättung anzeigen */
 function gdPixelate(img, level) {
@@ -483,10 +535,21 @@ function gdStatsModal() {
       h('div.gd-dist', buckets.map(b => h('div.gd-dist-row', h('span', b),
         h('div.gd-bar', { style: { width: Math.max(4, ((s.dist[b] || 0) / max) * 100) + '%' } }, String(s.dist[b] || 0))))));
   };
-  openModal({ title: 'Deine Statistik', width: 620, autofocus: false, body: h('div.gd-stats', GD_DAILY_MODES.map(block)) });
+  // Duelle: nur die Eckdaten – Bilanz und Bestenliste stehen im Duell-Tab
+  const duels = Store.get('gd.duels', []);
+  const st = duels.length ? duelStats(duels, App.me) : null;
+  const duelBlock = st && h('section.gd-stat-block',
+    h('h3', 'Duelle'),
+    h('div.gd-stat-nums',
+      h('div', h('strong', st.duels), h('span', 'Gespielt')),
+      h('div', h('strong', st.wins), h('span', 'Siege')),
+      h('div', h('strong', st.monthPoints), h('span', 'Punkte im Monat')),
+      h('div', h('strong', st.bestPoints || '–'), h('span', 'Bestes Duell'))),
+    h('a.linkish', { href: gdModeHash('duell'), onclick: () => closeAllModals() }, 'Bilanz und Bestenliste ansehen →'));
+  openModal({ title: 'Deine Statistik', width: 620, autofocus: false, body: h('div.gd-stats', GD_DAILY_MODES.map(block), duelBlock) });
 }
 
-function gdHelpModal() {
+function gdHelpModal(section = '') {
   const legend = (cls, text) => h('div.gd-help-row', h('span.gd-cell.' + cls, GD_STATE_ICON[cls]), h('span', text));
   const cb = h('input', {
     type: 'checkbox', checked: !!Store.get('gd.colorblind'),
@@ -520,7 +583,12 @@ function gdHelpModal() {
       h('p.help', 'Ein stark vergrößerter Ausschnitt aus einer Spielszene. Mit jedem Fehlversuch zoomt das Bild weiter heraus.'),
       sub('Endlos'),
       h('p.help', 'Zufällige Spiele im Klassik-Modus zum Üben – zählt nicht für die Statistik.'),
+      h('h3#gdHelpDuel', { style: { fontSize: '15px' } }, 'Duell'),
+      h('p.help', `Zu zweit gegeneinander: Beide raten gleichzeitig dasselbe Spiel, wer zuerst trifft, gewinnt die Runde. Statt nach Fehlversuchen werden die Hinweise alle ${DUEL_STEP_MS / 1000} Sekunden deutlicher; nach einem falschen Tipp ist das Raten ${DUEL_LOCK_MS / 1000} Sekunden gesperrt.`),
+      h('p.help', `Punkte-Duell: ${DUEL_POINT_ROUNDS} Runden, jeder Modus einmal – ein sofortiger Treffer bringt ${DUEL_POINTS[0].toLocaleString('de-DE')} Punkte, nach ${DUEL_ROUND_MS / 1000} Sekunden nur noch ${DUEL_POINTS[1]}. Best-of (${DUEL_BEST_OF.join(', ')} Runden): Wer zuerst die Mehrheit der Runden gewinnt.`),
+      h('p.help', 'Erstelle ein Duell und schick deinem Gegner Code oder Link – ihr braucht zwei Geräte oder zwei verschiedene Browser. Die Tagesrätsel der nächsten Tage kommen im Duell nicht dran. Deine Bilanz gegen Freunde wird nur in deinem Browser gespeichert.'),
       h('p.help', `Im Spiele-Pool: ${GD.length} bekannte Spiele von 1980 bis heute. Daten geprüft mit Wikipedia, Zitate mit Wikiquote; Cover und Szenen kommen von Wikipedia.`),
     ],
   });
+  if (section === 'duell') setTimeout(() => $('#gdHelpDuel')?.scrollIntoView({ block: 'start' }), 50);
 }

@@ -1,6 +1,6 @@
 /* ───────── Übersicht & Navigation ─────────
    #/            → Übersicht
-   #/gamedar     → Gamedar (…/cover, …/endless)
+   #/gamedar     → Gamedar (…/cover, …/endless, …/duell[/CODE])
    #/tiercrew    → Tiercrew
    #/paket/…     → geteilte Spieleliste (siehe Share in export.js)
    #ABC123       → Tiercrew-Einladungslink (Raum-Code) – bleibt wie bisher gültig
@@ -31,12 +31,12 @@ const Router = {
       Share.receive(hash.slice('#/paket/'.length));
       return;
     }
-    if (/^#\/gamedar/.test(hash)) this.show('gamedle', hash.split('/')[2]);
+    if (/^#\/gamedar/.test(hash)) this.show('gamedle', ...hash.split('/').slice(2, 4));
     else if (hash === '#/tiercrew' || /^#[A-Z0-9]{6}$/i.test(hash)) this.show('tierly');
     else this.show('hub');
   },
 
-  show(view, sub) {
+  show(view, sub, extra) {
     if (this.current === 'gamedle' && view !== 'gamedle') Gamedle.close();
     if (this.current && this.current !== view) closeAllModals(); // z. B. Zurück-Taste bei offenem Fenster
     this.current = view;
@@ -48,7 +48,7 @@ const Router = {
     $('#app').hidden = view !== 'tierly' || !App.state;
     if (view === 'tierly' && App.state && !tierlyActive) App.render();
     document.title = { hub: 'Gamedar – Spiele-Rätsel & Tier-Listen', gamedle: 'Gamedar – Spiel des Tages', tierly: 'Tiercrew – Tier-Listen mit Freunden' }[view];
-    if (view === 'gamedle') Gamedle.open(sub);
+    if (view === 'gamedle') Gamedle.open(sub, extra);
     if (view === 'hub') this.renderHub();
     window.scrollTo(0, 0);
   },
