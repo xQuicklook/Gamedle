@@ -7,11 +7,17 @@ const PEER_PREFIX = 'tierly-room-v1-';
 const MAX_ACTION_CHARS = 250000; // eine Aktion inkl. hochgeladenem Bild
 const RATE_WINDOW = 5000, RATE_MAX = 80; // höchstens 80 Aktionen pro 5 s und Gast
 const NET_ERRORS_RETRY = new Set(['network', 'server-error', 'socket-error', 'socket-closed', 'disconnected']);
+// Nur STUN: Den kostenlosen TURN-Relay, den PeerJS voreinstellt, gibt es nicht mehr (seine Adressen lösen nicht mehr auf)
+const PEER_OPTIONS = { debug: 0, config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] } };
 
 const JOIN_HELP = {
   signal: 'Der Vermittlungsserver (PeerJS) ist nicht erreichbar. Prüfe deine Internetverbindung – manchmal blockiert auch eine Firewall oder ein Adblocker „peerjs.com“.',
   host: 'Raum nicht gefunden. Ist der Code richtig und der Host online?',
-  webrtc: 'Der Raum wurde gefunden, aber eine direkte Verbindung kam nicht zustande. Häufige Ursache: Mobilfunk- oder Firmennetz. Tipp: anderes WLAN oder einen Handy-Hotspot probieren („Verbindung testen“ hilft bei der Suche).',
+  // Direkte Verbindung gescheitert – welcher Text passt, sagt der Browser-Check (webrtcHelp in diag.js)
+  webrtc: 'Der Raum wurde gefunden, aber es kam keine direkte Verbindung zustande. Macht beide „Verbindung testen“ – oft blockiert eine VPN- oder Datenschutz-Erweiterung, eine Browser-Einstellung oder eine Firewall.',
+  other: 'Der Raum wurde gefunden, aber es kam keine direkte Verbindung zustande. Bei dir ist alles in Ordnung – lass die Gegenseite „Verbindung testen“ machen. Oft blockiert dort eine VPN- oder Datenschutz-Erweiterung, eine Browser-Einstellung oder eine Firewall.',
+  browser: 'Dein Browser blockiert direkte Verbindungen (WebRTC) – meist eine VPN- oder Datenschutz-Erweiterung oder eine Browser-Einstellung. Tipp: ein privates Fenster oder einen anderen Browser probieren.',
+  network: 'Direkte Verbindungen kommen bei dir nicht nach außen durch – meist blockiert ein VPN, ein Virenschutz, eine Firewall oder ein Netzwerkfilter. Tipp: erst einen anderen Browser probieren, hilft das nicht, VPN oder Virenschutz kurz ausschalten.',
   hello: 'Der Host antwortet nicht. Versuch es gleich noch einmal.',
 };
 
@@ -87,7 +93,7 @@ const Net = {
     let idTaken = 0;
 
     const open = () => {
-      const peer = new Peer(PEER_PREFIX + code, { debug: 0 });
+      const peer = new Peer(PEER_PREFIX + code, PEER_OPTIONS);
       this.peer = peer;
       peer.on('open', () => { if (this.peer === peer) { idTaken = 0; this.setStatus('online'); } });
       peer.on('connection', conn => this.accept(conn));
@@ -112,10 +118,14 @@ const Net = {
             if (peer.destroyed) open();
             else if (peer.disconnected) peer.reconnect();
           }, 3000);
+        } else if (err.type === 'browser-incompatible') {
+          this.setStatus('offline');
+          this.on.error(JOIN_HELP.browser);
         }
       });
     };
     open();
+    checkIce(); // für den Hinweis im Einladen-Fenster, falls Mitspieler gar nicht beitreten könnten
   },
 
   accept(conn) {
@@ -250,8 +260,9 @@ const Net = {
     this.stage = 'signal';
     this.setStatus('connecting');
 
-    const peer = new Peer({ debug: 0 });
+    const peer = new Peer(PEER_OPTIONS);
     this.peer = peer;
+    checkIce(); // läuft nebenher – scheitert die Verbindung, steht damit die passende Hilfe fest
     peer.on('open', () => { this.stage = 'host'; this.connectToHost(); });
     peer.on('disconnected', () => {
       if (this.peer !== peer || peer.destroyed) return;
@@ -270,7 +281,7 @@ const Net = {
           else if (peer.disconnected) peer.reconnect();
           else this.retryHost();
         }, 3000);
-      }
+      } else if (err.type === 'browser-incompatible') this.fail('browser');
     });
     // Signal-Server antwortet gar nicht?
     this.later(() => { if (this.peer === peer && this.stage === 'signal' && !this.everConnected) this.fail('signal'); }, 12000);
@@ -278,7 +289,7 @@ const Net = {
 
   fail(stage) {
     this.leave();
-    this.on.joinFailed(JOIN_HELP[stage] || JOIN_HELP.host, stage);
+    this.on.joinFailed(stage === 'webrtc' ? webrtcHelp() : JOIN_HELP[stage] || JOIN_HELP.host, stage);
   },
 
   connectToHost() {

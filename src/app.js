@@ -222,7 +222,7 @@ const App = {
         return;
       }
       this.fallbackHost = null;
-      toast(msg, 9000, stage === 'signal' || stage === 'webrtc' ? { label: 'Verbindung testen', onClick: () => diagModal() } : null);
+      toast(msg, 12000, ['signal', 'webrtc', 'browser'].includes(stage) ? { label: 'Verbindung testen', onClick: () => diagModal() } : null);
       if (!$('#app').hidden) this.leave();
       const btn = $('#joinForm button');
       btn.disabled = false;

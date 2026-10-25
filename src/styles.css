@@ -842,6 +842,7 @@ kbd {
 .diag-state.fail { background: rgba(240, 82, 82, .18); color: var(--danger); }
 .diag-state.warn { background: rgba(245, 184, 61, .2); color: #d99a1c; }
 .diag-state.wait { animation: pulse 1.2s infinite; }
+.diag-alert { color: var(--danger); font-weight: 600; }
 @keyframes toastIn { from { opacity: 0; transform: translateY(8px); } }
 
 /* ───────── Responsive ───────── */

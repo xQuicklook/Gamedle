@@ -73,6 +73,7 @@ const Duel = {
     const s = this.settings();
     const settings = s.kind === 'points' ? { kind: 'points' } : { kind: 'bestof', bestOf: s.bestOf, mode: s.mode };
     this.begin(duelHostSession({ settings, me: this.me(), handlers: this.handlers() }));
+    checkIce().then(() => this.render()); // Warnhinweis, falls der Gegner gar nicht beitreten könnte
   },
 
   join(code) {
@@ -196,7 +197,7 @@ const Duel = {
       main.replaceChildren(h('div.gd-wrap.duel', Object.values(this.slots)));
     }
     if (screen === 'lobby') this.paint('body', [this.error, this.code, this.settings(), Store.get('gd.duels', []).length, Store.get('gd.duels', [])[0]?.at], () => this.lobbyView());
-    else if (screen === 'waiting') this.paint('body', [this.session.role, this.session.code, this.error], () => this.waitingView());
+    else if (screen === 'waiting') this.paint('body', [this.session.role, this.session.code, this.error, hostIceWarning()], () => this.waitingView());
     else if (screen === 'ready') this.paint('body', [this.session.opponent, this.online, this.session.client?.settings], () => this.readyView(v));
     else if (screen === 'over') this.paint('body', [v.over, v.rounds, this.online, this.rematchFrom, this.rematchAsked, this.recorded], () => this.overView(v));
     else this.matchView(v);
@@ -241,7 +242,8 @@ const Duel = {
       this.head('Zu zweit dasselbe Spiel raten – wer zuerst trifft, gewinnt die Runde.',
         h('button.linkish', { type: 'button', onclick: () => gdHelpModal('duell') }, 'Regeln')),
       h('div.duel-card',
-        this.error ? h('p.duel-error', { role: 'alert' }, this.error) : null,
+        this.error ? h('p.duel-error', { role: 'alert' }, this.error,
+          Object.values(JOIN_HELP).includes(this.error) ? [' ', h('button.linkish', { type: 'button', onclick: () => diagModal() }, 'Verbindung testen')] : null) : null,
         h('label.field', h('span', 'Dein Name'), name),
         h('div.field', h('span', 'Deine Farbe'), colors),
         h('div.duel-kinds',
@@ -312,9 +314,11 @@ const Duel = {
         h('div.duel-card.center', h('p.muted', 'Gleich geht es los.'), h('button.btn.ghost', { type: 'button', onclick: () => this.leave() }, 'Abbrechen'))];
     }
     const link = `${GD_URL()}#/gamedar/duell/${s.code || ''}`;
+    const warning = hostIceWarning();
     return [
       this.head('Warte auf deinen Gegner'),
       h('div.duel-card.center',
+        warning ? h('p.duel-error', { role: 'alert' }, warning, ' ', h('button.linkish', { type: 'button', onclick: () => diagModal() }, 'Verbindung testen')) : null,
         h('p.muted', 'Schick ihm diesen Code oder den Link:'),
         h('div.duel-code', s.code || '······'),
         h('div.duel-actions',

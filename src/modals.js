@@ -127,7 +127,7 @@ function infoModal() {
         h('p.help', 'Mitspielen geht direkt von Browser zu Browser (WebRTC), nicht über Dritte: Im Tiercrew-Raum teilt ihr eure Listen, im Duell bekommt dein Gegner Name, Farbe und deine Tipps.')),
       section('Welche Dienste angefragt werden',
         h('ul.info-list',
-          li('PeerJS-Vermittlungsserver (0.peerjs.com)', 'nur zum Finden der Mitspieler über den Raum- bzw. Duell-Code; der Server sieht dabei deine IP-Adresse. Bei blockierten Direktverbindungen kann zusätzlich der PeerJS-Relay (TURN) genutzt werden.'),
+          li('PeerJS-Vermittlungsserver (0.peerjs.com)', 'nur zum Finden der Mitspieler über den Raum- bzw. Duell-Code; der Server sieht dabei deine IP-Adresse.'),
           li('Wikipedia & Wikidata (Wikimedia Foundation)', 'für die Spielesuche, Cover, Szenen, Erscheinungsjahr und Reihe. Bilder werden direkt von upload.wikimedia.org geladen. Im Duell lädt sie der Browser des Erstellers und schickt dem Gegner nur den gerade sichtbaren Ausschnitt.'),
           li('Google STUN-Server', 'hilft beim Aufbau der Direktverbindung (ermittelt die öffentliche Adresse).'))),
       section('Quellen & Lizenzen',
@@ -171,6 +171,7 @@ function roomModal() {
         h('p.help', 'Fällt der Host aus, übernimmt automatisch der dienstälteste Gast. ',
           h('button.linkish', { type: 'button', onclick: () => diagModal() }, 'Verbindung testen')),
       );
+      if (Net.role === 'host' && hostIceWarning()) body.append(h('p.help.diag-alert', { role: 'alert' }, hostIceWarning()));
     }
 
     // Spielerliste
@@ -241,6 +242,8 @@ function roomModal() {
   };
   draw();
   m = openModal({ title: Net.role === 'solo' ? 'Freunde einladen' : 'Raum & Spieler', body, width: 480, autofocus: false });
+  // Browser-Check noch nicht fertig? Warnung nachreichen – nur dann neu zeichnen, damit Eingaben nicht verloren gehen
+  if (Net.role === 'host') checkIce().then(() => { if (body.isConnected && hostIceWarning() && !body.querySelector('.diag-alert')) draw(); });
 }
 
 /* ───────── Detailansicht einer Kachel ───────── */

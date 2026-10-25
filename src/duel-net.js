@@ -317,7 +317,7 @@ async function duelStageImage(job, game) {
 function duelPeerHost(h) {
   let code = roomCode(), peer = null, conn = null, closed = false, taken = 0;
   const open = () => {
-    peer = new Peer(DUEL_PEER_PREFIX + code, { debug: 0 });
+    peer = new Peer(DUEL_PEER_PREFIX + code, PEER_OPTIONS);
     const self = peer;
     peer.on('open', () => h.open(code));
     peer.on('connection', c => {
@@ -341,10 +341,11 @@ function duelPeerHost(h) {
       // Code zufällig schon vergeben → neuer Code (noch kennt ihn niemand)
       if (err.type === 'unavailable-id' && ++taken < 5) { self.destroy(); code = roomCode(); open(); }
       else if (NET_ERRORS_RETRY.has(err.type)) setTimeout(() => { if (self.destroyed) open(); else if (self.disconnected) self.reconnect(); }, 3000);
-      else h.error(JOIN_HELP.signal);
+      else h.error(err.type === 'browser-incompatible' ? JOIN_HELP.browser : JOIN_HELP.signal);
     });
   };
   open();
+  checkIce(); // für den Hinweis beim Warten, falls der Gegner gar nicht beitreten könnte
   return {
     get code() { return code; },
     send(msg) { try { if (conn?.open) conn.send(msg); } catch (e) { console.warn(e); } },
@@ -356,7 +357,8 @@ function duelPeerHost(h) {
    h: open(), message(msg, at), lost(at), fail(text) */
 function duelPeerGuest(code, h) {
   let conn = null, ever = false, closed = false, lostAt = null, retry = null;
-  const peer = new Peer({ debug: 0 });
+  const peer = new Peer(PEER_OPTIONS);
+  checkIce(); // läuft nebenher – scheitert die Verbindung, steht damit die passende Hilfe fest
   const fail = text => { if (closed) return; closed = true; try { peer.destroy(); } catch { /* egal */ } h.fail(text); };
   const lost = () => {
     if (closed || retry) return;
@@ -373,13 +375,13 @@ function duelPeerGuest(code, h) {
     c.on('data', msg => { if (c === conn) h.message(msg, Date.now()); });
     c.on('close', () => { if (c === conn) lost(); });
     c.on('error', () => { if (c === conn) lost(); });
-    setTimeout(() => { if (c === conn && !c.open) { if (ever) lost(); else fail(JOIN_HELP.webrtc); } }, 15000);
+    setTimeout(() => { if (c === conn && !c.open) { if (ever) lost(); else fail(webrtcHelp()); } }, 15000);
   };
   peer.on('open', () => { if (!conn?.open) connect(); }); // auch nach erneuter Anmeldung beim Vermittlungsserver
   peer.on('error', err => {
     if (err.type === 'peer-unavailable') { if (ever) lost(); else fail('Duell nicht gefunden. Ist der Code richtig und der Gegner noch auf der Seite?'); }
     else if (NET_ERRORS_RETRY.has(err.type)) { if (ever) lost(); else setTimeout(() => !closed && peer.disconnected && peer.reconnect(), 3000); }
-    else fail(JOIN_HELP.signal);
+    else fail(err.type === 'browser-incompatible' ? JOIN_HELP.browser : JOIN_HELP.signal);
   });
   setTimeout(() => { if (!ever && !conn) fail(JOIN_HELP.signal); }, 12000);
   return {
