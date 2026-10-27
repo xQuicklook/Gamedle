@@ -26,6 +26,17 @@ const GD_HINTS = {
   endless: [['letter', 4], ['cover', 8]],
 };
 
+/* „Lösung aufdecken“ gibt es in diesen Modi – erst, wenn alle Hilfen ausgeschöpft sind:
+   alle Tipps geöffnet und alle Emojis zu sehen, das Cover scharf bzw. die Szene ganz herausgezoomt */
+const GD_REVEAL_MODES = ['quote', 'emoji', 'cover', 'scene'];
+function gdCanReveal(mode, ans, wrong, hints) {
+  if (!GD_REVEAL_MODES.includes(mode)) return false;
+  if (mode === 'cover') return wrong >= GD_COVER_LEVELS.length;
+  if (mode === 'scene') return wrong >= GD_SCENE_ZOOM.length;
+  const emojis = mode === 'emoji' ? (GD_EMOJI_HINTS[ans.id] || '').split(' ').length : 0;
+  return hints >= GD_HINTS[mode].length && 1 + wrong >= emojis;
+}
+
 const Gamedle = {
   mode: 'classic',
   date: null,
@@ -40,6 +51,7 @@ const Gamedle = {
     $('#gdStatsBtn').append(icon('chart'));
     $('#gdHelpBtn').append(icon('edit'));
     $('#gdStatsBtn').onclick = () => gdStatsModal();
+    $('#gdFlame').onclick = () => gdStatsModal();
     $('#gdHelpBtn').onclick = () => gdHelpModal();
     $('#hubInfo').onclick = () => infoModal();
     const fresh = c => c && Date.now() - c.at < 7 * 86400000;
@@ -50,6 +62,8 @@ const Gamedle = {
     if (fresh(scenes) && scenes.v) this.scenes = gdUnseal(scenes.v, 'scenes');
     else if (scenes?.map) Store.del('gd.scenes');
     this.sealProgress();
+    // Spielstände von vor der 🔥 Tagesserie: bisher gespielte Tage aus den Serien der Modi übernehmen
+    if (!Store.get('gd.days')) Store.set('gd.days', gdDeriveDays(Store.get('gd.stats', {}), gdToday()));
     document.body.classList.toggle('gd-cb', !!Store.get('gd.colorblind'));
   },
 
@@ -176,9 +190,33 @@ const Gamedle = {
       }
     }
     this.save(p);
+    if (p.done && this.mode !== 'endless') this.checkDay();
     this.animateLast = true;
     this.render();
     if (p.done) setTimeout(() => gdCelebrate(), this.mode === 'classic' || this.mode === 'endless' ? 1300 : 200);
+  },
+
+  /* Alle Tagesrätsel gelöst (keins aufgedeckt)? → 🔥 Tagesserie zählt weiter */
+  checkDay() {
+    const today = Store.get('gd.progress', {})[this.date] || {};
+    if (!GD_DAILY_MODES.every(m => today[m]?.done && !today[m].gaveUp)) return;
+    const days = gdRecordDay(Store.get('gd.days', {}), this.date);
+    Store.set('gd.days', days);
+    this.flamePop = true;
+    setTimeout(() => toast(days.streak === 1 ? '🔥 Alle Rätsel von heute gelöst – deine Serie beginnt!' : `🔥 ${days.streak} Tage in Folge alles gelöst!`, 5000), 1600);
+  },
+
+  /* Lösung aufdecken: zählt nicht als gelöst – die Serie des Modus und die 🔥 Tagesserie enden */
+  async reveal() {
+    if (!(await confirmDialog('Lösung aufdecken?', 'Das Rätsel zählt dann nicht als gelöst – deine Serie in diesem Modus und die 🔥 Tagesserie enden.', 'Aufdecken', true))) return;
+    const p = this.progress();
+    if (p.done) return;
+    Object.assign(p, { done: true, gaveUp: true });
+    Store.set('gd.stats', gdRecordGiveUp(Store.get('gd.stats', {}), this.mode, this.date));
+    const days = Store.get('gd.days');
+    if (days?.streak) Store.set('gd.days', { ...days, streak: 0 });
+    this.save(p);
+    this.render();
   },
 
   /* ── Rendering ── */
@@ -187,11 +225,30 @@ const Gamedle = {
     const tab = mode => h('button.tab', {
       role: 'tab', 'aria-selected': String(this.mode === mode),
       onclick: () => { location.hash = gdModeHash(mode); },
-    }, GD_MODE_UI[mode].label, today[mode]?.done ? h('span.gd-done', ' ✓') : null,
+    }, GD_MODE_UI[mode].label,
+    today[mode]?.gaveUp ? h('span.gd-gaveup', { title: 'Aufgedeckt' }, ' 🏳️') : today[mode]?.done ? h('span.gd-done', ' ✓') : null,
     mode === 'duell' && Duel.session ? h('span.gd-live', { title: 'Duell läuft' }, ' ●') : null,
     mode === 'duell' && !Duel.session && !Store.get('gd.duelSeen') ? h('span.gd-new', 'neu') : null);
     $('#gdTabs').replaceChildren(...GD_DAILY_MODES.map(tab), tab('endless'), tab('duell'));
     $('#gdTabs [aria-selected="true"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    this.renderFlame(today);
+  },
+
+  /* 🔥 Tagesserie oben rechts: leuchtet, wenn heute alles gelöst ist – grau, solange noch Rätsel offen sind */
+  renderFlame(today) {
+    const btn = $('#gdFlame');
+    const days = Store.get('gd.days');
+    const streak = gdDayStreak(days, gdToday());
+    const done = days?.lastDay === gdToday();
+    const open = GD_DAILY_MODES.filter(m => !today[m]?.done).length;
+    btn.className = 'gd-flame' + (done ? ' on' : '') + (this.flamePop ? ' pop' : '');
+    this.flamePop = false;
+    btn.replaceChildren(h('span', { 'aria-hidden': 'true' }, '🔥'), String(streak));
+    btn.title = done ? `${streak} ${streak === 1 ? 'Tag' : 'Tage'} in Folge alles gelöst – morgen geht es weiter.`
+      : GD_DAILY_MODES.some(m => today[m]?.gaveUp) ? 'Heute wurde eine Lösung aufgedeckt – morgen beginnt eine neue Serie.'
+        : streak ? `Noch ${open} Rätsel heute, um deine Serie zu halten.`
+          : `Löse alle ${GD_DAILY_MODES.length} Tagesrätsel an einem Tag, um eine Serie zu starten.`;
+    btn.setAttribute('aria-label', `Tagesserie ${streak}: ${btn.title}`);
   },
 
   render() {
@@ -210,6 +267,7 @@ const Gamedle = {
       this.stage(ans, p, wrong),
       p.done ? this.resultCard(ans, p) : this.searchBox(p),
       p.done ? null : this.hintBar(ans, p, wrong),
+      p.done ? null : this.revealBar(ans, p, wrong),
       this.yesterday(no),
       table ? this.table(ans, p) : this.guessChips(ans, p),
     ));
@@ -266,6 +324,14 @@ const Gamedle = {
     }));
   },
 
+  /* Alle Hilfen ausgeschöpft und trotzdem keine Idee? Dann darf man die Lösung aufdecken */
+  revealBar(ans, p, wrong) {
+    if (!gdCanReveal(this.mode, ans, wrong, p.hints || 0)) return null;
+    return h('div.gd-reveal',
+      h('button.btn.ghost.sm', { type: 'button', onclick: () => this.reveal() }, '🏳️ Lösung aufdecken'),
+      h('span.muted', 'Zählt dann nicht als gelöst.'));
+  },
+
   table(ans, p) {
     const rows = [...p.guesses].reverse().map(id => { const game = GD_BY_ID.get(id); return { game, cells: gdCompare(game, ans) }; });
     return gdGuessTable(rows, { animateFirst: this.animateLast, cover: g => this.cover(g) });
@@ -293,19 +359,21 @@ const Gamedle = {
     const next = this.mode === 'endless' ? null
       : [...GD_DAILY_MODES.slice(i + 1), ...GD_DAILY_MODES.slice(0, i)].find(m => !today[m]?.done);
     const speaker = this.mode === 'quote' && GD_QUOTES[ans.id]?.[1];
-    return h('div.gd-result',
+    const tries = p.gaveUp ? `aufgedeckt nach ${n} ${n === 1 ? 'Versuch' : 'Versuchen'}` : `${n} ${n === 1 ? 'Versuch' : 'Versuche'}`;
+    return h('div.gd-result' + (p.gaveUp ? '.gave-up' : ''),
       src ? h('img.gd-result-cover', { src, alt: '', referrerpolicy: 'no-referrer' }) : null,
       h('div.gd-result-body',
-        h('span.gd-result-kicker', this.mode === 'endless' ? 'Richtig!' : `Gamedar #${gdDayNumber(this.date)} gelöst!`),
+        h('span.gd-result-kicker', this.mode === 'endless' ? 'Richtig!' : `Gamedar #${gdDayNumber(this.date)} ${p.gaveUp ? 'aufgedeckt' : 'gelöst!'}`),
         h('h3', ans.title),
-        h('p.muted', `${ans.year} · ${ans.dev} · ${n} ${n === 1 ? 'Versuch' : 'Versuche'}`),
+        h('p.muted', `${ans.year} · ${ans.dev} · ${tries}`),
         speaker ? h('p.muted', `Gesagt von ${speaker}`) : null,
         h('div.gd-result-actions',
           this.mode === 'endless'
             ? h('button.btn.primary', { onclick: () => { this.newEndless(); this.render(); } }, 'Nächstes Spiel')
             : h('button.btn.primary', {
               // Der geteilte Link führt direkt in diesen Modus
-              onclick: () => gdShare(gdShareText(this.mode, this.date, p.guesses, GD_URL() + gdModeHash(this.mode), { answer: ans, hints: p.hints || 0 })),
+              onclick: () => gdShare(gdShareText(this.mode, this.date, p.guesses, GD_URL() + gdModeHash(this.mode),
+                { answer: ans, hints: p.hints || 0, gaveUp: !!p.gaveUp, flame: gdDayStreak(Store.get('gd.days'), this.date) })),
             }, icon('upload'), 'Ergebnis teilen'),
           next ? h('a.btn', { href: gdModeHash(next) }, `Weiter: ${GD_MODE_UI[next].label}`) : null),
         this.mode !== 'endless' ? h('p.gd-next.muted', 'Nächstes Rätsel in ', h('strong#gdCountdown', gdFmtDuration(gdMsUntilNext()))) : null,
@@ -523,10 +591,20 @@ function gdCelebrate() {
 function gdStatsModal() {
   const stats = Store.get('gd.stats', {});
   const today = gdToday();
+  const days = Store.get('gd.days');
+  const dayBlock = h('section.gd-stat-block.gd-stat-days',
+    h('h3', '🔥 Tagesserie'),
+    h('p.muted', `Tage in Folge, an denen du alle ${GD_DAILY_MODES.length} Tagesrätsel gelöst hast – aufgedeckte zählen nicht.`),
+    h('div.gd-stat-nums',
+      h('div', h('strong', gdDayStreak(days, today)), h('span', 'Aktuell')),
+      h('div', h('strong', days?.best || 0), h('span', 'Beste'))));
   const block = mode => {
     const s = stats[mode] || { won: 0, best: 0, total: 0, dist: {} };
     const buckets = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10+'];
-    const max = Math.max(1, ...buckets.map(b => s.dist[b] || 0));
+    const reveal = GD_REVEAL_MODES.includes(mode);
+    const max = Math.max(1, s.gaveUp || 0, ...buckets.map(b => s.dist[b] || 0));
+    const bar = (label, n, cls = '') => h('div.gd-dist-row', h('span', label),
+      h('div.gd-bar' + cls, { style: { width: Math.max(4, (n / max) * 100) + '%' } }, String(n)));
     return h('section.gd-stat-block',
       h('h3', GD_MODE_UI[mode].label),
       h('div.gd-stat-nums',
@@ -534,8 +612,9 @@ function gdStatsModal() {
         h('div', h('strong', gdCurrentStreak(stats, mode, today)), h('span', 'Serie')),
         h('div', h('strong', s.best), h('span', 'Beste Serie')),
         h('div', h('strong', s.won ? (s.total / s.won).toFixed(1).replace('.', ',') : '–'), h('span', 'Ø Versuche'))),
-      h('div.gd-dist', buckets.map(b => h('div.gd-dist-row', h('span', b),
-        h('div.gd-bar', { style: { width: Math.max(4, ((s.dist[b] || 0) / max) * 100) + '%' } }, String(s.dist[b] || 0))))));
+      h('div.gd-dist', buckets.map(b => bar(b, s.dist[b] || 0)),
+        // Aufgedeckte Rätsel als eigene Zeile unter der Verteilung
+        reveal ? h('div', { title: 'Aufgedeckt' }, bar('🏳️', s.gaveUp || 0, '.gaveup')) : null));
   };
   // Duelle: nur die Eckdaten – Bilanz und Bestenliste stehen im Duell-Tab
   const duels = Store.get('gd.duels', []);
@@ -548,7 +627,7 @@ function gdStatsModal() {
       h('div', h('strong', st.monthPoints), h('span', 'Punkte im Monat')),
       h('div', h('strong', st.bestPoints || '–'), h('span', 'Bestes Duell'))),
     h('a.linkish', { href: gdModeHash('duell'), onclick: () => closeAllModals() }, 'Bilanz und Bestenliste ansehen →'));
-  openModal({ title: 'Deine Statistik', width: 620, autofocus: false, body: h('div.gd-stats', GD_DAILY_MODES.map(block), duelBlock) });
+  openModal({ title: 'Deine Statistik', width: 620, autofocus: false, body: h('div.gd-stats', dayBlock, GD_DAILY_MODES.map(block), duelBlock) });
 }
 
 function gdHelpModal(section = '') {
@@ -583,6 +662,10 @@ function gdHelpModal(section = '') {
       h('p.help', 'Erkenne das Spiel am Cover. Es startet stark verpixelt und wird mit jedem Fehlversuch schärfer.'),
       sub('Szene'),
       h('p.help', 'Ein stark vergrößerter Ausschnitt aus einer Spielszene. Mit jedem Fehlversuch zoomt das Bild weiter heraus.'),
+      sub('Lösung aufdecken'),
+      h('p.help', 'Bei Zitat, Emoji, Cover und Szene kannst du die Lösung aufdecken, sobald alle Hilfen ausgeschöpft sind: alle Tipps geöffnet, alle Emojis zu sehen, das Cover scharf bzw. die Szene ganz zu sehen. Das Rätsel zählt dann nicht als gelöst.'),
+      sub('🔥 Tagesserie'),
+      h('p.help', `Löse an einem Tag alle ${GD_DAILY_MODES.length} Tagesrätsel, dann zählt die Flamme oben rechts hoch. Lässt du einen Tag aus oder deckst eine Lösung auf, beginnt sie wieder bei null.`),
       sub('Endlos'),
       h('p.help', 'Zufällige Spiele im Klassik-Modus zum Üben – zählt nicht für die Statistik.'),
       h('h3#gdHelpDuel', { style: { fontSize: '15px' } }, 'Duell'),

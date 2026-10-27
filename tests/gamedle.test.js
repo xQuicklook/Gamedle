@@ -15,6 +15,7 @@ const G = vm.runInNewContext(`${src('gamedle-seal.js')}\n${src('gamedle-data.js'
   GD, GD_BY_ID, GD_GENRES, GD_PLATFORMS, GD_PERSP, GD_MODES, GD_NO_COVER, GD_LAUNCH, GD_SCHEDULE, GD_DAILY_MODES,
   GD_QUOTES, GD_EMOJI_HINTS, GD_SCENES, gdSeal, gdUnseal,
   gdToday, gdDayNumber, gdShiftDate, gdMsUntilNext, gdDaily, gdPool, gdCompare, gdSearch, gdNorm, gdShareText, gdRecordWin, gdCurrentStreak, gdHintLetter, gdHintValue,
+  gdRecordGiveUp, gdRecordDay, gdDayStreak, gdDeriveDays,
 })`, sandbox());
 
 test('Daten: eindeutige IDs und nur bekannte Kategorien', () => {
@@ -196,6 +197,59 @@ test('Teilen in den Zusatz-Modi: nur Fehlversuche und Treffer', () => {
   const txt = G.gdShareText('emoji', date, [other.id, answer.id], 'https://example.org/#/gamedar/emoji');
   assert.equal(txt.split('\n')[0], 'Gamedar #1 · Emoji 😀');
   assert.equal(txt.split('\n')[2], '🟥🟩');
+  // Aufgedeckt: kein grünes Feld, ehrlich markiert; die Flamme steht ab 2 Tagen im Titel
+  const gaveUp = G.gdShareText('emoji', date, [other.id], 'https://example.org/#/gamedar/emoji', { gaveUp: true, flame: 3 }).split('\n');
+  assert.equal(gaveUp[0], 'Gamedar #1 · Emoji 😀 · 🔥 3');
+  assert.equal(gaveUp[1], 'Aufgedeckt nach 1 Versuch 🏳️');
+  assert.equal(gaveUp[2], '🟥');
+  assert.equal(G.gdShareText('emoji', date, [answer.id], 'u', { flame: 1 }).split('\n')[0], 'Gamedar #1 · Emoji 😀', 'ein Tag ist noch keine Serie');
+});
+
+test('Aufdecken: zählt nicht als gelöst und beendet die Serie des Modus', () => {
+  const s = {};
+  G.gdRecordWin(s, 'quote', '2026-10-24', 2);
+  G.gdRecordWin(s, 'quote', '2026-10-25', 4);
+  G.gdRecordGiveUp(s, 'quote', '2026-10-26');
+  G.gdRecordGiveUp(s, 'quote', '2026-10-26'); // doppelt zählt nicht
+  assert.equal(s.quote.won, 2);
+  assert.equal(s.quote.gaveUp, 1);
+  assert.equal(s.quote.best, 2, 'die beste Serie bleibt');
+  assert.equal(G.gdCurrentStreak(s, 'quote', '2026-10-26'), 0, 'sofort vorbei, nicht erst morgen');
+  G.gdRecordWin(s, 'quote', '2026-10-27', 1);
+  assert.equal(G.gdCurrentStreak(s, 'quote', '2026-10-27'), 1, 'danach beginnt eine neue Serie');
+});
+
+test('🔥 Tagesserie: Tage in Folge, an denen alles gelöst wurde', () => {
+  let d = G.gdRecordDay({}, '2026-10-24');
+  d = G.gdRecordDay(d, '2026-10-25');
+  d = G.gdRecordDay(d, '2026-10-25'); // doppelt zählt nicht
+  assert.deepEqual({ ...d }, { streak: 2, best: 2, lastDay: '2026-10-25' });
+  assert.equal(G.gdDayStreak(d, '2026-10-26'), 2, 'heute noch offen – die Serie lebt');
+  assert.equal(G.gdDayStreak(d, '2026-10-27'), 0, 'einen Tag ausgelassen');
+  d = G.gdRecordDay(d, '2026-10-28');
+  assert.deepEqual({ ...d }, { streak: 1, best: 2, lastDay: '2026-10-28' });
+  assert.equal(G.gdDayStreak(null, '2026-10-28'), 0);
+});
+
+test('🔥 Tagesserie aus älteren Spielständen: aus den Serien der Modi abgeleitet', () => {
+  const win = (s, days) => { for (const day of days) for (const m of G.GD_DAILY_MODES) G.gdRecordWin(s, m, day, 3); return s; };
+  // Drei Tage alles gelöst, heute erst einen Modus
+  const s = win({}, ['2026-10-24', '2026-10-25', '2026-10-26']);
+  G.gdRecordWin(s, 'classic', '2026-10-27', 2);
+  assert.deepEqual({ ...G.gdDeriveDays(s, '2026-10-27') }, { streak: 3, best: 3, lastDay: '2026-10-26' });
+  // Heute auch schon alles gelöst
+  win(s, ['2026-10-27']);
+  assert.deepEqual({ ...G.gdDeriveDays(s, '2026-10-27') }, { streak: 4, best: 4, lastDay: '2026-10-27' });
+  // Ein Modus fehlt an einem Tag → die Serie zählt erst ab danach
+  const t = win({}, ['2026-10-24']);
+  for (const m of G.GD_DAILY_MODES.slice(1)) G.gdRecordWin(t, m, '2026-10-25', 1);
+  win(t, ['2026-10-26']);
+  assert.equal(G.gdDeriveDays(t, '2026-10-26').streak, 1);
+  // Heute aufgedeckt → keine Serie
+  const u = win({}, ['2026-10-25', '2026-10-26']);
+  G.gdRecordGiveUp(u, 'scene', '2026-10-27');
+  assert.equal(G.gdDeriveDays(u, '2026-10-27').streak, 0);
+  assert.equal(G.gdDeriveDays({}, '2026-10-27').streak, 0);
 });
 
 test('Tipp-Buchstabe überspringt Artikel', () => {

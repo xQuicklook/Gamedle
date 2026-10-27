@@ -56,8 +56,10 @@ const Router = {
   renderHub() {
     const today = Store.get('gd.progress', {})[gdToday()] || {};
     const total = GD_DAILY_MODES.length;
-    const solved = GD_DAILY_MODES.filter(m => today[m]?.done).length;
-    $('#hubBadge').textContent = solved === total ? 'Heute alles gelöst ✓' : solved ? `Heute ${solved} von ${total} gelöst` : `#${gdDayNumber(gdToday())} wartet`;
+    const solved = GD_DAILY_MODES.filter(m => today[m]?.done && !today[m].gaveUp).length; // aufgedeckt zählt nicht
+    const flame = gdDayStreak(Store.get('gd.days'), gdToday());
+    $('#hubBadge').textContent = (flame ? `🔥 ${flame} · ` : '')
+      + (solved === total ? 'Heute alles gelöst ✓' : solved ? `Heute ${solved} von ${total} gelöst` : `#${gdDayNumber(gdToday())} wartet`);
     // Ein offener Tierly-Raum läuft im Hintergrund weiter
     const open = !!App.state;
     $('#hubTierlyBadge').textContent = !open ? '' : Net.role === 'solo' ? 'Solo-Liste offen' : `Raum ${Net.code} offen`;

@@ -150,18 +150,21 @@ function gdSearch(q, exclude = new Set(), limit = 8) {
 /* ── Teilen (Wordle-Stil) ── */
 const GD_EMOJI = { ok: '🟩', partial: '🟨', no: '🟥', up: '⬆️', down: '⬇️' };
 const GD_SHARE_LABEL = { classic: 'Klassik 🎮', quote: 'Zitat 💬', emoji: 'Emoji 😀', cover: 'Cover 🖼️', scene: 'Szene 🔍' };
-function gdShareText(mode, date, guesses, url, { answer = gdDaily(mode, date), hints = 0 } = {}) {
+function gdShareText(mode, date, guesses, url, { answer = gdDaily(mode, date), hints = 0, gaveUp = false, flame = 0 } = {}) {
   const no = gdDayNumber(date);
   const n = guesses.length;
-  const solved = `Gelöst mit ${n} ${n === 1 ? 'Versuch' : 'Versuchen'}${hints ? ` · 💡 ${hints} ${hints === 1 ? 'Tipp' : 'Tipps'}` : ''}`;
+  const tries = `${n} ${n === 1 ? 'Versuch' : 'Versuchen'}`;
+  const solved = `${gaveUp ? `Aufgedeckt nach ${tries} 🏳️` : `Gelöst mit ${tries}`}${hints ? ` · 💡 ${hints} ${hints === 1 ? 'Tipp' : 'Tipps'}` : ''}`;
+  const title = `Gamedar #${no} · ${GD_SHARE_LABEL[mode]}${flame >= 2 ? ` · 🔥 ${flame}` : ''}`;
   if (mode !== 'classic') {
     // Ohne Eigenschaften-Vergleich: nur Fehlversuche und Treffer (lange Serien gekürzt)
-    const marks = n > 12 ? `${'🟥'.repeat(10)} … +${n - 11} 🟩` : guesses.map((id, i) => (i === n - 1 ? '🟩' : '🟥')).join('');
-    return `Gamedar #${no} · ${GD_SHARE_LABEL[mode]}\n${solved}\n${marks}\n${url}`;
+    const marks = gaveUp ? (n > 12 ? `${'🟥'.repeat(10)} … +${n - 10}` : '🟥'.repeat(n))
+      : n > 12 ? `${'🟥'.repeat(10)} … +${n - 11} 🟩` : guesses.map((id, i) => (i === n - 1 ? '🟩' : '🟥')).join('');
+    return `${title}\n${solved}\n${marks}\n${url}`;
   }
   const rows = guesses.slice(-6).map(id => gdCompare(GD_BY_ID.get(id), answer).map(c => GD_EMOJI[c.state]).join(''));
   const more = n > 6 ? `… und ${n - 6} weitere Versuche davor\n` : '';
-  return `Gamedar #${no} · Klassik 🎮\n${solved}\n${more}${rows.join('\n')}\n${url}`;
+  return `${title}\n${solved}\n${more}${rows.join('\n')}\n${url}`;
 }
 
 /* ── Statistik ── */
@@ -183,4 +186,43 @@ function gdCurrentStreak(stats, mode, today) {
   const s = stats[mode];
   if (!s?.lastWin) return 0;
   return s.lastWin === today || s.lastWin === gdShiftDate(today, -1) ? s.streak : 0;
+}
+
+/* Lösung aufgedeckt: zählt nicht als gelöst, die Serie des Modus endet sofort */
+function gdRecordGiveUp(stats, mode, date) {
+  const s = stats[mode] ||= { won: 0, streak: 0, best: 0, lastWin: null, dist: {}, total: 0 };
+  if (s.lastGiveUp === date) return stats; // schon gezählt
+  s.gaveUp = (s.gaveUp || 0) + 1;
+  s.lastGiveUp = date;
+  s.streak = 0;
+  return stats;
+}
+
+/* ── 🔥 Tagesserie: Tage in Folge, an denen alle Tagesrätsel gelöst wurden (aufgedeckt zählt nicht) ──
+   days = { streak, best, lastDay } */
+function gdRecordDay(days, date) {
+  if (days.lastDay === date) return days; // schon gezählt
+  const streak = days.lastDay === gdShiftDate(date, -1) ? days.streak + 1 : 1;
+  return { streak, best: Math.max(days.best || 0, streak), lastDay: date };
+}
+
+/* Aktuelle Serie: lebt, solange gestern oder heute alles gelöst wurde */
+function gdDayStreak(days, today) {
+  return days?.lastDay === today || days?.lastDay === gdShiftDate(today, -1) ? days.streak : 0;
+}
+
+/* Ältere Statistik ohne Tagesserie: aus den Serien der einzelnen Modi ableiten.
+   Ein Tag war komplett, wenn jeder Modus eine Serie hat, die mindestens bis dorthin zurückreicht. */
+function gdDeriveDays(stats, today) {
+  const yesterday = gdShiftDate(today, -1);
+  const until = day => Math.min(...GD_DAILY_MODES.map(m => {
+    const s = stats[m];
+    if (!s?.lastWin || !s.streak) return 0;
+    if (s.lastWin === day) return s.streak;
+    return s.lastWin === today && day === yesterday ? s.streak - 1 : 0; // heute schon gelöst → Serie bis gestern ist eins kürzer
+  }));
+  const now = until(today), before = until(yesterday);
+  if (now) return { streak: now, best: now, lastDay: today };
+  if (before) return { streak: before, best: before, lastDay: yesterday };
+  return { streak: 0, best: 0, lastDay: null };
 }
