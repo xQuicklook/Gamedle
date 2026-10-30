@@ -20,6 +20,12 @@ const ACCEPTED = new Set([
   // heutige Firmennamen, App-Stores statt „Mobile“ und Spiele ohne Cover-Bild
   'Tetris|Jahr', 'Super Mario Bros. 2|Jahr', 'Battlefield 2|Entwickler', 'Geometry Dash|Entwickler', 'Candy Crush Saga|Plattform',
   'RuneScape|kein Cover', 'Roblox|kein Cover', 'Geometry Dash|kein Cover',
+  // Paket 1: Infobox-Leser greift bei DKR den Verlag einer Quellenangabe; osu! hat nur eine Software-Infobox
+  'Diddy Kong Racing|Publisher', 'osu!|keine Infobox', 'SingStar|kein Cover', 'Rust|kein Cover', 'Fall Guys|kein Cover',
+  // Paket 2: Infobox nennt bei RCT nur den Xbox-Entwickler (PC: Chris Sawyer)
+  'RollerCoaster Tycoon|Entwickler', 'Deponia|kein Cover',
+  // Paket 3: Ico wie Shadow of the Colossus mit dem bekannten Teamnamen
+  'Ico|Entwickler', 'Moorhuhn|kein Cover', 'Superhot|kein Cover', 'Free Fire|kein Cover', 'Deltarune|kein Cover',
 ]);
 
 const mediaOnly = process.argv.includes('--media');

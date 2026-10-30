@@ -109,11 +109,11 @@ test('Spielplan ist festgeschrieben: veröffentlichte Tage bleiben, jedes Spiel 
   // umsortiert. Bewusst keine Spiel-IDs, damit hier keine kommenden Lösungen im Klartext stehen.
   // Neue Spiele werden nur angehängt; nach dem Anhängen dürfen hier neue Stände dazukommen.
   const locks = {
-    classic: [298, '54ede6f83a78029c'],
-    quote: [143, 'e55426e898912e62'],
-    emoji: [298, '1d18babf417e7795'],
-    cover: [292, '2b6f020717958449'],
-    scene: [259, 'd80986a327d536fd'],
+    classic: [465, 'ea955ea7d0158472'],
+    quote: [175, '8bf154dc081ba7b0'],
+    emoji: [465, '2261899024fbc3b6'],
+    cover: [428, '5364d3ebd2852993'],
+    scene: [397, '7622e1cf13d0a54e'],
   };
   const fingerprint = ids => crypto.createHash('sha256').update(ids.join(',')).digest('hex').slice(0, 16);
   for (const [mode, [n, hash]] of Object.entries(locks)) {
